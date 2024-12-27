@@ -87,7 +87,7 @@ pub fn derive_shared_secret(private_key: EphemeralSecret, public_key: &PublicKey
 }
 
 /// Calculate the final shared secret by hashing multiple DH results.
-pub fn calculate_final_shared_secret(
+pub fn kdf(
     dh1: [u8; 32],
     dh2: [u8; 32],
     dh3: [u8; 32],
