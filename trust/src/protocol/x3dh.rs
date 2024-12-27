@@ -1,7 +1,7 @@
 use x25519_dalek::{EphemeralSecret, PublicKey};
 use ed25519_dalek::{SigningKey, Signature, VerifyingKey, Signer, Verifier};
 use rand::rngs::OsRng;
-use sha2::{Sha512, Digest, Sha256};
+use sha2::{Digest, Sha256};
 use serde::{Serialize, Deserialize};
 use serde_bytes;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -28,6 +28,12 @@ pub struct SessionInitMessage {
     pub timestamp: u64,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SignedPrekey {
+    pub verifying_key: FixedArray32,
+    pub signature: FixedArray64,
+}
+
 // Generate identity keypair
 pub fn generate_identity_keypair() -> (SigningKey, VerifyingKey) {
     let signing_key = SigningKey::generate(&mut OsRng);
@@ -36,12 +42,16 @@ pub fn generate_identity_keypair() -> (SigningKey, VerifyingKey) {
 }
 
 // Generate signed prekey pair
-pub fn generate_signed_prekey(identity_key: &SigningKey) -> (SigningKey, VerifyingKey, Signature) {
+pub fn generate_signed_prekey(identity_key: &SigningKey) -> (SigningKey, SignedPrekey) {
     let mut csprng = OsRng;
     let signing_key = SigningKey::generate(&mut csprng);
     let verifying_key = VerifyingKey::from(&signing_key);
     let signature = identity_key.sign(&verifying_key.to_bytes());
-    (signing_key, verifying_key, signature)
+    let signed_prekey = SignedPrekey {
+        verifying_key: FixedArray32(verifying_key.to_bytes()),
+        signature: FixedArray64(signature.to_bytes()),
+    };
+    (signing_key, signed_prekey)
 }
 
 // Generate one-time prekey
@@ -72,7 +82,7 @@ pub fn create_session_init_message(
 
     SessionInitMessage {
         sender_identity_key: FixedArray32(sender_identity_key.verifying_key().to_bytes()),
-        sender_ephemeral_key:FixedArray32(*ephemeral_public.as_bytes()),
+        sender_ephemeral_key: FixedArray32(*ephemeral_public.as_bytes()),
         receiver_prekey_bundle,
         timestamp: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -93,7 +103,7 @@ pub fn kdf(
     dh3: [u8; 32],
     dh4: Option<[u8; 32]>,
 ) -> [u8; 32] {
-    let mut hasher = Sha512::new();
+    let mut hasher = Sha256::new();
     hasher.update(dh1);
     hasher.update(dh2);
     hasher.update(dh3);
@@ -115,6 +125,13 @@ pub fn validate_signed_prekey(
     verifying_key.verify(signed_prekey, &Signature::from(signature)).is_ok()
 }
 
+// Deserialize a `SignedPrekey` and convert back to `VerifyingKey` and `Signature`
+pub fn deserialize_signed_prekey(data: &SignedPrekey) -> Result<(VerifyingKey, Signature), ed25519_dalek::SignatureError> {
+    let verifying_key = VerifyingKey::from_bytes(&data.verifying_key.0)?;
+    let signature = Signature::from_bytes(&data.signature.0);
+    Ok((verifying_key, signature))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -129,18 +146,19 @@ mod tests {
 
     #[test]
     fn test_generate_signed_prekey() {
-        let (identity_key, _) = generate_identity_keypair();
-        let (signing_key, verifying_key, signature) = generate_signed_prekey(&identity_key);
+        let (private_identity_key, public_identity_key) = generate_identity_keypair();
+        let (signing_key, signed_prekey) = generate_signed_prekey(&private_identity_key);
 
-        // Verify the signed prekey's signature
-        assert!(identity_key
-            .verifying_key()
-            .verify(verifying_key.as_bytes(), &signature)
-            .is_ok());
+        // Check that the serialized arrays have the correct lengths
+        assert_eq!(signed_prekey.verifying_key.0.len(), 32);
+        assert_eq!(signed_prekey.signature.0.len(), 64);
 
-        assert_eq!(signing_key.to_bytes().len(), 32, "SigningKey should be 32 bytes");
-        assert_eq!(verifying_key.to_bytes().len(), 32, "VerifyingKey should be 32 bytes");
+        // Deserialize and verify the key and signature
+        let (verify_key, signature) = deserialize_signed_prekey(&signed_prekey).unwrap();
+        assert_eq!(verify_key.to_bytes(), signed_prekey.verifying_key.0);
+        assert!(private_identity_key.verify(&verify_key.to_bytes(), &signature).is_ok());
     }
+
 
     #[test]
     fn test_generate_one_time_prekey() {
@@ -152,13 +170,13 @@ mod tests {
     #[test]
     fn test_generate_prekey_bundle() {
         let (identity_key, _) = generate_identity_keypair();
-        let (signed_prekey_signing, signed_prekey_verifying, signature) =
-            generate_signed_prekey(&identity_key);
-        let one_time_prekey = Some(generate_one_time_prekey());
+        let (signing_key, signed_prekey) = generate_signed_prekey(&identity_key);
 
+        let one_time_prekey = Some(generate_one_time_prekey());
+        let (verify_key, signature) = deserialize_signed_prekey(&signed_prekey).unwrap();
         let bundle = generate_prekey_bundle(
             &identity_key,
-            (signed_prekey_signing, signed_prekey_verifying, signature),
+            (signing_key, verify_key, signature),
             one_time_prekey,
         );
 
@@ -174,13 +192,15 @@ mod tests {
     #[test]
     fn test_prekey_bundle_serialization() {
         let (identity_key, _) = generate_identity_keypair();
-        let (signed_prekey_signing, signed_prekey_verifying, signature) =
-            generate_signed_prekey(&identity_key);
+        let (signing_key, signed_prekey) = generate_signed_prekey(&identity_key);
+
         let one_time_prekey = Some(generate_one_time_prekey());
+
+        let (verify_key, signature) = deserialize_signed_prekey(&signed_prekey).unwrap();
 
         let bundle = generate_prekey_bundle(
             &identity_key,
-            (signed_prekey_signing, signed_prekey_verifying, signature),
+            (signing_key, verify_key, signature),
             one_time_prekey,
         );
 

@@ -1,3 +1,5 @@
+mod server;
+
 use log::debug;
 
 pub fn run() {

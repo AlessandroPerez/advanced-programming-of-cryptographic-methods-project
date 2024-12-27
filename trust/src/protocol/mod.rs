@@ -1,2 +1,2 @@
-mod x3dh;
+pub mod x3dh;
 mod utils;

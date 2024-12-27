@@ -1,6 +1,7 @@
 use log::{self, error, debug};
 
 mod tui;
+mod client;
 
 pub fn run() {
     debug!("Starting client...");
