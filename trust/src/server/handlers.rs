@@ -17,11 +17,13 @@ pub async fn register_handler(
     state: ServerState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
 
+    // check if the request contains the required fields
     let username = data["username"]
         .as_str()
         .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
-    if state.get_user(&username).is_some() {
+    // check if the user already exists
+    if state.get_user(username).is_some() {
         return Err(warp::reject::custom(UserAlreadyExists));
     }
 
@@ -29,6 +31,7 @@ pub async fn register_handler(
         .as_str()
         .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
+    // the password is hashed and salted before storing
     let password = hash(password, DEFAULT_COST).unwrap();
 
     let bundle = KeyBundle::new(
