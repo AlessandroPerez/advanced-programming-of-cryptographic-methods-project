@@ -22,14 +22,18 @@ pub async fn register_handler(
         .as_str()
         .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
+    let password = data["password"]
+        .as_str()
+        .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
+
+    if username.is_empty() || password.is_empty() {
+        return Err(warp::reject::custom(InvalidParameter));
+    }
+
     // check if the user already exists
     if state.get_user(username).is_some() {
         return Err(warp::reject::custom(UserAlreadyExists));
     }
-
-    let password = data["password"]
-        .as_str()
-        .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
     // the password is hashed and salted before storing
     let password = hash(password, DEFAULT_COST).unwrap();
