@@ -1,25 +1,11 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::path::Path;
 use warp::Filter;
+use crate::server::handlers::{register_handler};
+use crate::server::state::ServerState;
 
-#[derive(Clone)]
-struct ServerState {
-    user_data: Arc<Mutex<HashMap<String, KeyBundle>>>,
-}
+pub async fn start_server() {
+    let state = ServerState::new();
 
-#[derive(Debug, Clone)]
-struct KeyBundle {
-    identity_key: [u8; 32],
-    signed_prekey: [u8; 32],
-    signature: [u8; 64],
-    one_time_prekey: [u8; 32],
-}
-
-#[tokio::main]
-async fn main() {
-    let state = ServerState {
-        user_data: Arc::new(Mutex::new(HashMap::new())),
-    };
     let state_filter = warp::any().map(move || state.clone());
 
     let register = warp::post()
@@ -28,26 +14,28 @@ async fn main() {
         .and(state_filter)
         .and_then(register_handler);
 
-    warp::serve(register).run(([127, 0, 0, 1], 1337)).await;
+    // Example route
+    let hello_route = warp::path("hello")
+        .and(warp::get())
+        .map(|| warp::reply::html("Hello, secure world!"));
+
+    let routes = hello_route.or(register);
+
+    let parent_dir = env!("CARGO_MANIFEST_DIR");
+    let cert_path = Path::new(&parent_dir).join("certs/cert.pem");
+    let key_path = Path::new(&parent_dir).join("certs/key.rsa");
+
+    warp::serve(routes)
+        .tls()
+        .cert_path(cert_path)
+        .key_path(key_path)
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 }
 
-async fn register_handler(
-    data: serde_json::Value,
-    state: ServerState,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    let username = data["username"].as_str().unwrap();
-    let bundle = KeyBundle {
-        identity_key: data["identity_key"].as_array().unwrap().clone().try_into()?,
-        signed_prekey: data["signed_prekey"].as_array().unwrap().clone().try_into()?,
-        signature: data["signature"].as_array().unwrap().clone().try_into()?,
-        one_time_prekey: data["one_time_prekey"].as_array().unwrap().clone().try_into()?,
-    };
 
-    state
-        .user_data
-        .lock()
-        .unwrap()
-        .insert(username.to_string(), bundle);
 
-    Ok(warp::reply::json(&serde_json::json!({"status": "ok"})))
-}
+
+
+
+

@@ -21,4 +21,5 @@ serde_bytes = "0.11.15"
 hmac = "0.12.1"
 base64 = "0.22.1"
 reqwest = { version = "0.12.10", features = ["json"] }
-warp = "0.3.7"
+warp = { version = "0.3.7", features = ["tls"] }
+rustls-pemfile = "2.2.0"

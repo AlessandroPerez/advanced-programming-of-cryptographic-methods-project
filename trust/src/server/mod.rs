@@ -1,8 +1,6 @@
-mod server;
+pub mod server;
+mod utils;
+mod handlers;
+mod state;
 
-use log::debug;
 
-pub fn run() {
-    debug!("Starting server...");
-    todo!();
-}
