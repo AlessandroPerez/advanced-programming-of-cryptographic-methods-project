@@ -15,11 +15,11 @@ pub async fn start_server() {
         .and_then(register_handler);
 
     // Example route
-    let hello_route = warp::path("hello")
+    let hello = warp::path("hello")
         .and(warp::get())
         .map(|| warp::reply::html("Hello, secure world!"));
 
-    let routes = hello_route.or(register);
+    let routes = hello.or(register);
 
     let parent_dir = env!("CARGO_MANIFEST_DIR");
     let cert_path = Path::new(&parent_dir).join("certs/cert.pem");

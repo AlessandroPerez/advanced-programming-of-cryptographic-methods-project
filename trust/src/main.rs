@@ -27,6 +27,7 @@ async fn main() {
 
             let payload = serde_json::json!({
                 "username": "test_user",
+                "password": "test_password",
                 "identity_key": vec![0; 32],       // Use `vec![0; 32]` for a 32-byte array
                 "signed_prekey": vec![0; 32],
                 "signature": vec![0; 64],         // Use `vec![0; 64]` for a 64-byte array

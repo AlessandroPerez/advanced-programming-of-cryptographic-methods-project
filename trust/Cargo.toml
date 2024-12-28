@@ -23,3 +23,5 @@ base64 = "0.22.1"
 reqwest = { version = "0.12.10", features = ["json"] }
 warp = { version = "0.3.7", features = ["tls"] }
 rustls-pemfile = "2.2.0"
+bcrypt = "0.16.0"
+hex = "0.4.3"
