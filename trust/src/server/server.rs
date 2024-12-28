@@ -2,6 +2,7 @@ use std::path::Path;
 use warp::Filter;
 use crate::server::handlers::{register_handler};
 use crate::server::state::ServerState;
+use crate::server::utils::handle_rejection;
 
 pub async fn start_server() {
     let state = ServerState::new();
@@ -12,7 +13,8 @@ pub async fn start_server() {
         .and(warp::path("register"))
         .and(warp::body::json())
         .and(state_filter)
-        .and_then(register_handler);
+        .and_then(register_handler)
+        .recover(handle_rejection);
 
     // Example route
     let hello = warp::path("hello")

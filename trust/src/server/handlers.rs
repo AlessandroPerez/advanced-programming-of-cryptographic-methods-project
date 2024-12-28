@@ -1,6 +1,6 @@
 use bcrypt::{hash, DEFAULT_COST};
 use serde::Serialize;
-use crate::server::utils::{parse_key_array, parse_key_array64, DeserializationError};
+use crate::server::utils::{parse_key_array, parse_key_array64, InvalidParameter, UserAlreadyExists};
 use crate::server::state::KeyBundle;
 use crate::server::state::ServerState;
 use crate::server::utils::User;
@@ -19,18 +19,15 @@ pub async fn register_handler(
 
     let username = data["username"]
         .as_str()
-        .ok_or_else(|| warp::reject::custom(DeserializationError))?;
+        .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
-    if state.get_user(username).is_some() {
-        return Ok(warp::reply::json(&RegistrationResponse {
-            status: "error".to_string(),
-            message: "Username already exists.".to_string(),
-        }));
+    if state.get_user(&username).is_some() {
+        return Err(warp::reject::custom(UserAlreadyExists));
     }
 
     let password = data["password"]
         .as_str()
-        .ok_or_else(|| warp::reject::custom(DeserializationError))?;
+        .ok_or_else(|| warp::reject::custom(InvalidParameter))?;
 
     let password = hash(password, DEFAULT_COST).unwrap();
 

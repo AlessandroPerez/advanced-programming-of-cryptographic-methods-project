@@ -4,7 +4,7 @@ use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 use serde::{Serialize, Deserialize};
 use serde_bytes;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Deserialize)]
 pub struct FixedArray64(#[serde(with = "serde_bytes")] pub [u8; 64]);

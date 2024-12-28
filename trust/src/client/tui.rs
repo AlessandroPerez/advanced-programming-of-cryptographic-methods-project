@@ -1,5 +1,5 @@
 use std::io;
-
+#[allow(unused_imports)]
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     buffer::Buffer,

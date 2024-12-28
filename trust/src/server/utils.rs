@@ -1,4 +1,5 @@
 use crate::server::state::KeyBundle;
+use warp::{reply, Reply, reject, Rejection, http::StatusCode};
 
 #[derive(Clone)]
 pub struct User {
@@ -66,4 +67,48 @@ pub fn parse_key_array64(value: &serde_json::Value) -> Result<[u8; 64], warp::Re
 #[derive(Debug)]
 pub struct DeserializationError;
 
-impl warp::reject::Reject for DeserializationError {}
+impl reject::Reject for DeserializationError {}
+
+#[derive(Debug)]
+pub struct InvalidParameter;
+impl reject::Reject for InvalidParameter {}
+
+#[derive(Debug)]
+pub struct UserNotFound;
+impl reject::Reject for UserNotFound {}
+
+#[derive(Debug)]
+pub struct UserAlreadyExists;
+impl reject::Reject for UserAlreadyExists {}
+
+pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
+    let code;
+    let message;
+
+    if err.is_not_found() {
+        code = StatusCode::NOT_FOUND;
+        message = "Not Found";
+    } else if let Some(DeserializationError) = err.find() {
+        code = StatusCode::BAD_REQUEST;
+        message = "Invalid JSON";
+    } else if let Some(InvalidParameter) = err.find() {
+        code = StatusCode::BAD_REQUEST;
+        message = "Invalid parameter";
+    } else if let Some(UserNotFound) = err.find() {
+        code = StatusCode::NOT_FOUND;
+        message = "User not found";
+    } else if let Some(UserAlreadyExists) = err.find() {
+        code = StatusCode::CONFLICT;
+        message = "User already exists";
+    } else {
+        eprintln!("unhandled rejection: {:?}", err);
+        code = StatusCode::INTERNAL_SERVER_ERROR;
+        message = "Internal Server Error";
+    }
+
+    Ok(reply::with_status(reply::json(&message), code))
+}
+
+
+
+

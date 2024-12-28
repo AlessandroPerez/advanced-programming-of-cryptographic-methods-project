@@ -6,7 +6,6 @@ mod server;
 use std::env;
 use log::error;
 use reqwest::Client;
-use tokio::main;
 use crate::server::server::start_server;
 
 #[tokio::main]
