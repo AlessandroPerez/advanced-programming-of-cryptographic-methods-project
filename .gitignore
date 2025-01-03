@@ -1,4 +1,8 @@
 .idea/
 tui/target/
 protocol/target/
+
 *.pem
+
+**/.vscode/
+**/__pycache__/

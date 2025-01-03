@@ -1,13 +1,15 @@
-from os.path import join
+from os.path import join, dirname, abspath
 from os import getcwd
 
 HOST = "0.0.0.0"
 PORT = 5000
 
-TEMPLATE_FOLDER = join(getcwd(), "app", "templates")
-STATIC_FOLDER = join(getcwd(), "app", "static")
+ROOT = dirname(abspath(__file__))
 
-CERTS = join(getcwd(), "certs")
+TEMPLATE_FOLDER = join(ROOT, "templates")
+STATIC_FOLDER = join(ROOT, "static")
+
+CERTS = join(dirname(ROOT), "certs")
 CERT_PEM = join(CERTS, "cert.pem")
 KEY_PEM = join(CERTS, "key.pem")
 OPENSSL_CONFIG = join(getcwd(), "certs", "openssl.cnf")
