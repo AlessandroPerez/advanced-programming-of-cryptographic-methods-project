@@ -1,0 +1,72 @@
+@import url(https://fonts.googleapis.com/css?family=Khula:700);
+
+body {
+    background: #000000;
+    font-family: "Press Start 2P";
+    user-select: none;
+    overflow: hidden;
+    margin: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+.hidden {
+    opacity: 0;
+}
+
+.console-container {
+    font-size: 4em;
+    text-align: center;
+    height: 200px;
+    width: 1800px;
+    display: block;
+    position: absolute;
+    color: white;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    line-height: 1.5;
+}
+
+.console-underscore {
+    display: inline-block;
+    position: relative;
+    top: -0.14em;
+    left: 10px;
+}
+
+footer {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    text-align: center;
+    color: white;
+}
+
+a {
+    color: #ffffff;
+}
+
+.fa {
+    color: #E90606;
+    margin: 0 3px;
+    font-size: 15px;
+    animation: pound 0.35s infinite alternate;
+    -webkit-animation: pound 0.35s infinite alternate;
+}
+
+@-webkit-keyframes pound {
+    to {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes pound {
+    to {
+        transform: scale(1.1);
+    }
+}
