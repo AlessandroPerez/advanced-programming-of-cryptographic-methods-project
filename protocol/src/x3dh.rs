@@ -23,8 +23,6 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     // process the prekey bundle
     bundle.ik.verify(&bundle.sig, &bundle.spk.0)?;
 
-    let pk = PrivateKey::from(&ik);
-
     let ik_b = PublicKey::from(&bundle.ik);
     // create ephemeral private key
     let ek = PrivateKey::new();
@@ -32,7 +30,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     let p_ek = PublicKey::from(&ek);
 
     // DH1 = DH(IKA, SPKB)
-    let dh1 = pk.diffie_hellman(&bundle.spk);
+    let dh1 = ik.diffie_hellman(&bundle.spk);
     // DH2 = DH(EKA, IKB)
     let dh2 = ek.diffie_hellman(&ik_b);
     // DH3 = DH(EKA, SPKB)
@@ -141,6 +139,4 @@ mod tests {
             initial_message.size()
         );
     }
-
-
 }

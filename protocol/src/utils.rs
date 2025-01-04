@@ -172,6 +172,13 @@ impl IdentityPrivateKey {
         let signature = dalek_private_key.sign(message);
         Signature(signature.to_bytes())
     }
+
+    pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
+        let dalek_private_key = StaticSecret::from(self.0);
+        let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
+        let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
+        SharedSecret(shared_secret.to_bytes())
+    }
 }
 
 /* PUBLIC KEY */
