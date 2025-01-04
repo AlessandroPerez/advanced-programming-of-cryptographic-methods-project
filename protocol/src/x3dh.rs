@@ -14,16 +14,17 @@ use crate::utils::{
     PublicKey,
     SharedSecret
 };
-pub(crate) fn generate_prekey_bundle(ik: &IdentityPrivateKey, spk: PublicKey) -> PreKeyBundle {
+pub(crate) fn generate_prekey_bundle(ik: &PrivateKey, spk: PublicKey) -> PreKeyBundle {
     PreKeyBundle::new(&ik, spk)
 }
 
-pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle)
+pub(crate) fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
     -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
     // process the prekey bundle
-    bundle.ik.verify(&bundle.sig, &bundle.spk.0)?;
 
-    let ik_b = PublicKey::from(&bundle.ik);
+    bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
+
+
     // create ephemeral private key
     let ek = PrivateKey::new();
     // create ephemeral public key
@@ -32,7 +33,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     // DH1 = DH(IKA, SPKB)
     let dh1 = ik.diffie_hellman(&bundle.spk);
     // DH2 = DH(EKA, IKB)
-    let dh2 = ek.diffie_hellman(&ik_b);
+    let dh2 = ek.diffie_hellman(&bundle.ik);
     // DH3 = DH(EKA, SPKB)
     let dh3 = ek.diffie_hellman(&bundle.spk);
 
@@ -43,6 +44,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
         dh2,
         dh3,
         if !bundle.otpk.is_empty() {
+            // DH4 = DH(EKA, OTPK)
             Some(ek.diffie_hellman(&bundle.otpk[0]))
         } else {
             None
@@ -51,7 +53,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
 
     let ad = AssociatedData {
         initiator_identity_key: PublicKey::from(&ik),
-        responder_identity_key: PublicKey::from(&bundle.ik),
+        responder_identity_key: bundle.ik,
     };
 
     Ok(
@@ -97,14 +99,47 @@ fn hkdf(
     Ok((shared_key1, shared_key2))
 }
 
+pub(crate) fn process_initial_message(
+    identity_key: PrivateKey,
+    signed_prekey: PrivateKey,
+    one_time_prekey: Option<PrivateKey>,
+    msg: InitialMessage,
+) -> Result<(EncryptionKey, DecryptionKey), X3DHError> {
+    // DH1 = DH(SPKB, IKA)
+    let dh1 = signed_prekey.diffie_hellman(&msg.identity_key);
+    // DH2 = DH(IKB, EKA)
+    let dh2 = identity_key.diffie_hellman(&msg.ephemeral_key);
+    // DH3 = DH(SPKB, EKA)
+    let dh3 = signed_prekey.diffie_hellman(&msg.ephemeral_key);
+
+    let (sk1, sk2) = hkdf(
+        "X3DH".to_string(),
+        dh1,
+        dh2,
+        dh3,
+        if msg.one_time_key_hash.is_some() {
+            // DH4 = DH(OTPK, EKA)
+            let dh4 = one_time_prekey.unwrap().diffie_hellman(&msg.ephemeral_key);
+            Some(dh4)
+        } else {
+            None
+        },
+    )?;
+    Ok((
+        EncryptionKey::from(sk2),
+        DecryptionKey::from(sk1),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::convert::TryFrom;
+    use crate::constants::{CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
 
     #[test]
     fn test_generate_prekey_bundle() {
-        let identity_key = IdentityPrivateKey::new();
+        let identity_key = PrivateKey::new();
         let prekey = PrivateKey::new();
         let prekey_pub = PublicKey::from(prekey);
         let pb1 = generate_prekey_bundle(&identity_key, prekey_pub);
@@ -118,12 +153,11 @@ mod tests {
 
     #[test]
     fn test_process_prekey_bundle() {
-        let identity_key = IdentityPrivateKey::new();
+        let identity_key = PrivateKey::new();
         let identity_key_pub = PublicKey::from(&identity_key);
         let prekey = PrivateKey::new();
         let prekey_pub = PublicKey::from(prekey);
         let pb = generate_prekey_bundle(&identity_key, prekey_pub);
-
         let (initial_message, encryption_key, decryption_key) =
             process_prekey_bundle(identity_key, pb).unwrap();
         assert_eq!(
@@ -136,7 +170,45 @@ mod tests {
         let im_bytes = initial_message.clone().to_bytes();
         assert_eq!(
             im_bytes.len(),
-            initial_message.size()
+            4 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH
         );
+
+        assert_eq!(
+            initial_message.size(),
+            4 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH
+        );
+    }
+
+    #[test]
+    fn test_process_initial_message() {
+        // Bob creates a prekey bundle and sends it to Alice
+        let bob_identity_key = PrivateKey::new();
+        let bob_prekey = PrivateKey::new();
+        let bob_prekey_pub = PublicKey::from(&bob_prekey);
+        let pb = generate_prekey_bundle(&bob_identity_key, bob_prekey_pub);
+
+        // Alice processes the prekey bundle and sends an initial message to Bob
+        let alice_identity_key = PrivateKey::new();
+        let (initial_message, encryption_key1, decryption_key1) =
+            process_prekey_bundle(alice_identity_key, pb).unwrap();
+
+        // Bob processes the initial message and creates a shared key
+        let (encryption_key2, decryption_key2) =
+            process_initial_message(bob_identity_key, bob_prekey, None, initial_message.clone()).unwrap();
+        assert_eq!(encryption_key1.as_ref(), decryption_key2.as_ref());
+        assert_eq!(decryption_key1.as_ref(), encryption_key2.as_ref());
+
+        let data = b"Hello World!";
+        let nonce = b"12byte_nonce";
+        let aad = initial_message.associated_data;
+        let cipher_text = encryption_key1.encrypt(data, nonce, &aad).unwrap();
+        let clear_text = decryption_key2.decrypt(&cipher_text, nonce, &aad).unwrap();
+        assert_eq!(data.to_vec(), clear_text);
+    }
+
+    #[test]
+    fn test() {
+        let ik = IdentityPrivateKey::new();
+        assert_eq!(PublicKey::from(&ik).as_ref(), PublicKey::from(ik).as_ref());
     }
 }

@@ -16,7 +16,8 @@ use sha2::{Digest, Sha256};
 /* PREKEY BUNDLE */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PreKeyBundle {
-    pub(crate) ik: IdentityPublicKey,       // identity key
+    pub(crate) verifying_key: IdentityPublicKey,
+    pub(crate) ik: PublicKey,       // identity key
     pub(crate) spk: PublicKey,              // signed prekey
     pub(crate) sig: Signature,              // signature
     pub(crate) otpk: Vec<PublicKey>         // one-time prekeys
@@ -24,10 +25,12 @@ pub struct PreKeyBundle {
 
 impl PreKeyBundle {
     pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
-    pub fn new(ik: &IdentityPrivateKey, spk: PublicKey) -> Self {
-        let sig = ik.sign(&spk.0);
+    pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
+        let ik_signing = IdentityPrivateKey::from(ik);
+        let sig = ik_signing.sign(&spk.0);
         PreKeyBundle {
-            ik: IdentityPublicKey::from(ik),
+            verifying_key: IdentityPublicKey::from(&ik_signing),
+            ik: PublicKey::from(ik),
             spk,
             sig,
             otpk: vec![]
@@ -71,6 +74,7 @@ impl TryFrom<String> for PreKeyBundle {
             return Err(X3DHError::InvalidPreKeyBundle);
         }
 
+        let verifying_key = IdentityPublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
         let identity_key = PublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
         let signed_prekey = PublicKey(*array_ref![
             bytes,
@@ -90,14 +94,16 @@ impl TryFrom<String> for PreKeyBundle {
                 one_time_keys.push(one_time_prekey);
             }
             Ok(Self {
-                ik: IdentityPublicKey(identity_key.0),
+                verifying_key,
+                ik: identity_key,
                 spk: signed_prekey,
                 sig: prekey_signature,
                 otpk: one_time_keys
             })
         } else {
             Ok(Self {
-                ik: IdentityPublicKey(identity_key.0),
+                verifying_key,
+                ik: identity_key,
                 spk: signed_prekey,
                 sig: prekey_signature,
                 otpk: vec![]
@@ -143,6 +149,20 @@ impl From<&IdentityPrivateKey> for IdentityPublicKey {
     }
 }
 
+impl From<PublicKey> for IdentityPublicKey {
+    fn from(public_key: PublicKey) -> IdentityPublicKey {
+        IdentityPublicKey(public_key.0)
+    }
+
+}
+
+impl From<&PublicKey> for IdentityPublicKey {
+    fn from(public_key: &PublicKey) -> IdentityPublicKey {
+        IdentityPublicKey(public_key.0)
+    }
+
+}
+
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for IdentityPublicKey {
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
@@ -178,6 +198,16 @@ impl IdentityPrivateKey {
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
         let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
         SharedSecret(shared_secret.to_bytes())
+    }
+}
+
+impl From<PrivateKey> for IdentityPrivateKey {
+    fn from(private_key: PrivateKey) -> IdentityPrivateKey {
+        IdentityPrivateKey(private_key.0)
+    }
+}impl From<&PrivateKey> for IdentityPrivateKey {
+    fn from(private_key: &PrivateKey) -> IdentityPrivateKey {
+        IdentityPrivateKey(private_key.0)
     }
 }
 
