@@ -352,9 +352,8 @@ pub struct InitialMessage {
 
 impl InitialMessage {
     // the byte size of a prekey bundle
-    pub(crate) const SIZE: usize = CURVE25519_PUBLIC_LENGTH
+    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH
-        + SHA256_HASH_LENGTH
         + SHA256_HASH_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH;
@@ -364,13 +363,19 @@ impl InitialMessage {
         out.extend_from_slice(self.identity_key.0.as_ref());
         out.extend_from_slice(self.ephemeral_key.0.as_ref());
         out.extend_from_slice(self.prekey_hash.0.as_ref());
-        out.extend_from_slice(self.identity_key.0.as_ref());
+        if let Some(one_time_key_hash) = self.one_time_key_hash {
+            out.extend_from_slice(one_time_key_hash.0.as_ref());
+        }
         out.extend_from_slice(self.associated_data.to_bytes().as_ref());
         out
     }
 
     pub fn to_base64(self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
+    }
+
+    pub fn size(&self) -> usize {
+        Self::BASE_SIZE + if self.one_time_key_hash.is_some() {SHA256_HASH_LENGTH} else {0}
     }
 }
 

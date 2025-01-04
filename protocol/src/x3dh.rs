@@ -23,7 +23,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     // process the prekey bundle
     bundle.ik.verify(&bundle.sig, &bundle.spk.0)?;
 
-    let ik = PrivateKey::from(&ik);
+    let pk = PrivateKey::from(&ik);
 
     let ik_b = PublicKey::from(&bundle.ik);
     // create ephemeral private key
@@ -32,7 +32,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     let p_ek = PublicKey::from(&ek);
 
     // DH1 = DH(IKA, SPKB)
-    let dh1 = ik.diffie_hellman(&bundle.spk);
+    let dh1 = pk.diffie_hellman(&bundle.spk);
     // DH2 = DH(EKA, IKB)
     let dh2 = ek.diffie_hellman(&ik_b);
     // DH3 = DH(EKA, SPKB)
@@ -59,7 +59,7 @@ pub(crate) fn process_prekey_bundle(ik: IdentityPrivateKey, bundle: PreKeyBundle
     Ok(
         (
             InitialMessage {
-                identity_key: PublicKey::from(ik),
+                identity_key: PublicKey::from(&ik),
                 ephemeral_key: p_ek,
                 prekey_hash: bundle.spk.hash(),
                 one_time_key_hash: if !bundle.otpk.is_empty() {Some(bundle.otpk[0].hash())} else {None},
@@ -117,4 +117,30 @@ mod tests {
         let pb2 = PreKeyBundle::try_from(pb1_base64).unwrap();
         assert_eq!(pb2.spk.as_ref(), pb1.spk.as_ref());
     }
+
+    #[test]
+    fn test_process_prekey_bundle() {
+        let identity_key = IdentityPrivateKey::new();
+        let identity_key_pub = PublicKey::from(&identity_key);
+        let prekey = PrivateKey::new();
+        let prekey_pub = PublicKey::from(prekey);
+        let pb = generate_prekey_bundle(&identity_key, prekey_pub);
+
+        let (initial_message, encryption_key, decryption_key) =
+            process_prekey_bundle(identity_key, pb).unwrap();
+        assert_eq!(
+            initial_message.identity_key.as_ref(),
+            identity_key_pub.as_ref()
+        );
+        assert_eq!(encryption_key.as_ref().len(), AES256_SECRET_LENGTH);
+        assert_eq!(decryption_key.as_ref().len(), AES256_SECRET_LENGTH);
+
+        let im_bytes = initial_message.clone().to_bytes();
+        assert_eq!(
+            im_bytes.len(),
+            initial_message.size()
+        );
+    }
+
+
 }
