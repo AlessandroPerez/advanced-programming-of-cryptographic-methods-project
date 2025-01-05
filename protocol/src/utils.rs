@@ -9,7 +9,14 @@ use serde::{Deserialize, Serialize};
 use serde_bytes;
 use x25519_dalek::StaticSecret;
 use zeroize::{Zeroize, ZeroizeOnDrop};
-use crate::constants::{CURVE25519_PUBLIC_LENGTH, SIGNATURE_LENGTH, AES256_SECRET_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, AES256_NONCE_LENGTH};
+use crate::constants::{
+    CURVE25519_PUBLIC_LENGTH,
+    SIGNATURE_LENGTH,
+    AES256_SECRET_LENGTH,
+    CURVE25519_SECRET_LENGTH,
+    SHA256_HASH_LENGTH,
+    AES256_NONCE_LENGTH
+};
 use crate::errors::X3DHError;
 use base64::{Engine as _, engine:: general_purpose};
 use sha2::{Digest, Sha256};
@@ -20,9 +27,9 @@ use sha2::{Digest, Sha256};
 pub struct PreKeyBundle {
     pub(crate) verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
     pub(crate) ik: PublicKey,               // identity key
-    pub(crate) spk: PublicKey,              // signed prekey
+    pub(crate) spk: PublicKey,              // signed pre-key
     pub(crate) sig: Signature,              // signature
-    pub(crate) otpk: Vec<PublicKey>         // one-time prekeys
+    pub(crate) otpk: Vec<PublicKey>         // one-time pre-keys
 }
 
 impl PreKeyBundle {
@@ -36,6 +43,18 @@ impl PreKeyBundle {
             spk,
             sig,
             otpk: vec![]
+        }
+    }
+
+    pub fn new_with_otpk(ik: &PrivateKey, spk: PublicKey, otpk: Vec<PublicKey>) -> Self {
+        let ik_signing = SigningKey::from(ik);
+        let sig = ik_signing.sign(&spk.0);
+        PreKeyBundle {
+            verifying_key: VerifyingKey::from(&ik_signing),
+            ik: PublicKey::from(ik),
+            spk,
+            sig,
+            otpk
         }
     }
 
@@ -416,6 +435,8 @@ impl InitialMessage {
         + CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH;
 
+    pub(crate) const SIZE_WITH_OTPK: usize = Self::BASE_SIZE + SHA256_HASH_LENGTH;
+
     pub fn to_bytes(self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.identity_key.0.as_ref());
@@ -433,7 +454,67 @@ impl InitialMessage {
     }
 
     pub fn size(&self) -> usize {
-        Self::BASE_SIZE + if self.one_time_key_hash.is_some() {SHA256_HASH_LENGTH} else {0}
+        if self.one_time_key_hash.is_some() {
+            Self::SIZE_WITH_OTPK
+        } else {
+            Self::BASE_SIZE
+        }
+    }
+}
+
+impl TryFrom<String> for InitialMessage {
+    type Error = X3DHError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let bytes = general_purpose::STANDARD.decode(value)?;
+        if bytes.len() != Self::BASE_SIZE && bytes.len() != Self::SIZE_WITH_OTPK {
+            return Err(X3DHError::InvalidInitialMessage);
+        }
+
+        let identity_key = PublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
+        let ephemeral_key = PublicKey(*array_ref![
+            bytes,
+            CURVE25519_PUBLIC_LENGTH,
+            CURVE25519_PUBLIC_LENGTH
+        ]);
+        let prekey_hash = Sha256Hash(*array_ref![
+            bytes,
+            2 * CURVE25519_PUBLIC_LENGTH,
+            SHA256_HASH_LENGTH
+        ]);
+
+        if bytes.len() == Self::SIZE_WITH_OTPK {
+            let one_time_key_hash = Sha256Hash(*array_ref![
+                bytes,
+                2 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH,
+                SHA256_HASH_LENGTH
+            ]);
+            let associated_data = AssociatedData::try_from(array_ref![
+                bytes,
+                2 * CURVE25519_PUBLIC_LENGTH + 2 * SHA256_HASH_LENGTH,
+                2 * CURVE25519_PUBLIC_LENGTH
+            ])?;
+
+            Ok(Self {
+                identity_key,
+                ephemeral_key,
+                prekey_hash,
+                one_time_key_hash: Some(one_time_key_hash),
+                associated_data,
+            })
+        } else {
+            let associated_data = AssociatedData::try_from(array_ref![
+                bytes,
+                2 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH,
+                2 * CURVE25519_PUBLIC_LENGTH
+            ])?;
+            Ok(Self {
+                identity_key,
+                ephemeral_key,
+                prekey_hash,
+                one_time_key_hash: None,
+                associated_data,
+            })
+        }
     }
 }
 
@@ -504,8 +585,6 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for DecryptionKey {
         &self.0
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

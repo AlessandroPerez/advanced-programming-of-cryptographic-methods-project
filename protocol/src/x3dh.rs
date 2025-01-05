@@ -11,11 +11,12 @@ use crate::utils::{
     PreKeyBundle,
     PrivateKey,
     PublicKey,
-    SharedSecret
+    SharedSecret,
+    SignedPreKey
 };
 
 
-pub(crate) fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
+pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
     -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
     // process the prekey bundle
 
@@ -96,7 +97,7 @@ fn hkdf(
     Ok((shared_key1, shared_key2))
 }
 
-pub(crate) fn process_initial_message(
+pub fn process_initial_message(
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
     one_time_prekey: Option<PrivateKey>,

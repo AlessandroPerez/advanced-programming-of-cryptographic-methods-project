@@ -1,4 +1,5 @@
+#![allow(warnings)]
 mod utils;
 mod constants;
-mod x3dh;
+pub mod x3dh;
 mod errors;
