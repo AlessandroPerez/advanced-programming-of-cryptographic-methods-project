@@ -15,6 +15,41 @@ use crate::utils::{
     SignedPreKey
 };
 
+pub fn generate_prekey_bundle()
+    -> (PreKeyBundle, PrivateKey, PrivateKey) {
+    // generate identity key
+    let identity_key = PrivateKey::new();
+    // generate signed prekey
+    let signed_prekey = SignedPreKey::new();
+    // create prekey bundle
+    (
+        PreKeyBundle::new(&identity_key, signed_prekey.public_key),
+        identity_key,
+        signed_prekey.private_key
+    )
+}
+
+pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>) {
+
+    let mut otpk_private = Vec::new();
+    let mut otpk_public = Vec::new();
+    for _ in 0..n {
+        let otpk_private_key = PrivateKey::new();
+        otpk_public.push(PublicKey::from(&otpk_private_key));
+        otpk_private.push(otpk_private_key);
+    }
+
+    let ik = PrivateKey::new();
+    let spk = SignedPreKey::new();
+    let pb = PreKeyBundle::new_with_otpk(
+        &ik,
+        spk.public_key,
+        otpk_public
+    );
+
+    (pb, ik, spk.private_key, otpk_private)
+}
+
 
 pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
     -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
