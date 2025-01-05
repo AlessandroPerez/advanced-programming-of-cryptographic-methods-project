@@ -7,16 +7,13 @@ use crate::utils::{
     AssociatedData,
     DecryptionKey,
     EncryptionKey,
-    IdentityPrivateKey,
     InitialMessage,
     PreKeyBundle,
     PrivateKey,
     PublicKey,
     SharedSecret
 };
-pub(crate) fn generate_prekey_bundle(ik: &PrivateKey, spk: PublicKey) -> PreKeyBundle {
-    PreKeyBundle::new(&ik, spk)
-}
+
 
 pub(crate) fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
     -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
@@ -136,13 +133,13 @@ mod tests {
     use super::*;
     use std::convert::TryFrom;
     use crate::constants::{CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
+    use crate::utils::SignedPreKey;
 
     #[test]
     fn test_generate_prekey_bundle() {
         let identity_key = PrivateKey::new();
-        let prekey = PrivateKey::new();
-        let prekey_pub = PublicKey::from(prekey);
-        let pb1 = generate_prekey_bundle(&identity_key, prekey_pub);
+        let prekey = SignedPreKey::new();
+        let pb1 = PreKeyBundle::new(&identity_key, prekey.public_key);
         let pb1_bytes = pb1.to_bytes();
         assert_eq!(pb1_bytes.len(), pb1.size());
 
@@ -155,9 +152,8 @@ mod tests {
     fn test_process_prekey_bundle() {
         let identity_key = PrivateKey::new();
         let identity_key_pub = PublicKey::from(&identity_key);
-        let prekey = PrivateKey::new();
-        let prekey_pub = PublicKey::from(prekey);
-        let pb = generate_prekey_bundle(&identity_key, prekey_pub);
+        let prekey = SignedPreKey::new();
+        let pb = PreKeyBundle::new(&identity_key, prekey.public_key);
         let (initial_message, encryption_key, decryption_key) =
             process_prekey_bundle(identity_key, pb).unwrap();
         assert_eq!(
@@ -183,9 +179,8 @@ mod tests {
     fn test_process_initial_message() {
         // Bob creates a prekey bundle and sends it to Alice
         let bob_identity_key = PrivateKey::new();
-        let bob_prekey = PrivateKey::new();
-        let bob_prekey_pub = PublicKey::from(&bob_prekey);
-        let pb = generate_prekey_bundle(&bob_identity_key, bob_prekey_pub);
+        let bob_prekey = SignedPreKey::new();
+        let pb = PreKeyBundle::new(&bob_identity_key, bob_prekey.public_key);
 
         // Alice processes the prekey bundle and sends an initial message to Bob
         let alice_identity_key = PrivateKey::new();
@@ -193,8 +188,12 @@ mod tests {
             process_prekey_bundle(alice_identity_key, pb).unwrap();
 
         // Bob processes the initial message and creates a shared key
-        let (encryption_key2, decryption_key2) =
-            process_initial_message(bob_identity_key, bob_prekey, None, initial_message.clone()).unwrap();
+        let (encryption_key2, decryption_key2) = process_initial_message(
+            bob_identity_key,
+            bob_prekey.private_key,
+            None,
+            initial_message.clone()
+        ).unwrap();
         assert_eq!(encryption_key1.as_ref(), decryption_key2.as_ref());
         assert_eq!(decryption_key1.as_ref(), encryption_key2.as_ref());
 
@@ -204,11 +203,5 @@ mod tests {
         let cipher_text = encryption_key1.encrypt(data, nonce, &aad).unwrap();
         let clear_text = decryption_key2.decrypt(&cipher_text, nonce, &aad).unwrap();
         assert_eq!(data.to_vec(), clear_text);
-    }
-
-    #[test]
-    fn test() {
-        let ik = IdentityPrivateKey::new();
-        assert_eq!(PublicKey::from(&ik).as_ref(), PublicKey::from(ik).as_ref());
     }
 }

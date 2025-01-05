@@ -13,11 +13,13 @@ use crate::constants::{CURVE25519_PUBLIC_LENGTH, SIGNATURE_LENGTH, AES256_SECRET
 use crate::errors::X3DHError;
 use base64::{Engine as _, engine:: general_purpose};
 use sha2::{Digest, Sha256};
+
+
 /* PREKEY BUNDLE */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PreKeyBundle {
-    pub(crate) verifying_key: IdentityPublicKey,
-    pub(crate) ik: PublicKey,       // identity key
+    pub(crate) verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
+    pub(crate) ik: PublicKey,               // identity key
     pub(crate) spk: PublicKey,              // signed prekey
     pub(crate) sig: Signature,              // signature
     pub(crate) otpk: Vec<PublicKey>         // one-time prekeys
@@ -26,10 +28,10 @@ pub struct PreKeyBundle {
 impl PreKeyBundle {
     pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
     pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
-        let ik_signing = IdentityPrivateKey::from(ik);
+        let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
         PreKeyBundle {
-            verifying_key: IdentityPublicKey::from(&ik_signing),
+            verifying_key: VerifyingKey::from(&ik_signing),
             ik: PublicKey::from(ik),
             spk,
             sig,
@@ -74,7 +76,7 @@ impl TryFrom<String> for PreKeyBundle {
             return Err(X3DHError::InvalidPreKeyBundle);
         }
 
-        let verifying_key = IdentityPublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
+        let verifying_key = VerifyingKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
         let identity_key = PublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
         let signed_prekey = PublicKey(*array_ref![
             bytes,
@@ -131,45 +133,45 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
 /* VERIFYING KEY */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct IdentityPublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub(crate) struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
-impl From<IdentityPrivateKey> for IdentityPublicKey {
-    fn from(private_key: IdentityPrivateKey) -> IdentityPublicKey {
+impl From<SigningKey> for VerifyingKey {
+    fn from(private_key: SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
-        IdentityPublicKey(dalek_public_key.to_bytes())
+        VerifyingKey(dalek_public_key.to_bytes())
     }
 }
 
-impl From<&IdentityPrivateKey> for IdentityPublicKey {
-    fn from(private_key: &IdentityPrivateKey) -> IdentityPublicKey {
+impl From<&SigningKey> for VerifyingKey {
+    fn from(private_key: &SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
-        IdentityPublicKey(dalek_public_key.to_bytes())
+        VerifyingKey(dalek_public_key.to_bytes())
     }
 }
 
-impl From<PublicKey> for IdentityPublicKey {
-    fn from(public_key: PublicKey) -> IdentityPublicKey {
-        IdentityPublicKey(public_key.0)
-    }
-
-}
-
-impl From<&PublicKey> for IdentityPublicKey {
-    fn from(public_key: &PublicKey) -> IdentityPublicKey {
-        IdentityPublicKey(public_key.0)
+impl From<PublicKey> for VerifyingKey {
+    fn from(public_key: PublicKey) -> VerifyingKey {
+        VerifyingKey(public_key.0)
     }
 
 }
 
-impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for IdentityPublicKey {
+impl From<&PublicKey> for VerifyingKey {
+    fn from(public_key: &PublicKey) -> VerifyingKey {
+        VerifyingKey(public_key.0)
+    }
+
+}
+
+impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
 }
 
-impl IdentityPublicKey {
+impl VerifyingKey {
     pub(crate) fn verify(&self, signature: &Signature, message: &[u8]) -> Result<(), ed25519_dalek::SignatureError> {
         let dalek_public_key = ed25519_dalek::VerifyingKey::from_bytes(&self.0)?;
         let dalek_signature = ed25519_dalek::Signature::from(signature.0);
@@ -179,12 +181,12 @@ impl IdentityPublicKey {
 
 /* SIGNING KEY */
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub(crate) struct IdentityPrivateKey([u8; CURVE25519_PUBLIC_LENGTH]);
+pub(crate) struct SigningKey([u8; CURVE25519_PUBLIC_LENGTH]);
 
-impl IdentityPrivateKey {
-    pub(crate) fn new() -> IdentityPrivateKey {
+impl SigningKey {
+    pub(crate) fn new() -> SigningKey {
         let key = ed25519_dalek::SigningKey::generate(&mut OsRng);
-        IdentityPrivateKey(key.to_bytes())
+        SigningKey(key.to_bytes())
     }
 
     pub(crate) fn sign(&self, message: &[u8]) -> Signature {
@@ -201,13 +203,68 @@ impl IdentityPrivateKey {
     }
 }
 
-impl From<PrivateKey> for IdentityPrivateKey {
-    fn from(private_key: PrivateKey) -> IdentityPrivateKey {
-        IdentityPrivateKey(private_key.0)
+impl From<PrivateKey> for SigningKey {
+    fn from(private_key: PrivateKey) -> SigningKey {
+        SigningKey(private_key.0)
     }
-}impl From<&PrivateKey> for IdentityPrivateKey {
-    fn from(private_key: &PrivateKey) -> IdentityPrivateKey {
-        IdentityPrivateKey(private_key.0)
+}impl From<&PrivateKey> for SigningKey {
+    fn from(private_key: &PrivateKey) -> SigningKey {
+        SigningKey(private_key.0)
+    }
+}
+
+/* SIGNED PREKEY */
+#[derive(Clone)]
+pub(crate) struct SignedPreKey {
+    pub(crate) private_key: PrivateKey,
+    pub(crate) public_key: PublicKey,
+}
+
+impl SignedPreKey {
+    pub(crate) fn new() -> SignedPreKey {
+        let private_key = PrivateKey::new();
+        let public_key = PublicKey::from(&private_key);
+        SignedPreKey {
+            private_key,
+            public_key,
+        }
+    }
+}
+
+/* EPHEMERAL PRIVATE KEY */
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+pub(crate) struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
+
+impl PrivateKey {
+    pub(crate) fn new() -> PrivateKey {
+        let key = StaticSecret::random_from_rng(&mut OsRng);
+        PrivateKey(key.to_bytes())
+    }
+    pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
+        let dalek_private_key = StaticSecret::from(self.0);
+        let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
+        let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
+        SharedSecret(shared_secret.to_bytes())
+    }
+}
+
+impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
+    fn as_ref(&self) -> &[u8; CURVE25519_SECRET_LENGTH] {
+        &self.0
+    }
+}
+
+impl From<SigningKey> for PrivateKey {
+    fn from(private_key: SigningKey) -> PrivateKey {
+        let dalek_private_key = StaticSecret::from(private_key.0);
+        PrivateKey(dalek_private_key.to_bytes())
+    }
+}
+
+impl From<&SigningKey> for PrivateKey {
+    fn from(private_key: &SigningKey) -> PrivateKey {
+        let dalek_private_key = StaticSecret::from(private_key.0);
+        PrivateKey(dalek_private_key.to_bytes())
     }
 }
 
@@ -231,28 +288,28 @@ impl From<&PrivateKey> for PublicKey {
     }
 }
 
-impl From<IdentityPublicKey> for PublicKey {
-    fn from(public_key: IdentityPublicKey) -> PublicKey {
+impl From<VerifyingKey> for PublicKey {
+    fn from(public_key: VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
 }
 
-impl From<&IdentityPublicKey> for PublicKey {
-    fn from(public_key: &IdentityPublicKey) -> PublicKey {
+impl From<&VerifyingKey> for PublicKey {
+    fn from(public_key: &VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
 }
 
-impl From<IdentityPrivateKey> for PublicKey {
-    fn from(value: IdentityPrivateKey) -> Self {
-        let key = IdentityPublicKey::from(&value);
+impl From<SigningKey> for PublicKey {
+    fn from(value: SigningKey) -> Self {
+        let key = VerifyingKey::from(&value);
         PublicKey::from(key)
     }
 }
 
-impl From<&IdentityPrivateKey> for PublicKey {
-    fn from(value: &IdentityPrivateKey) -> Self {
-        let key = IdentityPublicKey::from(value);
+impl From<&SigningKey> for PublicKey {
+    fn from(value: &SigningKey) -> Self {
+        let key = VerifyingKey::from(value);
         PublicKey::from(key)
     }
 }
@@ -286,42 +343,6 @@ impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     }
 }
 
-/* EPHEMERAL PRIVATE KEY */
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub(crate) struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
-
-impl PrivateKey {
-    pub(crate) fn new() -> PrivateKey {
-        let key = StaticSecret::random_from_rng(&mut OsRng);
-        PrivateKey(key.to_bytes())
-    }
-    pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
-        let dalek_private_key = StaticSecret::from(self.0);
-        let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
-        let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
-        SharedSecret(shared_secret.to_bytes())
-    }
-}
-
-impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
-    fn as_ref(&self) -> &[u8; CURVE25519_SECRET_LENGTH] {
-        &self.0
-    }
-}
-
-impl From<IdentityPrivateKey> for PrivateKey {
-    fn from(private_key: IdentityPrivateKey) -> PrivateKey {
-        let dalek_private_key = StaticSecret::from(private_key.0);
-        PrivateKey(dalek_private_key.to_bytes())
-    }
-}
-
-impl From<&IdentityPrivateKey> for PrivateKey {
-    fn from(private_key: &IdentityPrivateKey) -> PrivateKey {
-        let dalek_private_key = StaticSecret::from(private_key.0);
-        PrivateKey(dalek_private_key.to_bytes())
-    }
-}
 
 /* ASSOCIATED DATA */
 #[derive(Clone, Serialize, Deserialize)]
@@ -491,9 +512,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_serde_prekey_bundle() {
+
+        let ik1 = PrivateKey::new();
+        let spk = SignedPreKey::new();
+
+        let pb1 = PreKeyBundle::new(&ik1, spk.public_key);
+
+        let b64 = pb1.clone().to_base64();
+        let pb2 = PreKeyBundle::try_from(b64).unwrap();
+        assert_eq!(pb1.ik.0, pb2.ik.0);
+        assert_eq!(pb1.spk.0, pb2.spk.0);
+        assert_eq!(pb1.sig.0, pb2.sig.0);
+    }
+
+    #[test]
+    fn test_hash_public_key() {
+        let key1 = PublicKey::from(PrivateKey::new());
+        let key2 = PublicKey::from(PrivateKey::new());
+        assert_ne!(key1.hash().0, key2.hash().0);
+    }
+
+    #[test]
     fn test_sign_verify() {
-        let ik = IdentityPrivateKey::new();
-        let p_ik = IdentityPublicKey::from(&ik);
+        let ik = SigningKey::new();
+        let p_ik = VerifyingKey::from(&ik);
         let data = String::from("Hello World!!!");
 
         let sig = ik.sign(data.as_bytes());
