@@ -57,7 +57,6 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
 
     bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
 
-
     // create ephemeral private key
     let ek = PrivateKey::new();
     // create ephemeral public key
@@ -162,6 +161,44 @@ pub fn process_initial_message(
         EncryptionKey::from(sk2),
         DecryptionKey::from(sk1),
     ))
+}
+
+pub fn process_server_initial_message(
+    identity_key: PrivateKey,
+    signed_prekey: PrivateKey,
+    one_time_prekey: Option<PrivateKey>,
+    server_ik: &PublicKey,
+    msg: InitialMessage,
+) -> Result<(EncryptionKey, DecryptionKey), X3DHError> {
+
+    if msg.identity_key.as_ref() != server_ik.as_ref() {
+        return Err(X3DHError::InvalidInitialMessage);
+    }
+    // DH1 = DH(SPKB, IKA)
+    let dh1 = signed_prekey.diffie_hellman(server_ik);
+    // DH2 = DH(IKB, EKA)
+    let dh2 = identity_key.diffie_hellman(&msg.ephemeral_key);
+    // DH3 = DH(SPKB, EKA)
+    let dh3 = signed_prekey.diffie_hellman(&msg.ephemeral_key);
+
+    let (sk1, sk2) = hkdf(
+        "X3DH".to_string(),
+        dh1,
+        dh2,
+        dh3,
+        if msg.one_time_key_hash.is_some() {
+            // DH4 = DH(OTPK, EKA)
+            let dh4 = one_time_prekey.unwrap().diffie_hellman(&msg.ephemeral_key);
+            Some(dh4)
+        } else {
+            None
+        },
+    )?;
+    Ok((
+        EncryptionKey::from(sk2),
+        DecryptionKey::from(sk1),
+    ))
+
 }
 
 #[cfg(test)]

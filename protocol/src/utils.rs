@@ -25,11 +25,11 @@ use sha2::{Digest, Sha256};
 /* PREKEY BUNDLE */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PreKeyBundle {
-    pub(crate) verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
-    pub(crate) ik: PublicKey,               // identity key
-    pub(crate) spk: PublicKey,              // signed pre-key
-    pub(crate) sig: Signature,              // signature
-    pub(crate) otpk: Vec<PublicKey>         // one-time pre-keys
+    pub verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
+    pub ik: PublicKey,               // identity key
+    pub spk: PublicKey,              // signed pre-key
+    pub sig: Signature,              // signature
+    pub otpk: Vec<PublicKey>         // one-time pre-keys
 }
 
 impl PreKeyBundle {
@@ -252,10 +252,10 @@ impl SignedPreKey {
 
 /* EPHEMERAL PRIVATE KEY */
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub(crate) struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
+pub struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
 
 impl PrivateKey {
-    pub(crate) fn new() -> PrivateKey {
+    pub fn new() -> PrivateKey {
         let key = StaticSecret::random_from_rng(&mut OsRng);
         PrivateKey(key.to_bytes())
     }
@@ -264,6 +264,24 @@ impl PrivateKey {
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
         let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
         SharedSecret(shared_secret.to_bytes())
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    pub fn to_base64(&self) -> String {
+        general_purpose::STANDARD.encode(self.to_bytes())
+    }
+
+    pub fn from_base64(value: String) -> Result<PrivateKey, X3DHError> {
+        let bytes = general_purpose::STANDARD.decode(value)?;
+        if bytes.len() != CURVE25519_SECRET_LENGTH {
+            return Err(X3DHError::InvalidPrivateKey);
+        }
+        let mut arr = [0u8; CURVE25519_SECRET_LENGTH];
+        arr.copy_from_slice(&bytes);
+        Ok(PrivateKey(arr))
     }
 }
 
@@ -289,7 +307,7 @@ impl From<&SigningKey> for PrivateKey {
 
 /* PUBLIC KEY */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct PublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct PublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
     fn from(private_key: PrivateKey) -> PublicKey {
@@ -344,6 +362,20 @@ impl PublicKey {
         let digest = Sha256::digest(self.0.as_ref());
         Sha256Hash(*array_ref![digest, 0, SHA256_HASH_LENGTH])
     }
+
+    pub fn to_base64(&self) -> String {
+        general_purpose::STANDARD.encode(self.0.to_vec())
+    }
+
+    pub fn from_base64(value: String) -> Result<PublicKey, X3DHError> {
+        let bytes = general_purpose::STANDARD.decode(value)?;
+        if bytes.len() != CURVE25519_PUBLIC_LENGTH {
+            return Err(X3DHError::InvalidPublicKey);
+        }
+        let mut arr = [0u8; CURVE25519_PUBLIC_LENGTH];
+        arr.copy_from_slice(&bytes);
+        Ok(PublicKey(arr))
+    }
 }
 
 /* SIGNATURE */
@@ -355,6 +387,8 @@ impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
         &self.0
     }
 }
+
+
 
 impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     fn from(value: [u8; SIGNATURE_LENGTH]) -> Signature {
@@ -520,7 +554,7 @@ impl TryFrom<String> for InitialMessage {
 
 /* Encryption Key */
 #[derive(Zeroize, ZeroizeOnDrop)]
-pub(crate) struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
+pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
     pub(crate) fn encrypt(
@@ -554,7 +588,7 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for EncryptionKey {
 
 /* Decryption Key */
 #[derive(Zeroize, ZeroizeOnDrop)]
-pub(crate) struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
+pub struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl DecryptionKey {
     pub(crate) fn decrypt(
