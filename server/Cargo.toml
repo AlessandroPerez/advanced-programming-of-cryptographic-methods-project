@@ -1,0 +1,13 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.22"
+protocol = { path = "../protocol" }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_bytes = "0.11.15"
+serde_json = "1.0.134"
+tokio = { version = "1.42.0", features = ["full"] }
+tokio-tungstenite = "0.26.1"
