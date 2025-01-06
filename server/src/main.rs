@@ -7,21 +7,24 @@ use std::sync::Arc;
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
-use futures::StreamExt;
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt};
 use futures_util::stream::SplitSink;
 use serde_json::Value;
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Utf8Bytes;
-use protocol::x3dh::{
+use protocol::utils::{
     EncryptionKey,
     DecryptionKey,
     PreKeyBundle,
     PrivateKey,
     PublicKey,
-    X3DHError,
-    process_prekey_bundle
 };
+use protocol::x3dh::{
+    process_prekey_bundle,
+};
+use protocol::errors::X3DHError;
+
+
 use uuid::Uuid;
 
 type Tx = mpsc::UnboundedSender<Message>;
@@ -65,7 +68,8 @@ async fn main() {
 
     let addr = "127.0.0.1:3333";
     let listener = TcpListener::bind(&addr).await.unwrap();
-    info!("WebSocket server started listening on port 3333");
+    info!("WebSocket server started listening on port {}", &port);
+
     while let Ok((stream, _)) = listener.accept().await {
         let peers = peers.clone();
         tokio::spawn(handle_connection(stream, peers));
@@ -80,7 +84,11 @@ async fn handle_connection(stream: TcpStream, peers: PeerMap) {
     let (mut write, mut read) = ws_stream.split();
     info!("New WebSocket connection established");
 
-    let (tx, mut rx) = mpsc::unbounded_channel();
+    let write = Arc::new(Mutex::new(write));
+
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    let mut rx = UnboundedReceiverStream::new(rx);
 
     let peer_uuid = Uuid::new_v4().to_string();
     peers.write().await.insert(
@@ -105,14 +113,15 @@ async fn handle_connection(stream: TcpStream, peers: PeerMap) {
     });
 
     let peers_clone = peers.clone();
+    let peer_id = peer_uuid.clone();
     let task_receiver = tokio::spawn( async move {
-        while let Some(Ok(msg)) = read.next().await {
+        while let Some(Ok(msg)) = StreamExt::next(&mut read).await {
             if let Message::Text(text) = msg {
                 println!("Received: {}", text);
 
                 // Parse the target peer and message content
                 if let Some((action, target_id, content)) = parse_message(&text).await {
-                    if let Ok(msg) = handle_message(action, target_id, content, &peers_clone, peer_uuid.clone()).await {
+                    if let Ok(msg) = handle_message(action, target_id.clone(), content, &peers_clone, peer_id.clone()).await {
                         if let Some(target) = peers_clone.read().await.get(&target_id) {
                             let _ = target.sender.send(Message::Text(Utf8Bytes::from(msg)));
                         }
@@ -162,6 +171,7 @@ async fn handle_message(action: Action, target: String, content: String, peer_ma
         }
     }
 }
+
 
 async fn parse_message(text: &str) -> Option<(Action, String, String)> {
     if let Ok(json) = serde_json::from_str::<Value>(text) {

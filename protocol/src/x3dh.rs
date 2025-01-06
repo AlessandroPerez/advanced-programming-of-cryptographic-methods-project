@@ -83,6 +83,7 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
         },
     )?;
 
+    // TODO: add nonce and encrypt the associated data
     let ad = AssociatedData {
         initiator_identity_key: PublicKey::from(&ik),
         responder_identity_key: bundle.ik,

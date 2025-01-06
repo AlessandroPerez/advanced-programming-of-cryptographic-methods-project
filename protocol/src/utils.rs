@@ -152,7 +152,7 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
 /* VERIFYING KEY */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<SigningKey> for VerifyingKey {
     fn from(private_key: SigningKey) -> VerifyingKey {
@@ -557,7 +557,7 @@ impl TryFrom<String> for InitialMessage {
 pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
-    pub(crate) fn encrypt(
+    pub fn encrypt(
         &self,
         data: &[u8],
         nonce: &[u8; AES256_NONCE_LENGTH],
@@ -591,7 +591,7 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for EncryptionKey {
 pub struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl DecryptionKey {
-    pub(crate) fn decrypt(
+    pub fn decrypt(
         &self,
         data: &[u8],
         nonce: &[u8; AES256_NONCE_LENGTH],

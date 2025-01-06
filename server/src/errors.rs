@@ -1,6 +1,6 @@
 use std::env;
 use std::fmt::Display;
-use protocol::x3dh::X3DHError;
+use protocol::errors::X3DHError;
 
 #[derive(Debug)]
 pub(crate) enum ServerError {
