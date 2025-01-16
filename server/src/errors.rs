@@ -6,7 +6,8 @@ use protocol::errors::X3DHError;
 pub(crate) enum ServerError {
     X3DHError(X3DHError),
     VarError(env::VarError),
-    UserNotFoundError
+    UserNotFoundError,
+    UserAlreadyExists,
 }
 
 impl Display for ServerError {
@@ -14,7 +15,8 @@ impl Display for ServerError {
         match &self {
             ServerError::X3DHError(e) => write!(f, "X3DH error: {}", e),
             ServerError::VarError(e) => write!(f, "Environment variable error: {}", e),
-            ServerError::UserNotFoundError => write!(f, "User not found")
+            ServerError::UserNotFoundError => write!(f, "User not found"),
+            ServerError::UserAlreadyExists => write!(f, "User already exists"),
         }
     }
 }

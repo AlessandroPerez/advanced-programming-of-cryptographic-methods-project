@@ -1,6 +1,7 @@
 .idea/
 tui/target/
 protocol/target/
+server/target/
 
 *.pem
 
