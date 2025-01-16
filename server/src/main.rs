@@ -30,10 +30,15 @@ use crate::utils::{
     Peer,
     PeerMap,
     Action,
+    Request
 };
 
+
+// Keys for testing
 const PRIVATE_KEY: &str = "QPdkjPrBYWzwTq70jdeVbr4f4kdS140HeuOXi88hgPc=";
 const PUBLIC_KEY: &str = "NwAHzj8jBk6dkZxmUZsYKpCqwSUt1i2zK44ylb2bmw8=";
+
+// server address
 const IP: &str = "127.0.0.1";
 const PORT: &str = "3333";
 
@@ -77,17 +82,31 @@ async fn handle_connection(stream: TcpStream, mut peers: PeerMap<'_>) {
 
     let (mut sender, mut receiver) = ws_stream.split();
 
-    while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
-        match msg_result {
-            Message::Text(text) => {
-                info!("Received message: \"{}\", from: {}", &text, &addr);
-                sender.send(Message::Text(text)).await.unwrap();
-            }
+    let task_receiver = tokio::spawn( async move {
+        while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
+            match msg_result {
+                Message::Text(text) => {
+                    info!("Received message: \"{}\", from: {}", &text, &addr);
+                    if let Some(request) = Request::from_json(&serde_json::from_str::<Value>(text.as_str()).unwrap()) {
+                        match request.action {
+                            Action::EstablishConnection => { info!("Establishing secure connection with {}", &addr); }
+                            Action::Register => {}
+                            Action::SendMessage => {}
+                            Action::GetPrekeyBundle => {}
+                        }
 
-            Message::Close(_) => { info!("Connection closed with {}", addr);}
-            _ => {}
+                    } else {
+                        error!("Invalid request from {}", &addr);
+                        sender.send(Message::Text(Utf8Bytes::from("Invalid request"))).await.unwrap();
+                    }
+
+                }
+
+                Message::Close(_) => { info!("Connection closed with {}", addr); }
+                _ => {}
+            }
         }
-    }
+    });
 
 
     /*let (tx, rx) = mpsc::unbounded_channel();
@@ -112,14 +131,3 @@ fn receive_messages(p0: &mut SplitStream<WebSocketStream<TcpStream>>, p1: &mut P
     todo!()
 }
 
-fn parse_message(text: &str) -> Option<(Action, String, String)> {
-    if let Ok(json) = serde_json::from_str::<Value>(text) {
-        let action = json.get("action")?.as_str()?.to_string();
-        let action = Action::from_str(&action)?;
-        let target = json.get("target")?.as_str()?.to_string();
-        let content = json.get("content")?.as_str()?.to_string();
-        Some((action, target, content))
-    } else {
-        None
-    }
-}

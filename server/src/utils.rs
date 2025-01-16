@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use env_logger::Target;
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Message;
 use protocol::utils::{DecryptionKey, EncryptionKey, PreKeyBundle};
@@ -54,7 +55,36 @@ impl Action {
             "establish_connection" => Some(Self::EstablishConnection),
             "send_message" => Some(Self::SendMessage),
             "get_prekey_bundle" => Some(Self::GetPrekeyBundle),
+            "register" => Some(Self::Register),
             _ => None
         }
+    }
+}
+
+pub(crate) struct Request {
+    pub(crate) action: Action,
+    pub(crate) text: String,
+    pub(crate) target: String,
+}
+
+impl Request {
+    pub(crate) fn new(action: Action, text: String, target: String) -> Self {
+        Self {
+            action,
+            text,
+            target,
+        }
+    }
+
+    pub(crate) fn from_json(json: &serde_json::Value) -> Option<Self> {
+        let action = json.get("action")?.as_str()?;
+        let action = Action::from_str(action)?;
+        let target = json.get("target")?.as_str()?.to_string();
+        let text = json.get("text")?.as_str()?.to_string();
+        Some(Self {
+            action,
+            text,
+            target,
+        })
     }
 }
