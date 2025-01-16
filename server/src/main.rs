@@ -87,7 +87,8 @@ async fn handle_connection(stream: TcpStream, mut peers: PeerMap<'_>) {
             match msg_result {
                 Message::Text(text) => {
                     info!("Received message: \"{}\", from: {}", &text, &addr);
-                    if let Some(request) = Request::from_json(&serde_json::from_str::<Value>(text.as_str()).unwrap()) {
+
+                    if let Some(request) = Request::from_json(&serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null)) {
                         match request.action {
                             Action::EstablishConnection => { info!("Establishing secure connection with {}", &addr); }
                             Action::Register => {}
