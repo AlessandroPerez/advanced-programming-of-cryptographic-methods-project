@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use aes_gcm::aead::{Aead, Payload};
+use aes_gcm::aead::{Aead, Buffer, Payload};
 use arrayref::array_ref;
 use ed25519_dalek::ed25519::signature::SignerMut;
 use ed25519_dalek::Verifier;
@@ -33,7 +33,7 @@ pub struct PreKeyBundle {
 }
 
 impl PreKeyBundle {
-    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
+    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
     pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
@@ -63,14 +63,14 @@ impl PreKeyBundle {
     }
 
     pub fn size(&self) -> usize {
-        CURVE25519_SECRET_LENGTH +
-        CURVE25519_PUBLIC_LENGTH +
+        CURVE25519_SECRET_LENGTH * 3 +
         SIGNATURE_LENGTH +
         self.otpk.len() * CURVE25519_PUBLIC_LENGTH
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
+        out.extend_from_slice(self.verifying_key.0.as_ref());
         out.extend_from_slice(self.ik.0.as_ref());
         out.extend_from_slice(self.spk.0.as_ref());
         out.extend_from_slice(self.sig.0.as_ref());
@@ -96,15 +96,15 @@ impl TryFrom<String> for PreKeyBundle {
         }
 
         let verifying_key = VerifyingKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
-        let identity_key = PublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
+        let identity_key = PublicKey(*array_ref![bytes, CURVE25519_PUBLIC_LENGTH, CURVE25519_PUBLIC_LENGTH]);
         let signed_prekey = PublicKey(*array_ref![
             bytes,
-            CURVE25519_PUBLIC_LENGTH,
+            2 * CURVE25519_PUBLIC_LENGTH,
             CURVE25519_PUBLIC_LENGTH
         ]);
         let prekey_signature = Signature(*array_ref![
             bytes,
-            2 * CURVE25519_PUBLIC_LENGTH,
+            3 * CURVE25519_PUBLIC_LENGTH,
             SIGNATURE_LENGTH
         ]);
         if bytes.len() > Self::BASE_SIZE {

@@ -278,4 +278,15 @@ mod tests {
         let clear_text = decryption_key2.decrypt(&cipher_text, nonce, &aad).unwrap();
         assert_eq!(data.to_vec(), clear_text);
     }
+
+    #[test]
+    fn test_generate_process_key_bundle() {
+        let pb = generate_prekey_bundle();
+        let (pb, ik, spk) = pb;
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
+        assert_eq!(im.identity_key.as_ref(), pik.as_ref());
+    }
 }

@@ -8,6 +8,7 @@ pub(crate) enum ServerError {
     VarError(env::VarError),
     UserNotFoundError,
     UserAlreadyExists,
+    InvalidPreKeyBundle,
 }
 
 impl Display for ServerError {
@@ -17,6 +18,7 @@ impl Display for ServerError {
             ServerError::VarError(e) => write!(f, "Environment variable error: {}", e),
             ServerError::UserNotFoundError => write!(f, "User not found"),
             ServerError::UserAlreadyExists => write!(f, "User already exists"),
+            ServerError::InvalidPreKeyBundle => write!(f, "Invalid prekey bundle"),
         }
     }
 }
