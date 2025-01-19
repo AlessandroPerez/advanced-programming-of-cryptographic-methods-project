@@ -289,4 +289,30 @@ mod tests {
         let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
         assert_eq!(im.identity_key.as_ref(), pik.as_ref());
     }
+
+    #[test]
+    fn test_process_prekey_bundle_with_otkp() {
+        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
+        assert_eq!(im.identity_key.as_ref(), pik.as_ref());
+        assert_eq!(im.one_time_key_hash.unwrap(), PublicKey::from(&otkp[0]).hash());
+    }
+
+
+    #[test]
+    fn test_process_initial_message_with_otpk() {
+        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik.clone(), pb).unwrap();
+        let im_b64 = im.to_base64();
+        let im = InitialMessage::try_from(im_b64).unwrap();
+        let (ek1, dk1) = process_initial_message(ik, spk, Some(otkp[0].clone()), im).unwrap();
+        assert_eq!(ek1.as_ref(), dk.as_ref());
+        assert_eq!(ek.as_ref(), dk1.as_ref());
+    }
 }

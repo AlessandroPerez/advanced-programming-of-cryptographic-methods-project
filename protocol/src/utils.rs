@@ -431,7 +431,7 @@ impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
 }
 
 /* SHA HASH */
-#[derive(Clone, Serialize, Deserialize, Eq)]
+#[derive(Clone, Serialize, Deserialize, Eq, Debug)]
 pub struct Sha256Hash(#[serde(with = "serde_bytes")] pub [u8; SHA256_HASH_LENGTH]);
 
 impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
