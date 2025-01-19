@@ -952,6 +952,9 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
+ "arrayref",
+ "base64",
  "chrono",
  "env_logger",
  "futures",
