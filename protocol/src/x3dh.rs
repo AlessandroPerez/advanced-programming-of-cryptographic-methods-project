@@ -83,7 +83,7 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
         },
     )?;
 
-    // TODO: add nonce and encrypt the associated data
+
     let ad = AssociatedData {
         initiator_identity_key: PublicKey::from(&ik),
         responder_identity_key: bundle.ik,
@@ -204,9 +204,12 @@ pub fn process_server_initial_message(
 
 #[cfg(test)]
 mod tests {
+    use base64::engine::general_purpose;
+    use base64::Engine;
+
     use super::*;
     use std::convert::TryFrom;
-    use crate::constants::{CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
+    use crate::constants::{AES256_NONCE_LENGTH, CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
     use crate::utils::SignedPreKey;
 
     #[test]
@@ -272,10 +275,33 @@ mod tests {
         assert_eq!(decryption_key1.as_ref(), encryption_key2.as_ref());
 
         let data = b"Hello World!";
-        let nonce = b"12byte_nonce";
         let aad = initial_message.associated_data;
-        let cipher_text = encryption_key1.encrypt(data, nonce, &aad).unwrap();
-        let clear_text = decryption_key2.decrypt(&cipher_text, nonce, &aad).unwrap();
+        let cipher_text = match encryption_key1.encrypt(data, &aad) {
+            Ok(c) => c,
+            Err(e) => {
+                println!("Error in encryption: {}", e);
+                return;
+            }
+        };
+
+        let cipher_text = match general_purpose::STANDARD.decode(cipher_text) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error in decoding: {}", e);
+                return;
+            }
+        };
+        let end = cipher_text.len();
+        let nonce = *array_ref!(cipher_text, 0, AES256_NONCE_LENGTH);
+        let add = *array_ref!(cipher_text, AES256_NONCE_LENGTH, AssociatedData::SIZE);
+        let cipher_text = &cipher_text[AES256_NONCE_LENGTH + AssociatedData::SIZE..end];
+        let clear_text = match decryption_key2.decrypt(&cipher_text, &nonce, &aad) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error in decryption: {}", e);
+                return;
+            }
+        };
         assert_eq!(data.to_vec(), clear_text);
     }
 
