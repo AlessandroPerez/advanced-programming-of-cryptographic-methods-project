@@ -1,4 +1,6 @@
 #![allow(warnings)]
+
+use arrayref::array_ref;
 #[cfg(test)]
 use base64::{engine::general_purpose, Engine};
 use futures_util::{SinkExt, StreamExt};
@@ -7,6 +9,7 @@ use tokio_tungstenite::tungstenite::{Message, Utf8Bytes};
 
 use protocol::utils::PreKeyBundle;
 use protocol::{utils::{AssociatedData, InitialMessage}, x3dh::{generate_prekey_bundle, process_initial_message}};
+use protocol::constants::AES256_NONCE_LENGTH;
 
 const URL: &str = "ws://127.0.0.1:3333";
 
@@ -68,31 +71,32 @@ async fn test_registration() {
         } 
         let registration_req = json!({
             "action" : "register",
-            "username" : "ciao",
+            "username" : "Luc",
             "bundle": pb.clone().to_base64()
         });
 
         let aad =  initial_msg.associated_data.clone();
         let req = registration_req.to_string().into_bytes();
-        let nonce = b"Hello_World!";
         let enc_req = if let Some(ek) = enc_k {
-            ek.encrypt(&req, &nonce, &aad).unwrap()
+            ek.encrypt(&req, &aad).unwrap()
         } else {
             panic!("Not encryption key found!");
         };
 
-        let enc_req = [nonce.to_vec(), aad.clone().to_bytes().to_vec(), enc_req.to_vec()].concat();
-
-        let enc_req = general_purpose::STANDARD.encode(enc_req.as_slice());
         write.send(Message::Text(Utf8Bytes::from(enc_req))).await.expect("Failed to send message");
 
         if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut read).await {
             println!("received registration response: {}", response.to_string());
             if let Some(dk) = dec_k {
-                let nonce = b"123456789012";
-                let response = general_purpose::STANDARD.decode(response.to_string()).unwrap();
-                let response = dk.decrypt(response.as_slice(), &nonce, &aad).unwrap();
-                println!("Decrypted: {}", String::from_utf8(response.clone()).unwrap());
+
+                let r = general_purpose::STANDARD.decode(response.to_string()).unwrap();
+                let end = r.len();
+                let offset = AES256_NONCE_LENGTH + AssociatedData::SIZE;
+                let nonce = *array_ref!(r, 0, AES256_NONCE_LENGTH);
+                let aad = AssociatedData::try_from(array_ref!(r, AES256_NONCE_LENGTH, AssociatedData::SIZE)).expect("Failed to parse associated data");
+                let enc_response = &r[offset..end];
+                let response = dk.decrypt(enc_response, &nonce, &aad).expect("Failed to decrypt response");
+                println!("Decrypted: {}", String::from_utf8(response).unwrap());
             }
         } else {
             panic!("Did not receive registration response");
@@ -100,8 +104,5 @@ async fn test_registration() {
     } else {
         panic!("Did not receive connection establishment acknowledgment");
     }
-
-
-
 }
 

@@ -10,7 +10,7 @@ use tokio_tungstenite::tungstenite::Message;
 use protocol::{constants::AES256_NONCE_LENGTH, errors::X3DHError, utils::{AssociatedData, DecryptionKey, PreKeyBundle}};
 use crate::errors::ServerError;
 
-type Tx = mpsc::UnboundedSender<Message>;
+pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;
 pub(crate) struct Peer {
     sender: Tx,
@@ -51,7 +51,7 @@ impl Display for ServerResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.code {
             ResponseCode::OK => write!(f, "{{\"code\": \"OK\", \"text\": \"{}\"}}", self.text),
-            ResponseCode::ERROR(e) => write!(f, "{{\"error\": \"{}\", \"text\": \"{}\"}}", e, self.text),
+            ResponseCode::ERROR(e) => write!(f, "{{\"code\": \"ERROR\", \"text\": \"{}. {}\"}}", e, self.text),
         }
     }
 }
@@ -98,7 +98,7 @@ impl<'a> RequestType<'a> {
         )
     }
 
-    pub(crate) fn decrypt_request(req: &'a str, dk: &'a DecryptionKey) -> Result<(Action, [u8; AES256_NONCE_LENGTH], AssociatedData), ServerError> {
+    pub(crate) fn decrypt_request(req: &'a str, dk: &'a DecryptionKey) -> Result<(Action, AssociatedData), ServerError> {
         let enc_req = general_purpose::STANDARD.decode(req.to_string())?;
         let nonce = *array_ref!(enc_req, 0, AES256_NONCE_LENGTH);
         let aad = AssociatedData::try_from(array_ref!(enc_req, AES256_NONCE_LENGTH, AssociatedData::SIZE))?;
@@ -118,7 +118,7 @@ impl<'a> RequestType<'a> {
         println!("Request: {:?}", req);
 
         match Action::from_json(&req.unwrap()) {
-            Some(action) => Ok((action, nonce, aad)),
+            Some(action) => Ok((action, aad)),
             None => {
                 error!("Failed to parse request");
                 Err(ServerError::InvalidRequest)
