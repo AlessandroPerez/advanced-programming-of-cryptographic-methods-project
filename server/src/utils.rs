@@ -4,7 +4,7 @@ use base64::{Engine as _, engine:: general_purpose};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use log::{error, info};
-use serde_json::Value;
+use serde_json::{json, Value};
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Message;
 use protocol::{constants::AES256_NONCE_LENGTH, errors::X3DHError, utils::{AssociatedData, DecryptionKey, PreKeyBundle}};
@@ -13,18 +13,24 @@ use crate::errors::ServerError;
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;
 pub(crate) struct Peer {
-    sender: Tx,
-    pb: Option<PreKeyBundle>,
-    online: bool
+    pub(crate) sender: Tx,
+    pub(crate) pb: PreKeyBundle,
 }
 
 impl Peer {
     pub(crate) fn new(sender: Tx, pb: PreKeyBundle) -> Self {
         Self {
             sender,
-            pb: Some(pb),
-            online: true
+            pb,
         }
+    }
+
+    pub(crate) fn send(&self, msg: Message) {
+        self.sender.send(msg).unwrap();
+    }
+
+    pub(crate) fn get_bundle(&self) -> PreKeyBundle {
+        self.pb.clone()
     }
 }
 
@@ -63,8 +69,21 @@ pub(crate) struct RegisterRequest {
 
 pub(crate) struct  SendMessageRequest {
     from: String,
-    to: String,
+    pub(crate) to: String,
+    text: String,
     timestamp: DateTime<Utc>
+}
+
+impl SendMessageRequest {
+    pub(crate) fn to_json(&self) -> String {
+        json!({
+            "event": "chat message",
+            "from": self.from,
+            "to": self.to,
+            "text": self.text,
+            "timestamp": self.timestamp.to_rfc3339()
+        }).to_string()
+    }
 }
 
 pub(crate) enum RequestType<'a> {
@@ -115,7 +134,7 @@ impl<'a> RequestType<'a> {
             }
         };
 
-        println!("Request: {:?}", req);
+        println!("Request: {:?}", &req);
 
         match Action::from_json(&req.unwrap()) {
             Some(action) => Ok((action, aad)),
@@ -148,6 +167,7 @@ impl Action{
                 Some(Self::SendMessage(SendMessageRequest {
                     from: request.get("from")?.to_string(),
                     to: request.get("to")?.to_string(),
+                    text: request.get("text")?.to_string(),
                     timestamp
                 }))
             },
