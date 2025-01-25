@@ -134,6 +134,54 @@ impl TryFrom<String> for PreKeyBundle {
     }
 }
 
+pub struct SessionKeys {
+    ek: Option<EncryptionKey>,
+    dk: Option<DecryptionKey>,
+    aad: Option<AssociatedData>
+}
+
+impl SessionKeys {
+    pub fn new() -> Self {
+        Self{
+            ek: None,
+            dk: None,
+            aad: None
+        }
+    }
+
+    pub fn new_with_keys(ek: EncryptionKey, dk: DecryptionKey, aad: Option<AssociatedData>) -> Self {
+        Self {
+            ek: Some(ek),
+            dk: Some(dk),
+            aad
+        }
+    }
+
+    pub fn get_encryption_key(&self) -> Option<EncryptionKey> {
+        self.ek.clone()
+    }
+
+    pub fn get_decryption_key(&self) -> Option<DecryptionKey> {
+        self.dk.clone()
+    }
+
+    pub fn get_associated_data(&self) -> Option<AssociatedData> {
+        self.aad.clone()
+    }
+
+    pub fn set_encryption_key(&mut self, ek: EncryptionKey) {
+        self.ek = Some(ek);
+    }
+
+    pub fn set_decryption_key(&mut self, dk: DecryptionKey) {
+        self.dk = Some(dk);
+    }
+
+    pub fn set_associated_data(&mut self, aad: AssociatedData) {
+        self.aad = Some(aad);
+    }
+}
+
 /* SHARED SECRET */
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct SharedSecret([u8; AES256_SECRET_LENGTH]);
@@ -570,7 +618,6 @@ impl EncryptionKey {
         data: &[u8],
         aad: &AssociatedData,
     ) -> Result<String, X3DHError> {
-        // TODO: generate a random nonce, return the base64 encoded string (nonce||aad||ciphertext)
         let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
 
         let cipher = Aes256Gcm::new_from_slice(&self.0);
