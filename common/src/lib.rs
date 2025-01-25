@@ -1,13 +1,15 @@
-pub mod error;
-
 use arrayref::array_ref;
+use base64::write;
 use base64::{engine::general_purpose, Engine as _};
+use chrono::DateTime;
+use chrono::Utc;
 use log::{error, info};
 use protocol::{
     constants::AES256_NONCE_LENGTH,
-    utils::{AssociatedData, DecryptionKey, PreKeyBundle},
+    utils::{AssociatedData, DecryptionKey},
 };
-use serde_json::Value;
+use serde_json::{json, to_string, Value};
+use std::fmt::Display;
 
 pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, AssociatedData), ()> {
     let enc_req = match general_purpose::STANDARD.decode(req.to_string()) {
@@ -47,5 +49,108 @@ pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, Associat
             error!("Failed to parse request: {}", e);
             Err(())
         }
+    }
+}
+
+pub enum ResponseCode {
+    Ok,
+    BadRequest,
+    NotFound,
+    InternalServerError,
+    Conflict,
+}
+
+impl Display for ResponseCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResponseCode::Ok => write!(f, "200"),
+            ResponseCode::BadRequest => write!(f, "400"),
+            ResponseCode::NotFound => write!(f, "404"),
+            ResponseCode::InternalServerError => write!(f, "500"),
+            ResponseCode::Conflict => write!(f, "409"),
+        }
+    }
+}
+
+impl TryFrom<&str> for ResponseCode {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, ()> {
+        match value {
+            "200" => Ok(Self::Ok),
+            "400" => Ok(Self::BadRequest),
+            "404" => Ok(Self::NotFound),
+            "500" => Ok(Self::InternalServerError),
+            "409" => Ok(Self::Conflict),
+            _ => Err(()),
+        }
+    }
+}
+
+pub struct ServerResponse {
+    code: ResponseCode,
+    text: String,
+}
+
+impl ServerResponse {
+    pub fn new(code: ResponseCode, text: String) -> Self {
+        Self { code, text }
+    }
+}
+
+impl TryFrom<Value> for ServerResponse {
+    type Error = ();
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let code = ResponseCode::try_from(
+            value
+                .get("code")
+                .unwrap_or(&Value::String("".to_string()))
+                .as_str()
+                .unwrap_or(""),
+        )?;
+        let message = value
+            .get("message")
+            .unwrap_or(&Value::String("".to_string()))
+            .to_string();
+        Ok(Self::new(code, message))
+    }
+}
+
+impl Display for ServerResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res = json!({
+            "code": self.code.to_string(),
+            "message": self.text
+        })
+        .to_string();
+
+        write!(f, "{}", res)
+    }
+}
+
+pub struct RegisterRequest {
+    pub username: String,
+    pub bundle: String,
+}
+
+pub struct SendMessageRequest {
+    pub msg_type: String,
+    pub from: String,
+    pub to: String,
+    pub text: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+impl SendMessageRequest {
+    pub fn to_json(&self) -> String {
+        json!({
+            "type": self.msg_type,
+            "from": self.from,
+            "to": self.to,
+            "text": self.text,
+            "timestamp": self.timestamp.to_rfc3339()
+        })
+        .to_string()
     }
 }

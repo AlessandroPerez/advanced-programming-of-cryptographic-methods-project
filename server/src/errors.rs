@@ -1,6 +1,6 @@
+use protocol::errors::X3DHError;
 use std::env;
 use std::fmt::Display;
-use protocol::errors::X3DHError;
 
 #[derive(Debug)]
 pub(crate) enum ServerError {
@@ -10,7 +10,7 @@ pub(crate) enum ServerError {
     UserAlreadyExists,
     InvalidPreKeyBundle,
     InvalidRequest,
-    Base64DecodeError(base64::DecodeError)
+    Base64DecodeError(base64::DecodeError),
 }
 
 impl Display for ServerError {
@@ -23,7 +23,6 @@ impl Display for ServerError {
             ServerError::InvalidPreKeyBundle => write!(f, "Invalid prekey bundle"),
             ServerError::InvalidRequest => write!(f, "Invalid request"),
             ServerError::Base64DecodeError(decode_error) => write!(f, "Error: {}", decode_error),
-
         }
     }
 }
@@ -44,6 +43,6 @@ impl From<env::VarError> for ServerError {
 
 impl From<base64::DecodeError> for ServerError {
     fn from(value: base64::DecodeError) -> Self {
-       ServerError::Base64DecodeError(value) 
+        ServerError::Base64DecodeError(value)
     }
 }
