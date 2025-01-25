@@ -8,7 +8,7 @@ use protocol::{
     constants::AES256_NONCE_LENGTH,
     utils::{AssociatedData, DecryptionKey},
 };
-use serde_json::{json, to_string, Value};
+use serde_json::{json, Value};
 use std::fmt::Display;
 
 pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, AssociatedData), ()> {
