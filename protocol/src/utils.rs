@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
-use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use aes_gcm::aead::{Aead, Payload};
+use aes::cipher::generic_array::sequence::GenericSequence;
+use aes_gcm::{AeadCore, Aes256Gcm, KeyInit, Nonce};
+use aes_gcm::aead::{Aead, Buffer, Payload};
 use arrayref::array_ref;
 use ed25519_dalek::ed25519::signature::SignerMut;
 use ed25519_dalek::Verifier;
@@ -25,15 +26,15 @@ use sha2::{Digest, Sha256};
 /* PREKEY BUNDLE */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PreKeyBundle {
-    pub(crate) verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
-    pub(crate) ik: PublicKey,               // identity key
-    pub(crate) spk: PublicKey,              // signed pre-key
-    pub(crate) sig: Signature,              // signature
-    pub(crate) otpk: Vec<PublicKey>         // one-time pre-keys
+    pub verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
+    pub ik: PublicKey,               // identity key
+    pub spk: PublicKey,              // signed pre-key
+    pub sig: Signature,              // signature
+    pub otpk: Vec<PublicKey>         // one-time pre-keys
 }
 
 impl PreKeyBundle {
-    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
+    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
     pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
@@ -63,14 +64,14 @@ impl PreKeyBundle {
     }
 
     pub fn size(&self) -> usize {
-        CURVE25519_SECRET_LENGTH +
-        CURVE25519_PUBLIC_LENGTH +
+        CURVE25519_SECRET_LENGTH * 3 +
         SIGNATURE_LENGTH +
         self.otpk.len() * CURVE25519_PUBLIC_LENGTH
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
+        out.extend_from_slice(self.verifying_key.0.as_ref());
         out.extend_from_slice(self.ik.0.as_ref());
         out.extend_from_slice(self.spk.0.as_ref());
         out.extend_from_slice(self.sig.0.as_ref());
@@ -96,15 +97,15 @@ impl TryFrom<String> for PreKeyBundle {
         }
 
         let verifying_key = VerifyingKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
-        let identity_key = PublicKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
+        let identity_key = PublicKey(*array_ref![bytes, CURVE25519_PUBLIC_LENGTH, CURVE25519_PUBLIC_LENGTH]);
         let signed_prekey = PublicKey(*array_ref![
             bytes,
-            CURVE25519_PUBLIC_LENGTH,
+            2 * CURVE25519_PUBLIC_LENGTH,
             CURVE25519_PUBLIC_LENGTH
         ]);
         let prekey_signature = Signature(*array_ref![
             bytes,
-            2 * CURVE25519_PUBLIC_LENGTH,
+            3 * CURVE25519_PUBLIC_LENGTH,
             SIGNATURE_LENGTH
         ]);
         if bytes.len() > Self::BASE_SIZE {
@@ -133,6 +134,54 @@ impl TryFrom<String> for PreKeyBundle {
     }
 }
 
+pub struct SessionKeys {
+    ek: Option<EncryptionKey>,
+    dk: Option<DecryptionKey>,
+    aad: Option<AssociatedData>
+}
+
+impl SessionKeys {
+    pub fn new() -> Self {
+        Self{
+            ek: None,
+            dk: None,
+            aad: None
+        }
+    }
+
+    pub fn new_with_keys(ek: EncryptionKey, dk: DecryptionKey, aad: Option<AssociatedData>) -> Self {
+        Self {
+            ek: Some(ek),
+            dk: Some(dk),
+            aad
+        }
+    }
+
+    pub fn get_encryption_key(&self) -> Option<EncryptionKey> {
+        self.ek.clone()
+    }
+
+    pub fn get_decryption_key(&self) -> Option<DecryptionKey> {
+        self.dk.clone()
+    }
+
+    pub fn get_associated_data(&self) -> Option<AssociatedData> {
+        self.aad.clone()
+    }
+
+    pub fn set_encryption_key(&mut self, ek: EncryptionKey) {
+        self.ek = Some(ek);
+    }
+
+    pub fn set_decryption_key(&mut self, dk: DecryptionKey) {
+        self.dk = Some(dk);
+    }
+
+    pub fn set_associated_data(&mut self, aad: AssociatedData) {
+        self.aad = Some(aad);
+    }
+}
+
 /* SHARED SECRET */
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct SharedSecret([u8; AES256_SECRET_LENGTH]);
@@ -152,7 +201,7 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
 /* VERIFYING KEY */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<SigningKey> for VerifyingKey {
     fn from(private_key: SigningKey) -> VerifyingKey {
@@ -252,10 +301,10 @@ impl SignedPreKey {
 
 /* EPHEMERAL PRIVATE KEY */
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub(crate) struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
+pub struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
 
 impl PrivateKey {
-    pub(crate) fn new() -> PrivateKey {
+    pub fn new() -> PrivateKey {
         let key = StaticSecret::random_from_rng(&mut OsRng);
         PrivateKey(key.to_bytes())
     }
@@ -264,6 +313,24 @@ impl PrivateKey {
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
         let shared_secret = dalek_private_key.diffie_hellman(&dalek_public_key);
         SharedSecret(shared_secret.to_bytes())
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    pub fn to_base64(&self) -> String {
+        general_purpose::STANDARD.encode(self.to_bytes())
+    }
+
+    pub fn from_base64(value: String) -> Result<PrivateKey, X3DHError> {
+        let bytes = general_purpose::STANDARD.decode(value)?;
+        if bytes.len() != CURVE25519_SECRET_LENGTH {
+            return Err(X3DHError::InvalidPrivateKey);
+        }
+        let mut arr = [0u8; CURVE25519_SECRET_LENGTH];
+        arr.copy_from_slice(&bytes);
+        Ok(PrivateKey(arr))
     }
 }
 
@@ -289,7 +356,7 @@ impl From<&SigningKey> for PrivateKey {
 
 /* PUBLIC KEY */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct PublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct PublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
     fn from(private_key: PrivateKey) -> PublicKey {
@@ -344,6 +411,20 @@ impl PublicKey {
         let digest = Sha256::digest(self.0.as_ref());
         Sha256Hash(*array_ref![digest, 0, SHA256_HASH_LENGTH])
     }
+
+    pub fn to_base64(&self) -> String {
+        general_purpose::STANDARD.encode(self.0.to_vec())
+    }
+
+    pub fn from_base64(value: String) -> Result<PublicKey, X3DHError> {
+        let bytes = general_purpose::STANDARD.decode(value)?;
+        if bytes.len() != CURVE25519_PUBLIC_LENGTH {
+            return Err(X3DHError::InvalidPublicKey);
+        }
+        let mut arr = [0u8; CURVE25519_PUBLIC_LENGTH];
+        arr.copy_from_slice(&bytes);
+        Ok(PublicKey(arr))
+    }
 }
 
 /* SIGNATURE */
@@ -356,6 +437,8 @@ impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
     }
 }
 
+
+
 impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     fn from(value: [u8; SIGNATURE_LENGTH]) -> Signature {
         Signature(value)
@@ -365,18 +448,25 @@ impl From<[u8; SIGNATURE_LENGTH]> for Signature {
 
 /* ASSOCIATED DATA */
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct AssociatedData {
+pub struct AssociatedData {
     pub(crate) initiator_identity_key: PublicKey,
     pub(crate) responder_identity_key: PublicKey,
 }
 
 impl AssociatedData {
-    pub(crate) const SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH;
-    pub(crate) fn to_bytes(self) -> Vec<u8> {
+    pub const SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH;
+    pub fn to_bytes(self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.initiator_identity_key.0.as_ref());
         out.extend_from_slice(self.responder_identity_key.0.as_ref());
         out
+    }
+
+    pub fn new(ik: PublicKey, spk: PublicKey) -> Self {
+        Self {
+            initiator_identity_key: ik,
+            responder_identity_key: spk
+        }
     }
 }
 
@@ -397,7 +487,7 @@ impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
 }
 
 /* SHA HASH */
-#[derive(Clone, Serialize, Deserialize, Eq)]
+#[derive(Clone, Serialize, Deserialize, Eq, Debug)]
 pub struct Sha256Hash(#[serde(with = "serde_bytes")] pub [u8; SHA256_HASH_LENGTH]);
 
 impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
@@ -420,11 +510,11 @@ impl PartialEq for Sha256Hash {
 /* INITIAL MESSAGE */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct InitialMessage {
-    pub(crate) identity_key: PublicKey,
-    pub(crate) ephemeral_key: PublicKey,
-    pub(crate) prekey_hash: Sha256Hash,
-    pub(crate) one_time_key_hash: Option<Sha256Hash>,
-    pub(crate) associated_data: AssociatedData,
+    pub identity_key: PublicKey,
+    pub ephemeral_key: PublicKey,
+    pub prekey_hash: Sha256Hash,
+    pub one_time_key_hash: Option<Sha256Hash>,
+    pub associated_data: AssociatedData,
 }
 
 impl InitialMessage {
@@ -519,24 +609,30 @@ impl TryFrom<String> for InitialMessage {
 }
 
 /* Encryption Key */
-#[derive(Zeroize, ZeroizeOnDrop)]
-pub(crate) struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
+#[derive(Zeroize, ZeroizeOnDrop, Clone)]
+pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
-    pub(crate) fn encrypt(
+    pub fn encrypt(
         &self,
         data: &[u8],
-        nonce: &[u8; AES256_NONCE_LENGTH],
         aad: &AssociatedData,
-    ) -> Result<Vec<u8>, X3DHError> {
+    ) -> Result<String, X3DHError> {
+        let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
+
         let cipher = Aes256Gcm::new_from_slice(&self.0);
-        let nonce = Nonce::from_slice(nonce);
         let payload = Payload {
             aad: &aad.clone().to_bytes(),
             msg: data,
         };
-        let output = cipher?.encrypt(nonce, payload)?;
-        Ok(output)
+        let encrypt_msg = cipher?.encrypt(nonce, payload)?;
+        let mut output = vec![];
+        output.extend_from_slice(&nonce.to_vec());
+        output.extend_from_slice(&aad.clone().to_bytes());
+        output.extend_from_slice(&encrypt_msg);
+        let b64 = general_purpose::STANDARD.encode(output);
+        
+        Ok(b64)
     }
 }
 
@@ -553,11 +649,11 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for EncryptionKey {
 }
 
 /* Decryption Key */
-#[derive(Zeroize, ZeroizeOnDrop)]
-pub(crate) struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
+#[derive(Zeroize, ZeroizeOnDrop, Clone)]
+pub struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl DecryptionKey {
-    pub(crate) fn decrypt(
+    pub fn decrypt(
         &self,
         data: &[u8],
         nonce: &[u8; AES256_NONCE_LENGTH],

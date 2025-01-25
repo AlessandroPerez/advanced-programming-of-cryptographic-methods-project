@@ -57,7 +57,6 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
 
     bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
 
-
     // create ephemeral private key
     let ek = PrivateKey::new();
     // create ephemeral public key
@@ -83,6 +82,7 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
             None
         },
     )?;
+
 
     let ad = AssociatedData {
         initiator_identity_key: PublicKey::from(&ik),
@@ -164,11 +164,52 @@ pub fn process_initial_message(
     ))
 }
 
+pub fn process_server_initial_message(
+    identity_key: PrivateKey,
+    signed_prekey: PrivateKey,
+    one_time_prekey: Option<PrivateKey>,
+    server_ik: &PublicKey,
+    msg: InitialMessage,
+) -> Result<(EncryptionKey, DecryptionKey), X3DHError> {
+
+    if msg.identity_key.as_ref() != server_ik.as_ref() {
+        return Err(X3DHError::InvalidInitialMessage);
+    }
+    // DH1 = DH(SPKB, IKA)
+    let dh1 = signed_prekey.diffie_hellman(server_ik);
+    // DH2 = DH(IKB, EKA)
+    let dh2 = identity_key.diffie_hellman(&msg.ephemeral_key);
+    // DH3 = DH(SPKB, EKA)
+    let dh3 = signed_prekey.diffie_hellman(&msg.ephemeral_key);
+
+    let (sk1, sk2) = hkdf(
+        "X3DH".to_string(),
+        dh1,
+        dh2,
+        dh3,
+        if msg.one_time_key_hash.is_some() {
+            // DH4 = DH(OTPK, EKA)
+            let dh4 = one_time_prekey.unwrap().diffie_hellman(&msg.ephemeral_key);
+            Some(dh4)
+        } else {
+            None
+        },
+    )?;
+    Ok((
+        EncryptionKey::from(sk2),
+        DecryptionKey::from(sk1),
+    ))
+
+}
+
 #[cfg(test)]
 mod tests {
+    use base64::engine::general_purpose;
+    use base64::Engine;
+
     use super::*;
     use std::convert::TryFrom;
-    use crate::constants::{CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
+    use crate::constants::{AES256_NONCE_LENGTH, CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
     use crate::utils::SignedPreKey;
 
     #[test]
@@ -234,10 +275,70 @@ mod tests {
         assert_eq!(decryption_key1.as_ref(), encryption_key2.as_ref());
 
         let data = b"Hello World!";
-        let nonce = b"12byte_nonce";
         let aad = initial_message.associated_data;
-        let cipher_text = encryption_key1.encrypt(data, nonce, &aad).unwrap();
-        let clear_text = decryption_key2.decrypt(&cipher_text, nonce, &aad).unwrap();
+        let cipher_text = match encryption_key1.encrypt(data, &aad) {
+            Ok(c) => c,
+            Err(e) => {
+                println!("Error in encryption: {}", e);
+                return;
+            }
+        };
+
+        let cipher_text = match general_purpose::STANDARD.decode(cipher_text) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error in decoding: {}", e);
+                return;
+            }
+        };
+        let end = cipher_text.len();
+        let nonce = *array_ref!(cipher_text, 0, AES256_NONCE_LENGTH);
+        let add = *array_ref!(cipher_text, AES256_NONCE_LENGTH, AssociatedData::SIZE);
+        let cipher_text = &cipher_text[AES256_NONCE_LENGTH + AssociatedData::SIZE..end];
+        let clear_text = match decryption_key2.decrypt(&cipher_text, &nonce, &aad) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error in decryption: {}", e);
+                return;
+            }
+        };
         assert_eq!(data.to_vec(), clear_text);
+    }
+
+    #[test]
+    fn test_generate_process_key_bundle() {
+        let pb = generate_prekey_bundle();
+        let (pb, ik, spk) = pb;
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
+        assert_eq!(im.identity_key.as_ref(), pik.as_ref());
+    }
+
+    #[test]
+    fn test_process_prekey_bundle_with_otkp() {
+        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
+        assert_eq!(im.identity_key.as_ref(), pik.as_ref());
+        assert_eq!(im.one_time_key_hash.unwrap(), PublicKey::from(&otkp[0]).hash());
+    }
+
+
+    #[test]
+    fn test_process_initial_message_with_otpk() {
+        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+        let pik = PublicKey::from(&ik);
+        let b64 = pb.to_base64();
+        let pb = PreKeyBundle::try_from(b64).unwrap();
+        let (im, ek, dk) = process_prekey_bundle(ik.clone(), pb).unwrap();
+        let im_b64 = im.to_base64();
+        let im = InitialMessage::try_from(im_b64).unwrap();
+        let (ek1, dk1) = process_initial_message(ik, spk, Some(otkp[0].clone()), im).unwrap();
+        assert_eq!(ek1.as_ref(), dk.as_ref());
+        assert_eq!(ek.as_ref(), dk1.as_ref());
     }
 }

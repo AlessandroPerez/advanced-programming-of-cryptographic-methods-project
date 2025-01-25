@@ -1,12 +1,16 @@
 [package]
-name = "tui"
+name = "server"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures = "0.3.31"
+log = "0.4.22"
 protocol = { path = "../protocol" }
 common = { path = "../common" }
-serde_json = "1.0.137"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_bytes = "0.11.15"
+serde_json = "1.0.134"
 tokio = { version = "1.42.0", features = ["full"] }
 tokio-tungstenite = "0.26.1"
 env_logger = "0.11.6"
@@ -18,4 +22,3 @@ base64 = "0.22.1"
 aes-gcm = "0.10.3"
 arrayref = "0.3.9"
 anyhow = "1.0.95"
-log = "0.4.25"

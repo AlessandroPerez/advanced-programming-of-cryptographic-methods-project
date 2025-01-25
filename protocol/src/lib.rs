@@ -1,5 +1,5 @@
 #![allow(warnings)]
-mod utils;
-mod constants;
+pub mod utils;
+pub mod constants;
 pub mod x3dh;
-mod errors;
+pub mod errors;

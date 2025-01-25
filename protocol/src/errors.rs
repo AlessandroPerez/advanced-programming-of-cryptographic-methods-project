@@ -10,6 +10,8 @@ pub enum X3DHError {
     Base64DecodeError(base64::DecodeError),
     InvalidPreKeyBundle,
     InvalidInitialMessage,
+    InvalidPrivateKey,
+    InvalidPublicKey,
 }
 
 impl Display for X3DHError {
@@ -22,6 +24,8 @@ impl Display for X3DHError {
             X3DHError::Base64DecodeError(e) => write!(f, "Base64 decode error: {}", e),
             X3DHError::InvalidPreKeyBundle => write!(f, "Invalid prekey bundle"),
             X3DHError::InvalidInitialMessage => write!(f, "Invalid initial message"),
+            X3DHError::InvalidPrivateKey => write!(f, "Invalid private key"),
+            X3DHError::InvalidPublicKey => write!(f, "Invalid public key"),
         }
     }
 }

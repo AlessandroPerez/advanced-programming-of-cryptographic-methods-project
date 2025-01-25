@@ -1,0 +1,391 @@
+mod utils;
+
+mod errors;
+mod tests;
+
+use crate::utils::{Peer, PeerMap};
+use common::{RegisterRequest, ResponseCode, ServerResponse};
+use futures::stream::SplitSink;
+use futures_util::stream::SplitStream;
+use futures_util::{SinkExt, StreamExt};
+use log::{error, info};
+use protocol::utils::{AssociatedData, EncryptionKey, PreKeyBundle, PrivateKey, SessionKeys};
+use protocol::x3dh::process_prekey_bundle;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::RwLock;
+use tokio::sync::{mpsc, Mutex};
+use tokio_tungstenite::tungstenite::Utf8Bytes;
+use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::{accept_async, tungstenite::Message};
+use utils::{decrypt_client_request, Action, EstablishConnection, Tx};
+
+// Keys for testing
+const PRIVATE_KEY: &str = "QPdkjPrBYWzwTq70jdeVbr4f4kdS140HeuOXi88hgPc=";
+const _PUBLIC_KEY: &str = "NwAHzj8jBk6dkZxmUZsYKpCqwSUt1i2zK44ylb2bmw8=";
+
+// server address
+const IP: &str = "127.0.0.1";
+const PORT: &str = "3333";
+
+type SharedSink = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
+type SharedSession = Arc<RwLock<SessionKeys>>;
+
+#[tokio::main]
+async fn main() {
+    env::set_var("RUST_LOG", "info");
+    env_logger::init();
+
+    let peers: PeerMap = Arc::new(RwLock::new(HashMap::new()));
+    let addr = format!("{}:{}", IP, PORT);
+
+    let listener = TcpListener::bind(&addr).await.unwrap();
+    info!("WebSocket server started listening on port {}", PORT);
+
+    while let Ok((stream, _)) = listener.accept().await {
+        let peers = peers.clone();
+        tokio::spawn(handle_connection(stream, peers));
+    }
+}
+
+async fn handle_connection(stream: TcpStream, peers: PeerMap) {
+    let addr = match stream.peer_addr() {
+        Ok(addr) => addr.to_string(),
+        Err(_) => "Unknown".to_string(),
+    };
+
+    info!("Incoming WebSocket connection: {}", &addr);
+
+    let ws_stream = match accept_async(stream).await {
+        Ok(ws) => ws,
+        Err(e) => {
+            error!("Websocket handshake failed with {}: {}", addr, e);
+            return;
+        }
+    };
+
+    info!("WebSocket connection established: {}", &addr);
+
+    let session = Arc::new(RwLock::new(SessionKeys::new()));
+    let (sender, receiver) = ws_stream.split();
+    let (tx, rx) = mpsc::unbounded_channel();
+    let sender = Arc::new(Mutex::new(sender));
+    let task_receiver = tokio::spawn(task_receiver(
+        sender.clone(),
+        receiver,
+        tx.clone(),
+        peers.clone(),
+        addr.to_string(),
+        session.clone(),
+    ));
+
+    let task_sender = tokio::spawn(task_sender(session.clone(), sender.clone(), rx));
+
+    tokio::select! {
+        _ = task_receiver => (),
+        _ = task_sender => (),
+    }
+}
+
+async fn send_message(sink: SharedSink, msg: String) -> anyhow::Result<()> {
+    let mut sink_lock = sink.lock().await;
+    sink_lock.send(Message::text(Utf8Bytes::from(msg))).await?;
+    Ok(())
+}
+
+fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String> {
+    if let Ok(bundle) = PreKeyBundle::try_from(bundle) {
+        match process_prekey_bundle(
+            PrivateKey::from_base64(PRIVATE_KEY.to_string()).unwrap(),
+            bundle.clone(),
+        ) {
+            Ok((im, ek, dk)) => {
+                let session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
+                let msg = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
+                Ok((msg, session))
+            }
+            Err(e) => Err(ServerResponse::new(
+                ResponseCode::BadRequest,
+                "Can't process bundle".to_string(),
+            )
+            .to_string()),
+        }
+    } else {
+        Err(ServerResponse::new(
+            ResponseCode::BadRequest,
+            "Prekey Bundle is malformed".to_string(),
+        )
+        .to_string())
+    }
+}
+
+async fn handle_registration(
+    mut request: RegisterRequest,
+    peers: PeerMap,
+    sender: SharedSink,
+    tx: Tx,
+    ek: EncryptionKey,
+    aad: AssociatedData,
+) -> Result<String, ()> {
+    request
+        .bundle
+        .retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
+
+    if !peers.read().await.contains_key(&request.username) {
+        match PreKeyBundle::try_from(request.bundle) {
+            Ok(pb) => {
+                let peer = Peer::new(tx, pb);
+                let user = request.username.clone();
+                peers.write().await.insert(request.username, peer);
+                let response = ServerResponse::new(
+                    ResponseCode::Ok,
+                    "User registered successfully.".to_string(),
+                )
+                .to_string();
+
+                match ek.encrypt(&response.into_bytes(), &aad) {
+                    Ok(res) => {
+                        send_message(sender, res)
+                            .await
+                            .expect("Failed to send message.");
+                    }
+                    Err(_) => todo!(),
+                }
+                Ok(user)
+            }
+            Err(_) => {
+                let response =
+                    ServerResponse::new(ResponseCode::BadRequest, "Bad request".to_string())
+                        .to_string();
+
+                match ek.encrypt(&response.into_bytes(), &aad) {
+                    Ok(enc) => {
+                        send_message(sender, enc)
+                            .await
+                            .expect("Failed to send message.");
+                        Err(())
+                    }
+                    Err(e) => {
+                        error!("Failed to send response to client due to error: {}", e);
+                        Err(())
+                    }
+                }
+            }
+        }
+    } else {
+        let response =
+            ServerResponse::new(ResponseCode::Conflict, "User already exists".to_string())
+                .to_string();
+
+        match ek.encrypt(&response.into_bytes(), &aad) {
+            Ok(enc) => {
+                send_message(sender, enc)
+                    .await
+                    .expect("Failed to send message.");
+                Err(())
+            }
+            Err(e) => {
+                error!("Failed to send response to client due to error: {}", e);
+                Err(())
+            }
+        }
+    }
+}
+
+async fn task_receiver(
+    sender: SharedSink,
+    mut receiver: SplitStream<WebSocketStream<TcpStream>>,
+    tx: Tx,
+    peers: PeerMap,
+    addr: String,
+    session: SharedSession,
+) {
+    let mut user = String::new();
+    while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
+        match msg_result {
+            Message::Text(text) => {
+                info!("Received message: \"{}\", from: {}", &text, &addr);
+                if let Some(request) = EstablishConnection::from_json(
+                    &serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null),
+                ) {
+                    match establish_connection(request.0.to_string()) {
+                        Ok((msg, s)) => {
+                            session
+                                .write()
+                                .await
+                                .set_encryption_key(s.get_encryption_key().unwrap());
+                            session
+                                .write()
+                                .await
+                                .set_decryption_key(s.get_decryption_key().unwrap());
+                            send_message(sender.clone(), msg)
+                                .await
+                                .expect("Failed to send message.");
+                        }
+
+                        Err(e) => {
+                            send_message(sender.clone(), e)
+                                .await
+                                .expect("Failed to send message.");
+                        }
+                    }
+                } else if let Some(dk) = session.read().await.get_decryption_key() {
+                    match decrypt_client_request(&text.to_string(), &dk) {
+                        Ok((action, aad)) => {
+                            match action {
+                                Action::Register(register_request) => {
+                                    if let Some(ek) = session.read().await.get_encryption_key() {
+                                        if let Ok(u) = handle_registration(
+                                            register_request,
+                                            peers.clone(),
+                                            sender.clone(),
+                                            tx.clone(),
+                                            ek,
+                                            aad,
+                                        )
+                                        .await
+                                        {
+                                            user = u;
+                                        }
+                                    }
+                                }
+                                Action::SendMessage(send_message_request) => {
+                                    // TODO: test this
+                                    match peers.read().await.get(&send_message_request.to) {
+                                        None => send_message(
+                                            sender.clone(),
+                                            ServerResponse::new(
+                                                ResponseCode::NotFound,
+                                                "User not found".to_string(),
+                                            )
+                                            .to_string(),
+                                        )
+                                        .await
+                                        .expect("Failed to send message."),
+
+                                        Some(peer) => {
+                                            // send message to the thread that handles the recipient
+                                            // connection
+                                            peer.sender
+                                                .send(Message::from(send_message_request.to_json()))
+                                                .expect("Failed to send message.");
+                                        }
+                                    }
+                                }
+                                Action::GetPrekeyBundle(user) => {
+                                    handle_get_bundle_request(
+                                        peers.clone(),
+                                        user,
+                                        &session,
+                                        sender.clone(),
+                                        &aad,
+                                    )
+                                    .await;
+                                }
+                            }
+                        }
+
+                        Err(_e) => {
+                            error!("Failed to decrypt request: {}", text.to_string())
+                        }
+                    }
+                } else {
+                    send_message(
+                        sender.clone(),
+                        ServerResponse::new(
+                            ResponseCode::BadRequest,
+                            "Establish a secure connection first".to_string(),
+                        )
+                        .to_string(),
+                    )
+                    .await
+                    .expect("Failed to send message.");
+                }
+            }
+
+            Message::Close(_) => {
+                peers.write().await.remove(&user);
+                info!("Connection closed");
+            }
+            _ => {}
+        }
+    }
+}
+
+async fn handle_get_bundle_request(
+    peers: PeerMap,
+    user: String,
+    session: &SharedSession,
+    sender: SharedSink,
+    aad: &AssociatedData,
+) {
+    match peers.read().await.get(&user) {
+        None => send_message(
+            sender.clone(),
+            ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string(),
+        )
+        .await
+        .expect("Failed to send message."),
+
+        Some(peer) => {
+            let response =
+                ServerResponse::new(ResponseCode::Ok, peer.get_bundle().to_base64()).to_string();
+
+            match session.read().await.get_encryption_key() {
+                Some(ek) => {
+                    match ek.encrypt(&response.into_bytes(), aad) {
+                        Ok(enc) => {
+                            send_message(sender.clone(), enc)
+                                .await
+                                .expect("Failed to send message.");
+                        }
+                        Err(e) => {
+                            // TODO: handle error
+                            error!("Failed to send response to client due to error: {}", e);
+                        }
+                    }
+                }
+                None => {
+                    if let Some(ek) = session.read().await.get_encryption_key() {
+                        let response = ServerResponse::new(
+                            ResponseCode::BadRequest,
+                            "Establish a secure connection first".to_string(),
+                        )
+                        .to_string();
+                        match ek.encrypt(&response.into_bytes(), aad) {
+                            Ok(enc) => {
+                                send_message(sender.clone(), enc)
+                                    .await
+                                    .expect("Failed to send message.");
+                            }
+                            Err(_) => todo!(),
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+async fn task_sender(
+    session: SharedSession,
+    sender: SharedSink,
+    mut receiver: mpsc::UnboundedReceiver<Message>,
+) {
+    while let Ok(msg_result) = receiver.try_recv() {
+        if let Some(ek) = session.read().await.get_encryption_key() {
+            let aad = session.read().await.get_associated_data().unwrap();
+            match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
+                Ok(enc) => {
+                    send_message(sender.clone(), enc)
+                        .await
+                        .expect("Failed to send message.");
+                }
+                Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
+            }
+        }
+    }
+}

@@ -10,4 +10,4 @@ pub(crate) const SHA256_HASH_LENGTH: usize = 32;
 // byte size of an aes256 key
 pub(crate) const AES256_SECRET_LENGTH: usize = 32;
 // byte size of aes256 nonce
-pub(crate) const AES256_NONCE_LENGTH: usize = 12;
+pub const AES256_NONCE_LENGTH: usize = 12;
