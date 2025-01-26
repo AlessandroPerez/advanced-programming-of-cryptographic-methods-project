@@ -262,6 +262,7 @@ async fn task_receiver(
                                 Action::SendMessage(send_message_request) => {
                                     // TODO: test this
                                     match peers.read().await.get(&send_message_request.to) {
+                                        // TODO: encrypt request
                                         None => send_message(
                                             sender.clone(),
                                             ServerResponse::new(

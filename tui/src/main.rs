@@ -1,20 +1,16 @@
-use arrayref::array_ref;
-use base64::engine::general_purpose;
-use base64::Engine;
 use common::ServerResponse;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
 use log::error;
-use protocol::constants::AES256_NONCE_LENGTH;
 use protocol::utils::{
     AssociatedData, DecryptionKey, EncryptionKey, InitialMessage, PreKeyBundle, PrivateKey,
     SessionKeys,
 };
 use protocol::x3dh::{generate_prekey_bundle, process_initial_message};
 use serde_json::{json, Value};
-use tokio::{net::TcpStream, sync::broadcast::error};
+use tokio::net::TcpStream;
 use tokio_tungstenite::{
     tungstenite::{Message, Utf8Bytes},
     MaybeTlsStream, WebSocketStream,
@@ -30,8 +26,8 @@ fn decrypt_server_request(req: String, dk: &DecryptionKey) -> Result<(Value, Ass
 
 async fn establish_connection(
     bundle: PreKeyBundle,
-    write: &mut SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
-    read: &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
+    write: &mut Sender,
+    read: &mut Receiver,
     ik: PrivateKey,
     spk: PrivateKey,
 ) -> Result<(EncryptionKey, DecryptionKey, InitialMessage), String> {
@@ -70,7 +66,7 @@ async fn register_user(
     write: &mut Sender,
     read: &mut Receiver,
     session: &mut SessionKeys,
-) -> Result<(), String> {
+) -> Result<ServerResponse, ()> {
     let req = json!({
             "action" : "register",
             "username" : username,
@@ -93,8 +89,8 @@ async fn register_user(
 
     if let Some(Ok(Message::Text(response))) = StreamExt::next(read).await {
         match decrypt_server_request(response.to_string(), dk) {
-            Ok((res, aad)) => ServerResponse::try_from(res),
-            Err(_) => todo!(),
+            Ok((res, aad)) => Ok(ServerResponse::try_from(res)?),
+            Err(_) => Err(()),
         }
     } else {
         panic!("Did not receive connection establishment acknowledgment");
