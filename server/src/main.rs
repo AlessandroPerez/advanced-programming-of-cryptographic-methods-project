@@ -107,7 +107,7 @@ fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String>
                 let msg = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
                 Ok((msg, session))
             }
-            Err(e) => Err(ServerResponse::new(
+            Err(_) => Err(ServerResponse::new(
                 ResponseCode::BadRequest,
                 "Can't process bundle".to_string(),
             )
@@ -203,6 +203,8 @@ async fn task_receiver(
     addr: String,
     session: SharedSession,
 ) {
+    // TODO: check if errors make the application vulnerable
+    // example: Decryption Oracle attack
     let mut user = String::new();
     while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
         match msg_result {
@@ -221,6 +223,11 @@ async fn task_receiver(
                                 .write()
                                 .await
                                 .set_decryption_key(s.get_decryption_key().unwrap());
+                            session
+                                .write()
+                                .await
+                                .set_associated_data(s.get_associated_data().unwrap());
+
                             send_message(sender.clone(), msg)
                                 .await
                                 .expect("Failed to send message.");
@@ -349,6 +356,8 @@ async fn handle_get_bundle_request(
                     }
                 }
                 None => {
+                    // TODO: Fix this: ek is None, no need to check is there is an ek in the
+                    // session
                     if let Some(ek) = session.read().await.get_encryption_key() {
                         let response = ServerResponse::new(
                             ResponseCode::BadRequest,
