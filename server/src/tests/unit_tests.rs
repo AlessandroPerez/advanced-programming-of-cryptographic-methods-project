@@ -60,7 +60,7 @@ async fn test_registration() {
     if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut read).await {
         println!("received initial msg: {}", response.to_string());
         let json_req: Value = serde_json::from_str::<Value>(&response.to_string()).unwrap();
-        let initial_msg = json_req.get("text").unwrap().as_str().unwrap();
+        let initial_msg = json_req.get("message").unwrap().as_str().unwrap();
         let initial_msg = InitialMessage::try_from(initial_msg.to_string()).unwrap();
         match process_initial_message(ik, spk, None, initial_msg.clone() ){
             Ok((ek, dk)) => {
