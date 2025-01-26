@@ -132,7 +132,7 @@ async fn test_get_bundle() {
     if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut read).await {
         println!("received initial msg: {}", response.to_string());
         let json_req: Value = serde_json::from_str::<Value>(&response.to_string()).unwrap();
-        let initial_msg = json_req.get("text").unwrap().as_str().unwrap();
+        let initial_msg = json_req.get("message").unwrap().as_str().unwrap();
         let initial_msg = InitialMessage::try_from(initial_msg.to_string()).unwrap();
         match process_initial_message(ik, spk, None, initial_msg.clone() ){
             Ok((ek, dk)) => {
@@ -173,7 +173,7 @@ async fn test_get_bundle() {
 
             let req = json!({
                 "action" : "get_prekey_bundle",
-                "user" : "Luc"
+                "user" : "Lucio"
             });
 
             let enc_req = if let Some(ek) = enc_k {
@@ -198,7 +198,7 @@ async fn test_get_bundle() {
                     let pb_string = String::from_utf8(response).unwrap();
                     let json = serde_json::from_str::<Value>(&pb_string).expect("Failed to parse json");
                     println!("json: {:?}", json);
-                    let mut pb_string = json.get("text").expect("Failed to get bundle").to_string();
+                    let mut pb_string = json.get("message").expect("Failed to get bundle").to_string();
                     println!("bundle with quotes: {}", &pb_string);
                     pb_string.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
                     println!("bundle: {}", &pb_string);
