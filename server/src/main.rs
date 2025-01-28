@@ -260,19 +260,25 @@ async fn task_receiver(
                                     }
                                 }
                                 Action::SendMessage(send_message_request) => {
-                                    // TODO: test this
                                     match peers.read().await.get(&send_message_request.to) {
-                                        // TODO: encrypt request
-                                        None => send_message(
-                                            sender.clone(),
-                                            ServerResponse::new(
-                                                ResponseCode::NotFound,
-                                                "User not found".to_string(),
-                                            )
-                                            .to_string(),
-                                        )
-                                        .await
-                                        .expect("Failed to send message."),
+                                        None => {
+                                            if let Some(ek) =
+                                                session.read().await.get_encryption_key()
+                                            {
+                                                let response = ServerResponse::new(
+                                                    ResponseCode::NotFound,
+                                                    "User not found".to_string(),
+                                                )
+                                                .to_string();
+                                                if let Ok(enc) =
+                                                    ek.encrypt(response.as_bytes(), &aad)
+                                                {
+                                                    send_message(sender.clone(), enc)
+                                                        .await
+                                                        .expect("Failed to send message.")
+                                                }
+                                            }
+                                        }
 
                                         Some(peer) => {
                                             // send message to the thread that handles the recipient
@@ -357,23 +363,16 @@ async fn handle_get_bundle_request(
                     }
                 }
                 None => {
-                    // TODO: Fix this: ek is None, no need to check is there is an ek in the
+                    // ek is None, no need to check is there is an ek in the
                     // session
-                    if let Some(ek) = session.read().await.get_encryption_key() {
-                        let response = ServerResponse::new(
-                            ResponseCode::BadRequest,
-                            "Establish a secure connection first".to_string(),
-                        )
-                        .to_string();
-                        match ek.encrypt(&response.into_bytes(), aad) {
-                            Ok(enc) => {
-                                send_message(sender.clone(), enc)
-                                    .await
-                                    .expect("Failed to send message.");
-                            }
-                            Err(_) => todo!(),
-                        }
-                    }
+                    let response = ServerResponse::new(
+                        ResponseCode::BadRequest,
+                        "Establish a secure connection first".to_string(),
+                    )
+                    .to_string();
+                    send_message(sender.clone(), response)
+                        .await
+                        .expect("Failed to send message.");
                 }
             }
         }
