@@ -2,6 +2,8 @@
 tui/target/
 protocol/target/
 server/target/
+common/target/
+client/target/
 
 *.pem
 
