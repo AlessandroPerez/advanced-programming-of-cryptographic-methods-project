@@ -231,6 +231,8 @@ async fn task_receiver(
                             send_message(sender.clone(), msg)
                                 .await
                                 .expect("Failed to send message.");
+
+                            info!("Connection established with: {}", &addr);
                         }
 
                         Err(e) => {

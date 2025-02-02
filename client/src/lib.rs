@@ -1,3 +1,5 @@
+pub mod error;
+
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
 
 use common::ServerResponse;
@@ -6,7 +8,7 @@ use futures_util::{
     SinkExt, StreamExt,
 };
 use log::{error, info};
-use protocol::x3dh::{generate_prekey_bundle, process_initial_message};
+use protocol::x3dh::{generate_prekey_bundle, generate_prekey_bundle_with_otpk, process_initial_message, process_server_initial_message};
 use protocol::{
     utils::{
         AssociatedData, DecryptionKey, EncryptionKey, InitialMessage, PreKeyBundle, PrivateKey,
@@ -15,16 +17,101 @@ use protocol::{
     x3dh::process_prekey_bundle,
 };
 use serde_json::{json, Value};
+
 use tokio::net::TcpStream;
 use tokio_tungstenite::{
     tungstenite::{Message, Utf8Bytes},
     MaybeTlsStream, WebSocketStream,
 };
+use protocol::utils::PublicKey;
+use crate::error::ClientError;
 
-const SERVER_URL: &str = "ws://127.0.0.1:3333";
+pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
+pub const SERVER_IK: &str = "NwAHzj8jBk6dkZxmUZsYKpCqwSUt1i2zK44ylb2bmw8=";
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
+
+pub struct Client {
+    friends: HashMap<String, Friend>,
+    session: SessionKeys,
+    write: Sender,
+    read: Receiver,
+    username: String,
+    bundle: PreKeyBundle,
+    identity_key: PrivateKey,
+    signed_prekey: PrivateKey,
+    one_time_prekey: Option<Vec<PrivateKey>>
+}
+
+
+impl Client {
+    pub async fn new() -> Result<Self, ClientError> {
+        // TODO: add otpk implementation
+        let (write, read) = Self::connect().await?;
+        let (bundle, ik, spk) = generate_prekey_bundle();
+        let session = SessionKeys::new();
+        let username = "".to_string();
+        let mut client = Self {
+            friends: HashMap::new(),
+            session,
+            write,
+            read,
+            username,
+            bundle,
+            identity_key: ik,
+            signed_prekey: spk,
+            one_time_prekey: None
+        };
+        client.establish_connection().await?;
+        Ok(client)
+    }
+
+    async fn connect() -> Result<(Sender, Receiver), ClientError> {
+        let (ws_stream, _) = tokio_tungstenite::connect_async(SERVER_URL).await?;
+        let (write, read) = ws_stream.split();
+        Ok((write, read))
+    }
+
+    pub async fn establish_connection(&mut self) -> Result<(), ClientError> {
+
+
+        let msg = json!({
+        "request_type": "EstablishConnection",
+        "bundle": self.bundle.clone().to_base64()
+    });
+
+        self.write
+            .send(Message::Text(Utf8Bytes::from(msg.to_string())))
+            .await
+            .expect("Failed to send message");
+
+        // Wait for server response
+        if let Some(Ok(Message::Text(initial_msg))) = StreamExt::next(&mut self.read).await {
+            if let Ok(resp) = ServerResponse::try_from(
+                serde_json::from_str::<Value>(initial_msg.as_str()).unwrap_or(Value::Null),
+            ) {
+                let mut im = resp.text;
+                info!("im: {}", &im);
+                im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
+                let initial_message = InitialMessage::try_from(im)?;
+                let (ek, dk) = process_initial_message(
+                    self.identity_key.clone(),
+                    self.signed_prekey.clone(),
+                    None,
+                    initial_message.clone(),
+                )?;
+
+                self.session.set_encryption_key(ek);
+                self.session.set_decryption_key(dk);
+                Ok(())
+        } else {
+            Err(ClientError::ServerResponseError)
+        }
+    } else {
+        Err(ClientError::ServerResponseError)}
+    }
+}
 struct Friend {
     keys: SessionKeys,
     pb: PreKeyBundle,
@@ -60,51 +147,7 @@ fn prompt(text: &str) -> String {
     response.trim_end().to_string()
 }
 
-pub async fn establish_connection(
-    bundle: PreKeyBundle,
-    write: &mut Sender,
-    read: &mut Receiver,
-    ik: PrivateKey,
-    spk: PrivateKey,
-) -> Result<(EncryptionKey, DecryptionKey, InitialMessage), String> {
-    let msg = json!({
-        "request_type": "EstablishConnection",
-        "bundle": bundle.to_base64()
-    });
 
-    write
-        .send(Message::Text(Utf8Bytes::from(msg.to_string())))
-        .await
-        .expect("Failed to send message");
-
-    // Wait for server response
-    if let Some(Ok(Message::Text(initial_msg))) = StreamExt::next(read).await {
-        if let Ok(resp) = ServerResponse::try_from(
-            serde_json::from_str::<Value>(initial_msg.as_str()).unwrap_or(Value::Null),
-        ) {
-            let mut im = resp.text;
-            info!("im: {}", &im);
-            im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
-            if let Ok(im) = InitialMessage::try_from(im) {
-                if let Ok((ek, dk)) = process_initial_message(ik, spk, None, im.clone()) {
-                    info!("Inital massage processed correctly");
-                    Ok((ek, dk, im))
-                } else {
-                    error!("Cannot process initial massage");
-                    Err("".to_string())
-                }
-            } else {
-                error!("Cannot parse initial message");
-                Err("".to_string())
-            }
-        } else {
-            error!("Cannot parse json response");
-            Err("".to_string())
-        }
-    } else {
-        Err("Did not receive connection establishment acknowledgment".to_string())
-    }
-}
 
 async fn get_user_prekeybundle(
     dk: &DecryptionKey,
@@ -192,9 +235,4 @@ async fn send_message(
 mod tests {
     use super::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
 }
