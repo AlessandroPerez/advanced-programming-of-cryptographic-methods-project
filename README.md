@@ -1,3 +1,6 @@
+# T.R.U.S.T
+The Rust Unique Secure Talk
+
 # Contacts
 
 Matteo Bordignon - [matteo.bordignon@studenti.unitn.it](mailto:matteo.bordignon@studenti.unitn.it)
