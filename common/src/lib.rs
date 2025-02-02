@@ -88,8 +88,8 @@ impl TryFrom<&str> for ResponseCode {
 }
 
 pub struct ServerResponse {
-    code: ResponseCode,
-    text: String,
+    pub code: ResponseCode,
+    pub text: String,
 }
 
 impl ServerResponse {

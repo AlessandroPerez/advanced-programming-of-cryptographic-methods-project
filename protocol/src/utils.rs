@@ -1,27 +1,22 @@
-use std::hash::{Hash, Hasher};
+use crate::constants::{
+    AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH,
+    SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
+};
+use crate::errors::X3DHError;
 use aes::cipher::generic_array::sequence::GenericSequence;
-use aes_gcm::{AeadCore, Aes256Gcm, KeyInit, Nonce};
 use aes_gcm::aead::{Aead, Buffer, Payload};
+use aes_gcm::{AeadCore, Aes256Gcm, KeyInit, Nonce};
 use arrayref::array_ref;
+use base64::{engine::general_purpose, Engine as _};
 use ed25519_dalek::ed25519::signature::SignerMut;
 use ed25519_dalek::Verifier;
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use serde_bytes;
+use sha2::{Digest, Sha256};
+use std::hash::{Hash, Hasher};
 use x25519_dalek::StaticSecret;
 use zeroize::{Zeroize, ZeroizeOnDrop};
-use crate::constants::{
-    CURVE25519_PUBLIC_LENGTH,
-    SIGNATURE_LENGTH,
-    AES256_SECRET_LENGTH,
-    CURVE25519_SECRET_LENGTH,
-    SHA256_HASH_LENGTH,
-    AES256_NONCE_LENGTH
-};
-use crate::errors::X3DHError;
-use base64::{Engine as _, engine:: general_purpose};
-use sha2::{Digest, Sha256};
-
 
 /* PREKEY BUNDLE */
 #[derive(Clone, Serialize, Deserialize)]
@@ -30,11 +25,14 @@ pub struct PreKeyBundle {
     pub ik: PublicKey,               // identity key
     pub spk: PublicKey,              // signed pre-key
     pub sig: Signature,              // signature
-    pub otpk: Vec<PublicKey>         // one-time pre-keys
+    pub otpk: Vec<PublicKey>,        // one-time pre-keys
 }
 
 impl PreKeyBundle {
-    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH + SIGNATURE_LENGTH;
+    pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH
+        + CURVE25519_PUBLIC_LENGTH
+        + CURVE25519_PUBLIC_LENGTH
+        + SIGNATURE_LENGTH;
     pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
@@ -43,7 +41,7 @@ impl PreKeyBundle {
             ik: PublicKey::from(ik),
             spk,
             sig,
-            otpk: vec![]
+            otpk: vec![],
         }
     }
 
@@ -55,7 +53,7 @@ impl PreKeyBundle {
             ik: PublicKey::from(ik),
             spk,
             sig,
-            otpk
+            otpk,
         }
     }
 
@@ -64,9 +62,7 @@ impl PreKeyBundle {
     }
 
     pub fn size(&self) -> usize {
-        CURVE25519_SECRET_LENGTH * 3 +
-        SIGNATURE_LENGTH +
-        self.otpk.len() * CURVE25519_PUBLIC_LENGTH
+        CURVE25519_SECRET_LENGTH * 3 + SIGNATURE_LENGTH + self.otpk.len() * CURVE25519_PUBLIC_LENGTH
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -97,7 +93,11 @@ impl TryFrom<String> for PreKeyBundle {
         }
 
         let verifying_key = VerifyingKey(*array_ref![bytes, 0, CURVE25519_PUBLIC_LENGTH]);
-        let identity_key = PublicKey(*array_ref![bytes, CURVE25519_PUBLIC_LENGTH, CURVE25519_PUBLIC_LENGTH]);
+        let identity_key = PublicKey(*array_ref![
+            bytes,
+            CURVE25519_PUBLIC_LENGTH,
+            CURVE25519_PUBLIC_LENGTH
+        ]);
         let signed_prekey = PublicKey(*array_ref![
             bytes,
             2 * CURVE25519_PUBLIC_LENGTH,
@@ -112,7 +112,8 @@ impl TryFrom<String> for PreKeyBundle {
             let mut one_time_keys = Vec::new();
             for i in 0..(bytes.len() - Self::BASE_SIZE) / CURVE25519_PUBLIC_LENGTH {
                 let start = Self::BASE_SIZE + i * CURVE25519_PUBLIC_LENGTH;
-                let one_time_prekey = PublicKey(*array_ref![bytes, start, CURVE25519_PUBLIC_LENGTH]);
+                let one_time_prekey =
+                    PublicKey(*array_ref![bytes, start, CURVE25519_PUBLIC_LENGTH]);
                 one_time_keys.push(one_time_prekey);
             }
             Ok(Self {
@@ -120,7 +121,7 @@ impl TryFrom<String> for PreKeyBundle {
                 ik: identity_key,
                 spk: signed_prekey,
                 sig: prekey_signature,
-                otpk: one_time_keys
+                otpk: one_time_keys,
             })
         } else {
             Ok(Self {
@@ -128,32 +129,37 @@ impl TryFrom<String> for PreKeyBundle {
                 ik: identity_key,
                 spk: signed_prekey,
                 sig: prekey_signature,
-                otpk: vec![]
+                otpk: vec![],
             })
         }
     }
 }
 
+#[derive(Clone)]
 pub struct SessionKeys {
     ek: Option<EncryptionKey>,
     dk: Option<DecryptionKey>,
-    aad: Option<AssociatedData>
+    aad: Option<AssociatedData>,
 }
 
 impl SessionKeys {
     pub fn new() -> Self {
-        Self{
+        Self {
             ek: None,
             dk: None,
-            aad: None
+            aad: None,
         }
     }
 
-    pub fn new_with_keys(ek: EncryptionKey, dk: DecryptionKey, aad: Option<AssociatedData>) -> Self {
+    pub fn new_with_keys(
+        ek: EncryptionKey,
+        dk: DecryptionKey,
+        aad: Option<AssociatedData>,
+    ) -> Self {
         Self {
             ek: Some(ek),
             dk: Some(dk),
-            aad
+            aad,
         }
     }
 
@@ -198,7 +204,6 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
     }
 }
 
-
 /* VERIFYING KEY */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
@@ -223,14 +228,12 @@ impl From<PublicKey> for VerifyingKey {
     fn from(public_key: PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
-
 }
 
 impl From<&PublicKey> for VerifyingKey {
     fn from(public_key: &PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
-
 }
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
@@ -240,7 +243,11 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
 }
 
 impl VerifyingKey {
-    pub(crate) fn verify(&self, signature: &Signature, message: &[u8]) -> Result<(), ed25519_dalek::SignatureError> {
+    pub(crate) fn verify(
+        &self,
+        signature: &Signature,
+        message: &[u8],
+    ) -> Result<(), ed25519_dalek::SignatureError> {
         let dalek_public_key = ed25519_dalek::VerifyingKey::from_bytes(&self.0)?;
         let dalek_signature = ed25519_dalek::Signature::from(signature.0);
         dalek_public_key.verify(message, &dalek_signature)
@@ -275,7 +282,8 @@ impl From<PrivateKey> for SigningKey {
     fn from(private_key: PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
-}impl From<&PrivateKey> for SigningKey {
+}
+impl From<&PrivateKey> for SigningKey {
     fn from(private_key: &PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
@@ -437,14 +445,11 @@ impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
     }
 }
 
-
-
 impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     fn from(value: [u8; SIGNATURE_LENGTH]) -> Signature {
         Signature(value)
     }
 }
-
 
 /* ASSOCIATED DATA */
 #[derive(Clone, Serialize, Deserialize)]
@@ -465,7 +470,7 @@ impl AssociatedData {
     pub fn new(ik: PublicKey, spk: PublicKey) -> Self {
         Self {
             initiator_identity_key: ik,
-            responder_identity_key: spk
+            responder_identity_key: spk,
         }
     }
 }
@@ -613,11 +618,7 @@ impl TryFrom<String> for InitialMessage {
 pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
-    pub fn encrypt(
-        &self,
-        data: &[u8],
-        aad: &AssociatedData,
-    ) -> Result<String, X3DHError> {
+    pub fn encrypt(&self, data: &[u8], aad: &AssociatedData) -> Result<String, X3DHError> {
         let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
 
         let cipher = Aes256Gcm::new_from_slice(&self.0);
@@ -631,7 +632,7 @@ impl EncryptionKey {
         output.extend_from_slice(&aad.clone().to_bytes());
         output.extend_from_slice(&encrypt_msg);
         let b64 = general_purpose::STANDARD.encode(output);
-        
+
         Ok(b64)
     }
 }
@@ -688,7 +689,6 @@ mod tests {
 
     #[test]
     fn test_serde_prekey_bundle() {
-
         let ik1 = PrivateKey::new();
         let spk = SignedPreKey::new();
 
