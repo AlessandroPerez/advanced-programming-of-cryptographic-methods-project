@@ -75,7 +75,7 @@ impl App {
 
     /// Returns the byte index based on the character position.
     ///
-    /// Since each character in a string can be contain multiple bytes, it's necessary to calculate
+    /// Since each character in a string can be contained multiple bytes, it's necessary to calculate
     /// the byte index based on the index of the character.
     fn byte_index(&self) -> usize {
         self.input
@@ -129,7 +129,6 @@ impl App {
                 self.client.set_username(self.input.clone());
                 match self.client.register_user().await {
                     Ok(_) => {
-                        self.input = String::new();
                         self.state = AppState::Chats;
                     },
                     Err(e) => {
@@ -184,7 +183,7 @@ impl App {
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut Frame) {
+    fn draw(&self, frame: &mut Frame) {
 
         match self.state {
             AppState::Animation => {
