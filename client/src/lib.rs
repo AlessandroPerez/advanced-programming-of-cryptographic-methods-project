@@ -138,6 +138,7 @@ impl Client {
         if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut self.read).await {
             match decrypt_server_request(response.to_string(), &self.session.get_decryption_key().unwrap()) {
                 Ok((res, _)) => {
+
                     match ServerResponse::try_from(res)?.code {
                         ResponseCode::Ok => Ok(()),
                         _ => Err(ClientError::UserAlreadyExistsError)
@@ -191,7 +192,7 @@ fn prompt(text: &str) -> String {
 
 
 
-async fn get_user_prekeybundle(
+async fn get_user_prekey_bundle(
     dk: &DecryptionKey,
     username: &str,
     write: &mut Sender,

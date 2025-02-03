@@ -133,66 +133,59 @@ async fn handle_registration(
     request
         .bundle
         .retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
-    // TODO: check if the username is alphanumeric
-    if !peers.read().await.contains_key(&request.username) {
+    let mut response = String::new();
+    let mut ret = Err(());
+    let is_alphanumeric = request.username.is_empty() ||
+        !request.username.chars().all(char::is_alphanumeric);
+
+    if !peers.read().await.contains_key(&request.username) && is_alphanumeric {
         match PreKeyBundle::try_from(request.bundle) {
             Ok(pb) => {
                 let peer = Peer::new(tx, pb);
                 let user = request.username.clone();
                 peers.write().await.insert(request.username, peer);
-                let response = ServerResponse::new(
+                response = ServerResponse::new(
                     ResponseCode::Ok,
                     "User registered successfully.".to_string(),
-                )
-                .to_string();
+                ).to_string();
 
-                match ek.encrypt(&response.into_bytes(), &aad) {
-                    Ok(res) => {
-                        send_message(sender, res)
-                            .await
-                            .expect("Failed to send message.");
-                    }
-                    Err(_) => todo!(),
-                }
-                Ok(user)
+                ret = Ok(user);
             }
             Err(_) => {
-                let response =
+
+                response =
                     ServerResponse::new(ResponseCode::BadRequest, "Bad request".to_string())
                         .to_string();
+                error!("{}", response);
+                ret = Err(());
 
-                match ek.encrypt(&response.into_bytes(), &aad) {
-                    Ok(enc) => {
-                        send_message(sender, enc)
-                            .await
-                            .expect("Failed to send message.");
-                        Err(())
-                    }
-                    Err(e) => {
-                        error!("Failed to send response to client due to error: {}", e);
-                        Err(())
-                    }
-                }
             }
         }
-    } else {
-        let response =
+    } else if is_alphanumeric {
+        response =
             ServerResponse::new(ResponseCode::Conflict, "User already exists".to_string())
                 .to_string();
-
-        match ek.encrypt(&response.into_bytes(), &aad) {
-            Ok(enc) => {
-                send_message(sender, enc)
-                    .await
-                    .expect("Failed to send message.");
-                Err(())
-            }
-            Err(e) => {
-                error!("Failed to send response to client due to error: {}", e);
-                Err(())
-            }
-        }
+        error!("{}", response);
+        ret = Err(());
+    } else {
+        response = ServerResponse::new(ResponseCode::BadRequest, "The username must be alphanumeric.".to_string())
+            .to_string();
+        error!("{}", response);
+        ret = Err(());
     }
+
+
+    info!("Sending response: {}", response);
+    match ek.encrypt(&response.into_bytes(), &aad) {
+        Ok(enc) => {
+            send_message(sender, enc)
+                .await
+                .expect("Failed to send message.");
+
+        }
+        Err(_) => ret = Err(()),
+    }
+    ret
 }
 
 async fn task_receiver(

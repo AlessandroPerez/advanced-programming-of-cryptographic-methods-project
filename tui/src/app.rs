@@ -1,12 +1,9 @@
-use std::io;
 use std::error;
 use crossterm::event;
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui::backend::Backend;
-use crate::handler::handle_key_events;
 use client::{Client};
-use client::errors::ClientError;
 use crate::widgets::register::RegistrationWidget;
 use crate::errors::TuiError;
 
