@@ -4,6 +4,7 @@ use client::Client;
 mod handler;
 mod app;
 mod widgets;
+mod errors;
 
 use crate::app::{App, AppResult};
 

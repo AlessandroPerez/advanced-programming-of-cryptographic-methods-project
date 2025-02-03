@@ -8,6 +8,7 @@ use crate::handler::handle_key_events;
 use client::{Client};
 use client::errors::ClientError;
 use crate::widgets::register::RegistrationWidget;
+use crate::errors::TuiError;
 
 // Application result type
 pub type AppResult<T> = Result<T, Box<dyn error::Error>>;
@@ -31,7 +32,7 @@ pub struct App {
     input: String,
     input_mode: InputMode,
     character_index: usize,
-    error: Option<ClientError>,
+    error: Option<TuiError>,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +66,11 @@ impl App {
     }
 
     fn enter_char(&mut self, new_char: char) {
+
+        if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
+            return;
+        }
+
         let index = self.byte_index();
         self.input.insert(index, new_char);
         self.move_cursor_right();
@@ -117,13 +123,19 @@ impl App {
         // self.messages.push(self.input.clone());
         match self.state {
             AppState::Register => {
+
+                if self.input.is_empty() {
+                    self.error = Some(TuiError::EmptyUsernameInput); // User can't be empty
+                    return;
+                }
+
                 self.client.set_username(self.input.clone());
                 match self.client.register_user().await {
                     Ok(_) => {
                         self.state = AppState::Chats;
                     },
                     Err(e) => {
-                        self.error = Some(e);
+                        self.error = Some(TuiError::from(e));
                     }
                 }
             },
@@ -184,7 +196,6 @@ impl App {
                 let mut error_message = String::new();
                 if let Some(error) = &self.error {
                     error_message = error.to_string();
-                    self.error = None;
                 }
                 frame.render_widget(
                     RegistrationWidget::new(
