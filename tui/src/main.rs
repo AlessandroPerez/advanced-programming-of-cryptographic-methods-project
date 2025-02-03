@@ -22,7 +22,6 @@ async fn main() -> AppResult<()> {
 
     // Run app
     let app_result = App::new(client).run(&mut terminal).await;
-
     // Restore terminal
     ratatui::restore();
 

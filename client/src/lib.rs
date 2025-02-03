@@ -105,7 +105,6 @@ impl Client {
                 self.session.set_encryption_key(ek);
                 self.session.set_decryption_key(dk);
                 self.session.set_associated_data(initial_message.associated_data);
-                self.bundle.otpk.remove(0);
                 Ok(())
             } else {
                 Err(ClientError::ServerResponseError)
@@ -154,6 +153,10 @@ impl Client {
 
     pub fn set_username(&mut self, username: String) {
         self.username = username;
+    }
+
+    pub async fn disconnect(&mut self) {
+        self.write.close().await.expect("Failed to close connection");
     }
 }
 struct Friend {

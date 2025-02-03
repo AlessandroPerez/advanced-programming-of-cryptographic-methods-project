@@ -160,7 +160,7 @@ impl App {
                             self.input_mode = InputMode::Insert;
                         }
                         KeyCode::Char('q') => {
-                            self.quit();
+                            self.quit().await;
                         }
                         _ => {}
                     },
@@ -211,7 +211,8 @@ impl App {
         }
     }
 
-    pub fn quit(&mut self) {
+    pub async fn quit(&mut self) {
         self.running = false;
+        self.client.disconnect().await;
     }
 }
