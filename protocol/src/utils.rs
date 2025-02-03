@@ -19,7 +19,7 @@ use x25519_dalek::StaticSecret;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /* PREKEY BUNDLE */
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct PreKeyBundle {
     pub verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
     pub ik: PublicKey,               // identity key
@@ -205,8 +205,8 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 }
 
 /* VERIFYING KEY */
-#[derive(Clone, Serialize, Deserialize)]
-pub struct VerifyingKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+#[derive(Clone, Debug)]
+pub struct VerifyingKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<SigningKey> for VerifyingKey {
     fn from(private_key: SigningKey) -> VerifyingKey {
@@ -363,8 +363,8 @@ impl From<&SigningKey> for PrivateKey {
 }
 
 /* PUBLIC KEY */
-#[derive(Clone, Serialize, Deserialize)]
-pub struct PublicKey(#[serde(with = "serde_bytes")] pub [u8; CURVE25519_PUBLIC_LENGTH]);
+#[derive(Clone, Debug)]
+pub struct PublicKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
     fn from(private_key: PrivateKey) -> PublicKey {
@@ -436,8 +436,8 @@ impl PublicKey {
 }
 
 /* SIGNATURE */
-#[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct Signature(#[serde(with = "serde_bytes")] pub [u8; SIGNATURE_LENGTH]);
+#[derive(Clone, Debug)]
+pub(crate) struct Signature( pub [u8; SIGNATURE_LENGTH]);
 
 impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
     fn as_ref(&self) -> &[u8; SIGNATURE_LENGTH] {
@@ -452,7 +452,7 @@ impl From<[u8; SIGNATURE_LENGTH]> for Signature {
 }
 
 /* ASSOCIATED DATA */
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct AssociatedData {
     pub(crate) initiator_identity_key: PublicKey,
     pub(crate) responder_identity_key: PublicKey,
@@ -492,8 +492,8 @@ impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
 }
 
 /* SHA HASH */
-#[derive(Clone, Serialize, Deserialize, Eq, Debug)]
-pub struct Sha256Hash(#[serde(with = "serde_bytes")] pub [u8; SHA256_HASH_LENGTH]);
+#[derive(Clone, Eq, Debug)]
+pub struct Sha256Hash(pub [u8; SHA256_HASH_LENGTH]);
 
 impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
     fn from(value: &[u8; SHA256_HASH_LENGTH]) -> Sha256Hash {
@@ -513,7 +513,7 @@ impl PartialEq for Sha256Hash {
 }
 
 /* INITIAL MESSAGE */
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct InitialMessage {
     pub identity_key: PublicKey,
     pub ephemeral_key: PublicKey,

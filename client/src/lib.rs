@@ -97,7 +97,7 @@ impl Client {
                 let (ek, dk) = process_server_initial_message(
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
-                    Some(self.one_time_prekey.remove(0)),
+                    Some(self.one_time_prekey.pop().unwrap()),
                     &PublicKey::from_base64(SERVER_IK.to_string()).unwrap(),
                     initial_message.clone(),
                 )?;
@@ -105,6 +105,7 @@ impl Client {
                 self.session.set_encryption_key(ek);
                 self.session.set_decryption_key(dk);
                 self.session.set_associated_data(initial_message.associated_data);
+                self.bundle.otpk.remove(0);
                 Ok(())
             } else {
                 Err(ClientError::ServerResponseError)

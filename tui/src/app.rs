@@ -129,6 +129,7 @@ impl App {
                 self.client.set_username(self.input.clone());
                 match self.client.register_user().await {
                     Ok(_) => {
+                        self.input = String::new();
                         self.state = AppState::Chats;
                     },
                     Err(e) => {

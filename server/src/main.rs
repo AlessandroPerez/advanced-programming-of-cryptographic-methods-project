@@ -14,6 +14,7 @@ use protocol::x3dh::process_prekey_bundle;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
+use std::ops::Deref;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -100,7 +101,7 @@ fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String>
     if let Ok(bundle) = PreKeyBundle::try_from(bundle) {
         match process_prekey_bundle(
             PrivateKey::from_base64(PRIVATE_KEY.to_string()).unwrap(),
-            bundle.clone(),
+            bundle,
         ) {
             Ok((im, ek, dk)) => {
                 let session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
@@ -340,8 +341,12 @@ async fn handle_get_bundle_request(
         .expect("Failed to send message."),
 
         Some(peer) => {
+            let mut updated_peer = peer.clone();
+            let bundle = updated_peer.get_bundle();
+            peers.write().await.insert(user.clone(), updated_peer);
+
             let response =
-                ServerResponse::new(ResponseCode::Ok, peer.get_bundle().to_base64()).to_string();
+                ServerResponse::new(ResponseCode::Ok, bundle.to_base64()).to_string();
 
             match session.read().await.get_encryption_key() {
                 Some(ek) => {

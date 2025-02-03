@@ -77,7 +77,7 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
         dh3,
         if !bundle.otpk.is_empty() {
             // DH4 = DH(EKA, OTPK)
-            Some(ek.diffie_hellman(&bundle.otpk[0]))
+            Some(ek.diffie_hellman(&bundle.otpk.last().unwrap()))
         } else {
             None
         },
@@ -95,7 +95,8 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
                 identity_key: PublicKey::from(&ik),
                 ephemeral_key: p_ek,
                 prekey_hash: bundle.spk.hash(),
-                one_time_key_hash: if !bundle.otpk.is_empty() {Some(bundle.otpk.remove(0).hash())} else {None},
+                one_time_key_hash: if !bundle.otpk.is_empty() {
+                    Some(bundle.otpk.pop().unwrap().hash())} else {None},
                 associated_data: ad
             },
             EncryptionKey::from(sk1),

@@ -10,6 +10,8 @@ use tokio_tungstenite::tungstenite::Message;
 
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;
+
+#[derive(Debug, Clone)]
 pub(crate) struct Peer {
     pub(crate) sender: Tx,
     pub(crate) pb: PreKeyBundle,
@@ -20,9 +22,15 @@ impl Peer {
         Self { sender, pb }
     }
 
-    pub(crate) fn get_bundle(&self) -> PreKeyBundle {
-        self.pb.clone()
+    pub(crate) fn get_bundle(&mut self) -> PreKeyBundle {
+        let otpk = self.pb.otpk.pop().unwrap();
+        let otpk = vec![otpk];
+        let mut bundle = self.pb.clone();
+        bundle.otpk = otpk;
+        bundle
     }
+
+
 }
 
 pub(crate) struct EstablishConnection<'a>(pub &'a str);
