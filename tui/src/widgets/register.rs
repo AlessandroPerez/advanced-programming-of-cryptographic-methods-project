@@ -79,12 +79,12 @@ impl Widget for RegistrationWidget {
 
         let bottom_text = match self.input_mode {
             InputMode::Normal => Line::from(vec![
-                Span::styled(" NORMAL ", Style::default().fg(Color::Black).bg(Color::LightGreen)),
+                Span::styled(" NORMAL ", Style::default().fg(Color::Black).bg(Color::Rgb(130, 170, 255))),
                 Span::styled(" | Press 'i' to enter INSERT mode or 'q' to quit", Style::default().fg(Color::White)),
             ]),
 
             InputMode::Insert => Line::from(vec![
-                Span::styled(" INSERT ", Style::default().fg(Color::Black).bg(Color::LightRed)),
+                Span::styled(" INSERT ", Style::default().fg(Color::Black).bg(Color::Rgb(195, 232, 141))),
                 Span::styled(" | Press 'ESC' to enter NORMAL mode", Style::default().fg(Color::White)),
             ])
         };

@@ -133,7 +133,7 @@ async fn handle_registration(
     request
         .bundle
         .retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
-
+    // TODO: check if the username is alphanumeric
     if !peers.read().await.contains_key(&request.username) {
         match PreKeyBundle::try_from(request.bundle) {
             Ok(pb) => {
