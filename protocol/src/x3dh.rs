@@ -51,8 +51,8 @@ pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, Pr
 }
 
 
-pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
-    -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
+pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
+                             -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
     // process the prekey bundle
 
     bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
@@ -95,7 +95,7 @@ pub fn process_prekey_bundle(ik: PrivateKey, bundle: PreKeyBundle)
                 identity_key: PublicKey::from(&ik),
                 ephemeral_key: p_ek,
                 prekey_hash: bundle.spk.hash(),
-                one_time_key_hash: if !bundle.otpk.is_empty() {Some(bundle.otpk[0].hash())} else {None},
+                one_time_key_hash: if !bundle.otpk.is_empty() {Some(bundle.otpk.remove(0).hash())} else {None},
                 associated_data: ad
             },
             EncryptionKey::from(sk1),
@@ -172,7 +172,7 @@ pub fn process_server_initial_message(
     msg: InitialMessage,
 ) -> Result<(EncryptionKey, DecryptionKey), X3DHError> {
 
-    if msg.identity_key.as_ref() != server_ik.as_ref() {
+    if msg.identity_key.hash() != server_ik.hash(){
         return Err(X3DHError::InvalidInitialMessage);
     }
     // DH1 = DH(SPKB, IKA)

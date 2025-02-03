@@ -9,7 +9,7 @@ use futures::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::{SinkExt, StreamExt};
 use log::{error, info};
-use protocol::utils::{AssociatedData, EncryptionKey, PreKeyBundle, PrivateKey, SessionKeys};
+use protocol::utils::{AssociatedData, EncryptionKey, PreKeyBundle, PrivateKey, PublicKey, SessionKeys};
 use protocol::x3dh::process_prekey_bundle;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -25,7 +25,7 @@ use utils::{decrypt_client_request, Action, EstablishConnection, Tx};
 
 // Keys for testing
 const PRIVATE_KEY: &str = "QPdkjPrBYWzwTq70jdeVbr4f4kdS140HeuOXi88hgPc=";
-const _PUBLIC_KEY: &str = "NwAHzj8jBk6dkZxmUZsYKpCqwSUt1i2zK44ylb2bmw8=";
+
 
 // server address
 const IP: &str = "127.0.0.1";

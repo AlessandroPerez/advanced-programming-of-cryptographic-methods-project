@@ -1,4 +1,4 @@
-pub mod error;
+pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
 
@@ -24,10 +24,10 @@ use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
 };
 use protocol::utils::PublicKey;
-use crate::error::ClientError;
+use crate::errors::ClientError;
 
 pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
-pub const SERVER_IK: &str = "NwAHzj8jBk6dkZxmUZsYKpCqwSUt1i2zK44ylb2bmw8=";
+pub const SERVER_IK: &str = "KidEmuJzis1xt3+XwkzEBx4rB8hjuEvHK0LV0vY5aE8=";
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
@@ -41,7 +41,7 @@ pub struct Client {
     bundle: PreKeyBundle,
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
-    one_time_prekey: Option<Vec<PrivateKey>>
+    one_time_prekey: Vec<PrivateKey>
 }
 
 
@@ -49,7 +49,7 @@ impl Client {
     pub async fn new() -> Result<Self, ClientError> {
         // TODO: add otpk implementation
         let (write, read) = Self::connect().await?;
-        let (bundle, ik, spk) = generate_prekey_bundle();
+        let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(10);
         let session = SessionKeys::new();
         let username = "".to_string();
         let mut client = Self {
@@ -61,7 +61,7 @@ impl Client {
             bundle,
             identity_key: ik,
             signed_prekey: spk,
-            one_time_prekey: None
+            one_time_prekey: otpk
         };
         client.establish_connection().await?;
         Ok(client)
@@ -95,15 +95,17 @@ impl Client {
                 info!("im: {}", &im);
                 im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
                 let initial_message = InitialMessage::try_from(im)?;
-                let (ek, dk) = process_initial_message(
+                let (ek, dk) = process_server_initial_message(
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
-                    None,
+                    Some(self.one_time_prekey.remove(0)),
+                    &PublicKey::from_base64(SERVER_IK.to_string()).unwrap(),
                     initial_message.clone(),
                 )?;
 
                 self.session.set_encryption_key(ek);
                 self.session.set_decryption_key(dk);
+                self.session.set_associated_data(initial_message.associated_data);
                 Ok(())
         } else {
             Err(ClientError::ServerResponseError)
