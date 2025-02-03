@@ -2,7 +2,7 @@ pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
 
-use common::ServerResponse;
+use common::{ResponseCode, ServerResponse};
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -47,7 +47,6 @@ pub struct Client {
 
 impl Client {
     pub async fn new() -> Result<Self, ClientError> {
-        // TODO: add otpk implementation
         let (write, read) = Self::connect().await?;
         let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(10);
         let session = SessionKeys::new();
@@ -79,7 +78,7 @@ impl Client {
         let msg = json!({
         "request_type": "EstablishConnection",
         "bundle": self.bundle.clone().to_base64()
-    });
+        });
 
         self.write
             .send(Message::Text(Utf8Bytes::from(msg.to_string())))
@@ -107,11 +106,52 @@ impl Client {
                 self.session.set_decryption_key(dk);
                 self.session.set_associated_data(initial_message.associated_data);
                 Ok(())
+            } else {
+                Err(ClientError::ServerResponseError)
+            }
         } else {
             Err(ClientError::ServerResponseError)
         }
-    } else {
-        Err(ClientError::ServerResponseError)}
+    }
+
+    pub async fn register_user(&mut self) -> Result<(), ClientError> {
+        let req = json!({
+            "action" : "register",
+            "username" : self.username.clone(),
+            "bundle": self.bundle.clone().to_base64()
+        });
+
+        let enc_req = self.session
+            .get_encryption_key()
+            .unwrap()
+            .encrypt(
+                req.to_string().as_ref(),
+                &self.session.get_associated_data().unwrap(),
+            )
+            .expect("Failed to encrypt request");
+
+        self.write
+            .send(Message::Text(Utf8Bytes::from(enc_req)))
+            .await
+            .expect("Failed to send message");
+
+        if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut self.read).await {
+            match decrypt_server_request(response.to_string(), &self.session.get_decryption_key().unwrap()) {
+                Ok((res, _)) => {
+                    match ServerResponse::try_from(res)?.code {
+                        ResponseCode::Ok => Ok(()),
+                        _ => Err(ClientError::UserAlreadyExistsError)
+                    }
+                },
+                Err(_) => Err(ClientError::ServerResponseError),
+            }
+        } else {
+            panic!("Did not receive connection establishment acknowledgment");
+        }
+    }
+
+    pub fn set_username(&mut self, username: String) {
+        self.username = username;
     }
 }
 struct Friend {
@@ -186,43 +226,7 @@ async fn get_user_prekeybundle(
     }
 }
 
-async fn register_user(
-    dk: &DecryptionKey,
-    username: &str,
-    pb: PreKeyBundle,
-    write: &mut Sender,
-    read: &mut Receiver,
-    session: &mut SessionKeys,
-) -> Result<ServerResponse, ()> {
-    let req = json!({
-            "action" : "register",
-            "username" : username,
-            "bundle": pb.clone().to_base64()
-    });
 
-    let enc_req = session
-        .get_encryption_key()
-        .unwrap()
-        .encrypt(
-            req.to_string().as_ref(),
-            &session.get_associated_data().unwrap(),
-        )
-        .expect("Failed to encrypt request");
-
-    write
-        .send(Message::Text(Utf8Bytes::from(enc_req)))
-        .await
-        .expect("Failed to send message");
-
-    if let Some(Ok(Message::Text(response))) = StreamExt::next(read).await {
-        match decrypt_server_request(response.to_string(), dk) {
-            Ok((res, _aad)) => Ok(ServerResponse::try_from(res)?),
-            Err(_) => Err(()),
-        }
-    } else {
-        panic!("Did not receive connection establishment acknowledgment");
-    }
-}
 
 async fn send_message(
     to: &str,

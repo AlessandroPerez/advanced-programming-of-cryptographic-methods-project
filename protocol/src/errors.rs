@@ -1,9 +1,10 @@
 use std::fmt::{Display, Formatter};
 use aes::cipher::crypto_common;
+use ed25519_dalek::SignatureError;
 
 #[derive(Debug)]
 pub enum X3DHError {
-    InvalidSignature(ed25519_dalek::SignatureError),
+    InvalidSignature(SignatureError),
     HkdfInvalidLengthError(hkdf::InvalidLength),
     AesGcmInvalidLength(crypto_common::InvalidLength),
     AesGcmError(aes_gcm::Error),
@@ -13,6 +14,8 @@ pub enum X3DHError {
     InvalidPrivateKey,
     InvalidPublicKey,
 }
+
+
 
 impl Display for X3DHError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
