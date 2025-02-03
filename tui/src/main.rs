@@ -3,7 +3,7 @@ use client::Client;
 
 mod handler;
 mod app;
-
+mod widgets;
 
 use crate::app::{App, AppResult};
 
