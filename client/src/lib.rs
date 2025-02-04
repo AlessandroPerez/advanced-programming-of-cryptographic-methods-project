@@ -1,7 +1,7 @@
 pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
-
+use chrono::{DateTime, Utc};
 use common::{ResponseCode, ServerResponse};
 use futures_util::{
     stream::{SplitSink, SplitStream},
@@ -33,7 +33,7 @@ type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
 
 pub struct Client {
-    friends: HashMap<String, Friend>,
+    pub friends: HashMap<String, Friend>,
     session: SessionKeys,
     write: Sender,
     read: Receiver,
@@ -159,15 +159,29 @@ impl Client {
         self.write.close().await.expect("Failed to close connection");
     }
 }
+
+struct ChatMessage {
+    from: String,
+    text: String,
+    timestamp: DateTime<Utc>
+}
+
+impl ChatMessage {
+    fn new(from: String, text: String, timestamp: DateTime<Utc>) -> Self {
+        Self { from, text, timestamp }
+    }
+}
+
 struct Friend {
     keys: SessionKeys,
     pb: PreKeyBundle,
     im: InitialMessage,
+    chat: Vec<ChatMessage>
 }
 
 impl Friend {
     fn new(keys: SessionKeys, pb: PreKeyBundle, im: InitialMessage) -> Self {
-        Self { keys, pb, im }
+        Self { keys, pb, im, chat: Vec::new() }
     }
 
     fn get_friend_bundle(&self) -> PreKeyBundle {
@@ -176,6 +190,10 @@ impl Friend {
 
     fn get_friend_keys(&self) -> SessionKeys {
         self.keys.clone()
+    }
+
+    fn add_message(&mut self, message: ChatMessage) {
+        self.chat.push(message);
     }
 }
 
