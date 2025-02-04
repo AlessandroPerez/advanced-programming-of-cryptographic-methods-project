@@ -1,7 +1,5 @@
-use std::cmp::PartialEq;
-use crossterm::event;
 use crate::app::{App, AppResult, AppState, InputMode};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crate::errors::TuiError;
 
 
@@ -20,19 +18,19 @@ pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()>
                         app.quit().await;
                     },
 
-                    KeyCode::Left if app.state == AppState::Chats => {
+                    KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
                         app.active_window = 0;
                     },
 
-                    KeyCode::Right if app.state == AppState::Chats => {
+                    KeyCode::Right | KeyCode::Char('l') if app.state == AppState::Chats => {
                         app.active_window = 1;
                     },
 
-                    KeyCode::Down if app.state == AppState::Chats && app.active_window == 0 => {
+                    KeyCode::Down | KeyCode::Char('j') if app.state == AppState::Chats && app.active_window == 0 => {
                         app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
                     },
 
-                    KeyCode::Up if app.state == AppState::Chats && app.active_window == 0 => {
+                    KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
                         app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
                     },
 
