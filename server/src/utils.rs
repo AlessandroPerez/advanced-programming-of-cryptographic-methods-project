@@ -23,11 +23,10 @@ impl Peer {
     }
 
     pub(crate) fn get_bundle(&mut self) -> PreKeyBundle {
-        let otpk = self.pb.otpk.pop().unwrap();
-        let otpk = vec![otpk];
-        let mut bundle = self.pb.clone();
-        bundle.otpk = otpk;
-        bundle
+        let otpk = self.pb.otpk.pop();
+        let mut pb = self.pb.clone();
+        pb.otpk = vec![otpk.unwrap()];
+        pb
     }
 
 
@@ -75,6 +74,8 @@ pub(crate) enum Action {
 }
 
 impl Action {
+    // TODO: BUG: This function is not working as expected, the char " is being added to the string
+    //      when it is parsed from the json but server does not work without it
     pub(crate) fn from_json(request: &serde_json::Value) -> Option<Self> {
         let action = request.get("action")?.as_str()?;
         match action {
@@ -98,7 +99,9 @@ impl Action {
                 }))
             }
             "get_prekey_bundle" => {
-                let user = request.get("user")?.to_string();
+                // TODO: understand why this is not working
+                // let user = request.get("who")?.as_str()?.to_string();
+                let user = request.get("who")?.to_string();
                 Some(Self::GetPrekeyBundle(user))
             }
 

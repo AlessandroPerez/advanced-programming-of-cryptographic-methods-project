@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use crate::app::{App, AppResult, AppState, InputMode};
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crate::errors::TuiError;
@@ -18,6 +19,10 @@ pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()>
                         app.quit().await;
                     },
 
+                    KeyCode::Char('a') => {
+                        app.show_popup = !app.show_popup
+                    },
+
                     KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
                         app.active_window = 0;
                     },
@@ -32,6 +37,10 @@ pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()>
 
                     KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
                         app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
+                    },
+
+                    KeyCode::Esc if app.show_popup => {
+                        app.show_popup = false;
                     },
 
                     _ => {}
@@ -54,6 +63,7 @@ pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()>
     Ok(())
 }
 
+
 impl App {
     pub(crate) fn move_cursor_left(&mut self) {
         let cursor_moved_left = self.character_index.saturating_sub(1);
@@ -67,18 +77,27 @@ impl App {
 
     pub(crate) fn enter_char(&mut self, new_char: char) {
 
-        match self.state {
-            AppState::Register => {
-                if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
-                    return;
-                }
-            },
-            _ => {}
-        }
+        if self.input_mode == InputMode::Insert {
+            match self.state {
+                AppState::Register => {
+                    if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
+                        return;
+                    }
+                },
+                AppState::Chats => {
+                    if self.show_popup {
+                        if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
+                            return;
+                        }
+                    }
+                },
+                _ => {}
+            }
 
-        let index = self.byte_index();
-        self.input.insert(index, new_char);
-        self.move_cursor_right();
+            let index = self.byte_index();
+            self.input.insert(index, new_char);
+            self.move_cursor_right();
+        }
     }
 
     /// Returns the byte index based on the character position.
@@ -145,7 +164,36 @@ impl App {
                 }
             },
             AppState::Chats => {
-                // TODO send message
+                match self.input_mode {
+                    InputMode::Normal => {
+                        if !self.show_popup {
+                            if self.active_window == 0 {
+                                self.active_chat = self.selected_chat;
+                            }
+                        } else {
+                            match self.client.get_user_prekey_bundle(self.input.clone()).await {
+                                Ok(_) => {
+                                    self.show_popup = false;
+                                },
+                                Err(e) => {
+                                    self.error = Some(TuiError::from(e));
+                                }
+                            }
+                        }
+                    },
+                    InputMode::Insert => {
+                        if self.show_popup {
+                            match self.client.get_user_prekey_bundle(self.input.clone()).await {
+                                Ok(_) => {
+                                    self.show_popup = false;
+                                },
+                                Err(e) => {
+                                    self.error = Some(TuiError::from(e));
+                                }
+                            }
+                        }
+                    }
+                }
             },
             _ => {}
         }

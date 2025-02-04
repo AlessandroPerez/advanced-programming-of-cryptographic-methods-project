@@ -1,6 +1,7 @@
 pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
+use aes_gcm::aes::cipher::typenum::Le;
 use chrono::{DateTime, Utc};
 use common::{ResponseCode, ServerResponse};
 use futures_util::{
@@ -25,11 +26,17 @@ use tokio_tungstenite::{
 };
 use protocol::utils::PublicKey;
 use crate::errors::ClientError;
+use crate::TypeOr::{Left, Right};
 
 pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
 pub const SERVER_IK: &str = "KidEmuJzis1xt3+XwkzEBx4rB8hjuEvHK0LV0vY5aE8=";
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
+
+enum TypeOr<L, R> {
+    Left(L),
+    Right(R)
+}
 
 
 pub struct Client {
@@ -73,7 +80,6 @@ impl Client {
     }
 
     pub async fn establish_connection(&mut self) -> Result<(), ClientError> {
-
 
         let msg = json!({
         "request_type": "EstablishConnection",
@@ -121,33 +127,90 @@ impl Client {
             "bundle": self.bundle.clone().to_base64()
         });
 
-        let enc_req = self.session
+        match self.send_encrypted_message(req).await {
+            Left(Ok(response)) => {
+                match response.code {
+                    ResponseCode::Ok => {
+                        Ok(())
+                    }
+                    ResponseCode::Conflict => {
+                        Err(ClientError::UserAlreadyExistsError)
+                    }
+                    _ => {
+                        Err(ClientError::ServerResponseError)
+                    }
+                }
+            }
+            _ => {Err(ClientError::ServerResponseError)}
+        }
+
+    }
+
+    pub async fn get_user_prekey_bundle(
+        &mut self,
+        username: String,
+    ) -> Result<(), ClientError> {
+        let req = json!({
+            "action": "get_prekey_bundle",
+            "who": username,
+        });
+
+        let response = match self.send_encrypted_message(req).await {
+            Left(Ok(response)) => response,
+            _ => {return Err(ClientError::ServerResponseError)}
+        };
+
+        match response.code {
+            ResponseCode::Ok => {
+                let pb = PreKeyBundle::try_from(response.text)?;
+                let (im, ek, dk) = process_prekey_bundle(
+                    self.identity_key.clone(),
+                    pb.clone()
+                )?;
+                let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data));
+                self.friends.insert(username.clone(), Friend::new(friend_session, pb.clone()));
+                let req = json!({
+                                "action": "send_message",
+                                "type": "initial",
+                                "from": self.username,
+                                "to": username,
+                                "text": pb.clone().to_base64()
+                            });
+
+                self.send_encrypted_message(req).await;
+                Ok(())
+            }
+            _ => {Err(ClientError::ServerResponseError)}
+        }
+    }
+
+    async fn send_encrypted_message(&mut self, req: Value) -> TypeOr<Result<ServerResponse, ()>, ()> {
+
+        let enc = self.session
             .get_encryption_key()
             .unwrap()
             .encrypt(
-                req.to_string().as_ref(),
+                req.to_string().as_bytes(),
                 &self.session.get_associated_data().unwrap(),
             )
             .expect("Failed to encrypt request");
 
         self.write
-            .send(Message::Text(Utf8Bytes::from(enc_req)))
+            .send(Message::Text(Utf8Bytes::from(enc)))
             .await
-            .expect("Failed to send message");
+            .expect("Failed to send request.");
 
-        if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut self.read).await {
-            match decrypt_server_request(response.to_string(), &self.session.get_decryption_key().unwrap()) {
-                Ok((res, _)) => {
-
-                    match ServerResponse::try_from(res)?.code {
-                        ResponseCode::Ok => Ok(()),
-                        _ => Err(ClientError::UserAlreadyExistsError)
-                    }
-                },
-                Err(_) => Err(ClientError::ServerResponseError),
+        if req.get("action") != serde_json::from_str("send_message").ok().as_ref() {
+            if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut self.read).await {
+                match decrypt_server_request(response.to_string(), &self.session.get_decryption_key().unwrap()) {
+                    Ok((r, _aad)) => Left(ServerResponse::try_from(r)),
+                    Err(_) => Left(Err(())),
+                }
+            } else {
+                panic!("Did not received any request.")
             }
-        } else {
-            panic!("Did not receive connection establishment acknowledgment");
+        } else{
+            Right(())
         }
     }
 
@@ -175,13 +238,12 @@ impl ChatMessage {
 struct Friend {
     keys: SessionKeys,
     pb: PreKeyBundle,
-    im: InitialMessage,
     chat: Vec<ChatMessage>
 }
 
 impl Friend {
-    fn new(keys: SessionKeys, pb: PreKeyBundle, im: InitialMessage) -> Self {
-        Self { keys, pb, im, chat: Vec::new() }
+    fn new(keys: SessionKeys, pb: PreKeyBundle) -> Self {
+        Self { keys, pb, chat: Vec::new() }
     }
 
     fn get_friend_bundle(&self) -> PreKeyBundle {
@@ -214,40 +276,7 @@ fn prompt(text: &str) -> String {
 
 
 
-async fn get_user_prekey_bundle(
-    dk: &DecryptionKey,
-    username: &str,
-    write: &mut Sender,
-    read: &mut Receiver,
-    session: &mut SessionKeys,
-) -> Result<ServerResponse, ()> {
-    let req = json!({
-        "action": "get_prekey_bundle",
-        "who": username,
-    });
-    let enc = session
-        .get_encryption_key()
-        .unwrap()
-        .encrypt(
-            req.to_string().as_bytes(),
-            &session.get_associated_data().unwrap(),
-        )
-        .expect("Failed to encrypt request");
 
-    write
-        .send(Message::Text(Utf8Bytes::from(enc)))
-        .await
-        .expect("Failed to send request.");
-
-    if let Some(Ok(Message::Text(response))) = StreamExt::next(read).await {
-        match decrypt_server_request(response.to_string(), dk) {
-            Ok((r, _aad)) => Ok(ServerResponse::try_from(r)?),
-            Err(_) => Err(()),
-        }
-    } else {
-        panic!("Did not received any request.")
-    }
-}
 
 
 

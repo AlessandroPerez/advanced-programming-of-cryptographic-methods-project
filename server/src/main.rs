@@ -292,6 +292,7 @@ async fn task_receiver(
                                         &session,
                                         sender.clone(),
                                         &aad,
+                                        &addr,
                                     )
                                     .await;
                                 }
@@ -331,19 +332,21 @@ async fn handle_get_bundle_request(
     session: &SharedSession,
     sender: SharedSink,
     aad: &AssociatedData,
+    addr: &str,
 ) {
-    match peers.read().await.get(&user) {
-        None => send_message(
-            sender.clone(),
-            ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string(),
-        )
-        .await
-        .expect("Failed to send message."),
+    match peers.write().await.get_mut(&user) {
+        None => {
+            send_message(
+                sender.clone(),
+                ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string(),
+            )
+                .await
+                .expect("Failed to send message.");
+            error!("User not found: {}", &user);
+        },
 
         Some(peer) => {
-            let mut updated_peer = peer.clone();
-            let bundle = updated_peer.get_bundle();
-            peers.write().await.insert(user.clone(), updated_peer);
+            let bundle = peer.get_bundle();
 
             let response =
                 ServerResponse::new(ResponseCode::Ok, bundle.to_base64()).to_string();
@@ -355,6 +358,7 @@ async fn handle_get_bundle_request(
                             send_message(sender.clone(), enc)
                                 .await
                                 .expect("Failed to send message.");
+                            info!("Sent prekey bundle of {} to {}", &user, addr);
                         }
                         Err(e) => {
                             // TODO: handle error

@@ -4,8 +4,12 @@ use crossterm::event::{Event, KeyEventKind, KeyCode};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui::backend::Backend;
 use client::{Client};
+use ratatui::layout::{Constraint, Flex, Layout, Rect};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Clear};
 use crate::widgets::register::RegistrationWidget;
 use crate::widgets::chats::ChatsWidget;
+use crate::widgets::popup::PopupWidget;
 use crate::errors::TuiError;
 use crate::handler::handle_key_events;
 
@@ -45,12 +49,23 @@ pub struct App {
 
     pub(crate) active_window: usize,
     pub(crate) selected_chat: usize,
+    pub (crate) active_chat: usize,
+    pub(crate) show_popup: bool,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum InputMode {
     Normal,
     Insert,
+}
+impl PartialEq for InputMode {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (InputMode::Normal, InputMode::Normal) => true,
+            (InputMode::Insert, InputMode::Insert) => true,
+            _ => false,
+        }
+    }
 }
 
 impl App {
@@ -66,6 +81,8 @@ impl App {
             error: None,
             active_window: 0,
             selected_chat: 0,
+            active_chat: 0,
+            show_popup: false,
         }
     }
 
@@ -123,6 +140,17 @@ impl App {
                     ),
                     frame.area()
                 );
+                let area = frame.area();
+                if self.show_popup {
+
+                    let area = popup_area(area, 30, 10);
+                    frame.render_widget(Clear, area); //this clears out the background
+                    frame.render_widget(PopupWidget::new(
+                        self.input.clone(),
+                        self.character_index,
+                        self.input_mode.clone(),
+                    ), area);
+                }
             },
         }
     }
@@ -131,4 +159,15 @@ impl App {
         self.running = false;
         self.client.disconnect().await;
     }
+
+
 }
+
+fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+    let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
+
