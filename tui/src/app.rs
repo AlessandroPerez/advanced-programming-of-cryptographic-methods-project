@@ -92,95 +92,20 @@ impl App {
         };
 
         let incoming_messages = app.incoming_messages.clone();
-        app.chat_listener = Some(tokio::spawn(async move {
-            task_receiver(incoming_messages, chat_rx).await;
-        }));
+        app.chat_listener = Some(tokio::spawn(task_receiver(incoming_messages, chat_rx)));
         app
 
     }
 
 
-    pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> AppResult<()> {
-
-        // Main app loop
-        while self.running {
-            if self.incoming_messages.read().await.len() > 0 {
-                let messages = self.incoming_messages
-                    .write()
-                    .await
-                    .drain(..)
-                    .collect::<Vec<ChatMessage>>();
-
-                for message in messages {
-                    self.handle_incoming_chat_message(message).await;
-                }
-            }
-            terminal.draw(|frame| self.draw(frame))?;
-            handle_key_events(event::read()?, self).await?;
-
-
-        }
-
-        Ok(())
-    }
-
-    fn draw(&mut self, frame: &mut Frame) {
-
-        match self.state {
-            AppState::Animation => {
-                //TODO
-            },
-            AppState::Register => {
-                let mut error_message = String::new();
-                if let Some(error) = &self.error {
-                    error_message = error.to_string();
-                }
-                frame.render_widget(
-                    RegistrationWidget::new(
-                        self.input.clone(), // Input
-                        error_message, // Error message
-                        self.character_index, // Cursor position
-                        self.input_mode.clone(), // Current input mode
-                    ),
-                    frame.area()
-                );
-
-            },
-            AppState::Chats => {
-                frame.render_widget(
-                    ChatsWidget::new(
-                        self.input.clone(),
-                        self.character_index,
-                        self.input_mode.clone(),
-                        String::from("Marco Wang"),
-                        vec![
-                            String::from("Item 1"),
-                            String::from("Item 2"),
-                            String::from("Item 3"),
-                        ],
-                        self.selected_chat,
-                        self.active_window,
-                    ),
-                    frame.area()
-                );
-                let area = frame.area();
-                if self.show_popup {
-                    let error_message = match &self.error {
-                        Some(e) => e.to_string(),
-                        None => String::new(),
-                    };
-                    let area = popup_area(area, 30, 4);
-                    frame.render_widget(Clear, area); //this clears out the background
-                    frame.render_widget(PopupWidget::new(
-                        self.input.clone(),
-                        self.character_index,
-                        self.input_mode.clone(),
-                        error_message,
-                    ), area);
-                }
-            },
+    pub async fn tick(&mut self) {
+        let messages = self.incoming_messages.write().await.drain(..).collect::<Vec<ChatMessage>>();
+        for message in messages {
+            self.handle_incoming_chat_message(message).await;
         }
     }
+
+
 
     pub async fn quit(&mut self) {
         self.running = false;
@@ -192,13 +117,7 @@ impl App {
 
 }
 
-fn popup_area(area: Rect, len_x: u16, len_y: u16) -> Rect {
-    let vertical = Layout::vertical([Constraint::Length(len_y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Length(len_x)]).flex(Flex::Center);
-    let [area] = vertical.areas(area);
-    let [area] = horizontal.areas(area);
-    area
-}
+
 
 async fn task_receiver(incoming_messages: Arc<RwLock<Vec<ChatMessage>>>, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>){
     while let Some(msg) = chat_rx.recv().await {

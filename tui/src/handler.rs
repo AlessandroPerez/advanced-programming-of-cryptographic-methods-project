@@ -1,81 +1,79 @@
 use std::cmp::PartialEq;
 use client::ChatMessage;
 use crate::app::{App, AppResult, AppState, InputMode};
-use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use protocol::x3dh::{process_initial_message, process_server_initial_message};
 use crate::errors::TuiError;
 
 
 
-pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()> {
+pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
 
+        match app.input_mode {
 
-        if let Event::Key(key) = key_event {
-            match app.input_mode {
-
-                InputMode::Normal if key.kind == KeyEventKind::Press => match key.code {
-                    KeyCode::Char('i') => {
-                        app.input_mode = InputMode::Insert;
-                        app.input.clear();
-                    },
-                    KeyCode::Char('q') => {
-                        if !app.show_popup {
-                            app.quit().await;
-                        }
-                    },
-
-                    KeyCode::Char('a') => {
-                        app.show_popup = !app.show_popup;
-                        app.error = None;
-                        app.input.clear();
-                    },
-
-                    KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
-                        if !app.show_popup {
-                            app.active_window = 0;
-                        }
-                    },
-
-                    KeyCode::Right | KeyCode::Char('l') if app.state == AppState::Chats => {
-                        if !app.show_popup {
-                            app.active_window = 1;
-                        }
-                    },
-
-                    KeyCode::Down | KeyCode::Char('j') if app.state == AppState::Chats && app.active_window == 0 => {
-                        if !app.show_popup {
-                            app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
-                        }
-
-                    },
-
-                    KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
-                        if !app.show_popup {
-                            app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
-                        }
-                    },
-
-                    KeyCode::Esc if app.show_popup => {
-                        app.show_popup = false;
-                    },
-
-                    _ => {}
+            InputMode::Normal if key.kind == KeyEventKind::Press => match key.code {
+                KeyCode::Char('i') => {
+                    app.input_mode = InputMode::Insert;
+                    app.input.clear();
+                },
+                KeyCode::Char('q') => {
+                    if !app.show_popup {
+                        app.quit().await;
+                    }
                 },
 
-                InputMode::Insert if key.kind == KeyEventKind::Press => match key.code {
-                    KeyCode::Char(to_insert) => app.enter_char(to_insert),
-                    KeyCode::Enter => app.submit_message().await,
-                    KeyCode::Backspace => app.delete_char(),
-                    KeyCode::Left => app.move_cursor_left(),
-                    KeyCode::Right => app.move_cursor_right(),
-                    KeyCode::Esc => app.input_mode = InputMode::Normal,
-                    _ => {}
+                KeyCode::Char('a') => {
+                    app.show_popup = !app.show_popup;
+                    app.error = None;
+                    app.input.clear();
+                },
+
+                KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
+                    if !app.show_popup {
+                        app.active_window = 0;
+                    }
+                },
+
+                KeyCode::Right | KeyCode::Char('l') if app.state == AppState::Chats => {
+                    if !app.show_popup {
+                        app.active_window = 1;
+                    }
+                },
+
+                KeyCode::Down | KeyCode::Char('j') if app.state == AppState::Chats && app.active_window == 0 => {
+                    if !app.show_popup {
+                        app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
+                    }
+
+                },
+
+                KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
+                    if !app.show_popup {
+                        app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
+                    }
+                },
+
+                KeyCode::Esc if app.show_popup => {
+                    app.show_popup = false;
                 },
 
                 _ => {}
-            }
+            },
 
-    }
+            InputMode::Insert if key.kind == KeyEventKind::Press => match key.code {
+                KeyCode::Char(to_insert) => app.enter_char(to_insert),
+                KeyCode::Enter => app.submit_message().await,
+                KeyCode::Backspace => app.delete_char(),
+                KeyCode::Left => app.move_cursor_left(),
+                KeyCode::Right => app.move_cursor_right(),
+                KeyCode::Esc => app.input_mode = InputMode::Normal,
+                _ => {}
+            },
+
+            _ => {}
+        }
+
+
     Ok(())
 }
 
@@ -217,7 +215,6 @@ impl App {
     pub(crate) async fn handle_incoming_chat_message(&mut self, message: ChatMessage) {
         match message.msg_type.as_str() {
             "initial_message" => {
-                println!("Hakuna Matata");
                 self.client.add_friend(message.clone()).expect("Cannot add friend");
             },
             "chat" => {
