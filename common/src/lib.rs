@@ -10,6 +10,9 @@ use protocol::{
 };
 use serde_json::{json, Value};
 use std::fmt::Display;
+use serde::{Serialize, Deserialize};
+use serde::de::Error;
+use uuid::Uuid;
 
 pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, AssociatedData), ()> {
     let enc_req = match general_purpose::STANDARD.decode(req.to_string()) {
@@ -52,6 +55,21 @@ pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, Associat
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct RequestWrapper {
+    pub request_id: String,
+    pub body: serde_json::Value,
+}
+
+
+/// Server -> Client
+#[derive(Serialize, Deserialize)]
+pub struct ResponseWrapper {
+    pub request_id: String,
+    pub body: serde_json::Value,
+}
+
+#[derive(Serialize, Deserialize)]
 pub enum ResponseCode {
     Ok,
     BadRequest,
@@ -72,6 +90,7 @@ impl Display for ResponseCode {
     }
 }
 
+
 impl TryFrom<&str> for ResponseCode {
     type Error = ();
 
@@ -86,7 +105,7 @@ impl TryFrom<&str> for ResponseCode {
         }
     }
 }
-
+#[derive(Serialize, Deserialize)]
 pub struct ServerResponse {
     pub code: ResponseCode,
     pub text: String,
@@ -96,28 +115,16 @@ impl ServerResponse {
     pub fn new(code: ResponseCode, text: String) -> Self {
         Self { code, text }
     }
-}
 
-impl TryFrom<Value> for ServerResponse {
-    type Error = ();
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let code = ResponseCode::try_from(
-            value
-                .get("code")
-                .unwrap_or(&Value::String("".to_string()))
-                .as_str()
-                .unwrap_or(""),
-        )?;
-        let message = value
-            .get("message")
-            .unwrap_or(&Value::String("".to_string()))
-            .as_str()
-            .unwrap_or("")
-            .to_string();
-        Ok(Self::new(code, message))
+    pub fn from_json(value: String) -> Option<Self>{
+        let value = serde_json::from_str::<Value>(&value).ok()?;
+        let code = value.get("code")?.as_str()?;
+        let text = value.get("message")?.as_str()?;
+        let code = ResponseCode::try_from(code).ok()?;
+        Some(Self::new(code, text.to_string()))
     }
 }
+
 
 impl Display for ServerResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

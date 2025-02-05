@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use serde_json::Value;
 use tokio_tungstenite::tungstenite::Error as WsError;
 use protocol::errors::X3DHError;
 
@@ -9,6 +10,8 @@ pub enum ClientError {
     ServerResponseError,
     UserAlreadyExistsError,
     UserNotFoundError,
+    SerializationError,
+    SendError,
 }
 
 impl Display for ClientError {
@@ -19,6 +22,9 @@ impl Display for ClientError {
             ClientError::ServerResponseError => write!(f, "Server response error"),
             ClientError::UserAlreadyExistsError => write!(f, "User already exists"),
             ClientError::UserNotFoundError => write!(f, "User not found"),
+            ClientError::SerializationError => write!(f, "Serialization error"),
+            ClientError::SendError => write!(f, "Failed to send message"),
+
         }
     }
 }
@@ -28,6 +34,7 @@ impl From<WsError> for ClientError {
         ClientError::ConnectionError(value)
     }
 }
+
 
 impl From<X3DHError> for ClientError {
     fn from(value: X3DHError) -> Self {
@@ -40,3 +47,4 @@ impl From<()> for ClientError {
         ClientError::ServerResponseError
     }
 }
+

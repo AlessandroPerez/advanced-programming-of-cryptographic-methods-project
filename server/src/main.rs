@@ -22,6 +22,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio_tungstenite::tungstenite::Utf8Bytes;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
+use uuid::Uuid;
 use utils::{decrypt_client_request, Action, EstablishConnection, Tx};
 
 // Keys for testing
@@ -130,6 +131,7 @@ async fn handle_registration(
     tx: Tx,
     ek: EncryptionKey,
     aad: AssociatedData,
+    request_id: String,
 ) -> Result<String, ()> {
 
     let mut response = String::new();
@@ -148,7 +150,9 @@ async fn handle_registration(
                     "User registered successfully.".to_string(),
                 ).to_string();
 
+                info!("User registered: {}", &user);
                 ret = Ok(user);
+
             }
             Err(_) => {
 
@@ -173,9 +177,14 @@ async fn handle_registration(
         ret = Err(());
     }
 
+    let wrapper = common::ResponseWrapper {
+        request_id,
+        body: serde_json::from_str(response.as_str()).unwrap(),
+    };
+    let serialized = serde_json::to_string(&wrapper)
+        .map_err(|_| ())?;
 
-    info!("Sending response: {}", response);
-    match ek.encrypt(&response.into_bytes(), &aad) {
+    match ek.encrypt(&serialized.into_bytes(), &aad) {
         Ok(enc) => {
             send_message(sender, enc)
                 .await
@@ -220,6 +229,7 @@ async fn task_receiver(
                                 .await
                                 .set_associated_data(s.get_associated_data().unwrap());
 
+                            info!("Sending message: {}", &msg);
                             send_message(sender.clone(), msg)
                                 .await
                                 .expect("Failed to send message.");
@@ -235,10 +245,11 @@ async fn task_receiver(
                     }
                 } else if let Some(dk) = session.read().await.get_decryption_key() {
                     match decrypt_client_request(&text.to_string(), &dk) {
-                        Ok((action, aad)) => {
+                        Ok((action, request_id)) => {
                             match action {
                                 Action::Register(register_request) => {
                                     if let Some(ek) = session.read().await.get_encryption_key() {
+                                        let aad = session.read().await.get_associated_data().unwrap();
                                         if let Ok(u) = handle_registration(
                                             register_request,
                                             peers.clone(),
@@ -246,6 +257,7 @@ async fn task_receiver(
                                             tx.to_owned(),
                                             ek,
                                             aad,
+                                            request_id,
                                         )
                                         .await
                                         {
@@ -259,13 +271,21 @@ async fn task_receiver(
                                             if let Some(ek) =
                                                 session.read().await.get_encryption_key()
                                             {
+                                                let aad = session.read().await.get_associated_data().unwrap();
                                                 let response = ServerResponse::new(
                                                     ResponseCode::NotFound,
                                                     "User not found".to_string(),
                                                 )
                                                 .to_string();
+                                                let wrapper = common::ResponseWrapper {
+                                                    request_id,
+                                                    body: serde_json::from_str(response.as_str()).unwrap(),
+                                                };
+                                                let serialized = serde_json::to_string(&wrapper)
+                                                    .map_err(|_| ())
+                                                    .expect("Failed to serialize response");
                                                 if let Ok(enc) =
-                                                    ek.encrypt(response.as_bytes(), &aad)
+                                                    ek.encrypt(serialized.as_bytes(), &aad)
                                                 {
                                                     send_message(sender.clone(), enc)
                                                         .await
@@ -277,20 +297,29 @@ async fn task_receiver(
                                         Some(peer) => {
                                             // send message to the thread that handles the recipient
                                             // connection
+                                            let wrapper = common::RequestWrapper {
+                                                request_id,
+                                                body: serde_json::from_str(&send_message_request.to_json()).unwrap(),
+                                            };
+
+                                            let serialized = serde_json::to_string(&wrapper)
+                                                .map_err(|_| ())
+                                                .expect("Failed to serialize request");
                                             peer.sender
-                                                .send(Message::from(send_message_request.to_json()))
+                                                .send(Message::from(serialized))
                                                 .expect("Failed to send message");
                                         }
                                     }
                                 }
                                 Action::GetPrekeyBundle(user_asked) => {
                                     if user != user_asked {
+
                                         handle_get_bundle_request(
                                             peers.clone(),
                                             user_asked,
                                             &session,
                                             sender.clone(),
-                                            &aad,
+                                            request_id,
                                             &addr,
                                         )
                                             .await;
@@ -339,17 +368,31 @@ async fn handle_get_bundle_request(
     user: String,
     session: &SharedSession,
     sender: SharedSink,
-    aad: &AssociatedData,
+    request_id: String,
     addr: &str,
 ) {
+    let aad = session.read().await.get_associated_data().unwrap();
+    let ek = session.read().await.get_encryption_key().unwrap();
     match peers.write().await.get_mut(&user) {
         None => {
-            send_message(
-                sender.clone(),
-                ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string(),
-            )
-                .await
-                .expect("Failed to send message.");
+            let response = ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string();
+            let wrapper = common::ResponseWrapper {
+                request_id,
+                body: serde_json::from_str(response.as_str()).unwrap(),
+            };
+            let serialized = serde_json::to_string(&wrapper)
+                .map_err(|_| ())
+                .expect("Failed to serialize response");
+            match ek.encrypt(serialized.as_bytes(), &aad) {
+                Ok(enc) => {
+                    send_message(sender.clone(), enc)
+                        .await
+                        .expect("Failed to send message.");
+                }
+                Err(_) => {
+                    error!("Failed to encrypt response");
+                }
+            }
             error!("User not found: {}", &user);
         },
 
@@ -358,35 +401,22 @@ async fn handle_get_bundle_request(
 
             let response =
                 ServerResponse::new(ResponseCode::Ok, bundle.to_base64()).to_string();
-
-            match session.read().await.get_encryption_key() {
-                Some(ek) => {
-                    info!("Sending response: {}", &response);
-                    match ek.encrypt(&response.into_bytes(), aad) {
-                        Ok(enc) => {
-                            info!("Sent encrypted response: {}", &enc);
-                            send_message(sender.clone(), enc)
-                                .await
-                                .expect("Failed to send message.");
-                            info!("Sent prekey bundle of {} to {}", &user, addr);
-                        }
-                        Err(e) => {
-                            // TODO: handle error
-                            error!("Failed to send response to client due to error: {}", e);
-                        }
-                    }
-                }
-                None => {
-                    // ek is None, no need to check is there is an ek in the
-                    // session
-                    let response = ServerResponse::new(
-                        ResponseCode::BadRequest,
-                        "Establish a secure connection first".to_string(),
-                    )
-                    .to_string();
-                    send_message(sender.clone(), response)
+            let wrapper = common::ResponseWrapper {
+                request_id,
+                body: serde_json::from_str(response.as_str()).unwrap(),
+            };
+            let serialized = serde_json::to_string(&wrapper)
+                .map_err(|_| ())
+                .expect("Failed to serialize response");
+            match ek.encrypt(serialized.as_bytes(), &aad) {
+                Ok(enc) => {
+                    send_message(sender.clone(), enc)
                         .await
                         .expect("Failed to send message.");
+                    info!("Sent prekey bundle of {} to {}", &user, addr);
+                }
+                Err(_) => {
+                    error!("Failed to encrypt response");
                 }
             }
         }

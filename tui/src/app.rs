@@ -93,8 +93,6 @@ impl App {
         while self.running {
 
             terminal.draw(|frame| self.draw(frame))?;
-
-
             handle_key_events(event::read()?, self).await?;
         }
 

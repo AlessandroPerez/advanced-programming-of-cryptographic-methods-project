@@ -1,9 +1,10 @@
 pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
+use std::sync::Arc;
 use aes_gcm::aes::cipher::typenum::Le;
 use chrono::{DateTime, Utc};
-use common::{ResponseCode, ServerResponse};
+use common::{ResponseCode, ServerResponse, ResponseWrapper, RequestWrapper};
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -20,10 +21,12 @@ use protocol::{
 use serde_json::{json, Value};
 
 use tokio::net::TcpStream;
+use tokio::sync::{oneshot, Mutex};
 use tokio_tungstenite::{
     tungstenite::{Message, Utf8Bytes},
     MaybeTlsStream, WebSocketStream,
 };
+use uuid::Uuid;
 use protocol::utils::PublicKey;
 use crate::errors::ClientError;
 use crate::TypeOr::{Left, Right};
@@ -43,16 +46,19 @@ pub struct Client {
     pub friends: HashMap<String, Friend>,
     session: SessionKeys,
     write: Sender,
-    read: Receiver,
+    read: Option<Receiver>,
     pub username: String,
     bundle: PreKeyBundle,
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
-    one_time_prekey: Vec<PrivateKey>
+    one_time_prekey: Vec<PrivateKey>,
+    pending: Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>,
+    listener: Option<tokio::task::JoinHandle<()>>
 }
 
 
 impl Client {
+
     pub async fn new() -> Result<Self, ClientError> {
         let (write, read) = Self::connect().await?;
         let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(10);
@@ -62,14 +68,17 @@ impl Client {
             friends: HashMap::new(),
             session,
             write,
-            read,
+            read: Some(read),
             username,
             bundle,
             identity_key: ik,
             signed_prekey: spk,
-            one_time_prekey: otpk
+            one_time_prekey: otpk,
+            pending: Arc::new(Mutex::new(HashMap::new())),
+            listener: None
         };
         client.establish_connection().await?;
+        client.listener = Some(client.start_read_loop());
         Ok(client)
     }
 
@@ -91,11 +100,15 @@ impl Client {
             .await
             .expect("Failed to send message");
 
-        // Wait for server response
-        if let Some(Ok(Message::Text(initial_msg))) = StreamExt::next(&mut self.read).await {
-            if let Ok(resp) = ServerResponse::try_from(
-                serde_json::from_str::<Value>(initial_msg.as_str()).unwrap_or(Value::Null),
-            ) {
+
+        if let Some(read) = &mut self.read {
+
+            // Wait for server response
+            if let Some(Ok(Message::Text(initial_msg))) = StreamExt::next(read).await {
+
+                let resp = ServerResponse::from_json(initial_msg.to_string())
+                    .ok_or(ClientError::ServerResponseError)?;
+
                 let mut im = resp.text;
                 info!("im: {}", &im);
                 im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
@@ -120,6 +133,46 @@ impl Client {
         }
     }
 
+    fn start_read_loop(&mut self) -> tokio::task::JoinHandle<()> {
+        let mut read = self.read.take().expect("Reader already taken");
+        let pending_map = Arc::clone(&self.pending);
+        let decryption_key = self.session.get_decryption_key().unwrap();
+        tokio::task::spawn( async move {
+            while let Some(msg_result) = StreamExt::next(&mut read).await {
+                match msg_result {
+                    Ok(Message::Text(msg)) => {
+                        if let Ok(decrypted) = decrypt_server_request(msg.to_string(), &decryption_key) {
+                            match serde_json::from_str::<ResponseWrapper>(&decrypted.to_string()) {
+                                Ok(response) => {
+                                    // Look up the request_id in the pending map
+                                    let mut lock = pending_map.lock().await;
+                                    if let Some(tx) = lock.remove(&response.request_id) {
+                                        // Send the "body" to whoever is waiting
+                                        let _ = tx.send(response.body);
+                                    }
+                                },
+                                Err(e) => {
+                                    // Possibly a broadcast or push message with no request_id
+                                    // handle it differently or log error
+                                    error!("Failed to parse ResponseWrapper: {:?}", e);
+                                }
+                            }
+                        }
+                    },
+                    Ok(Message::Close(_)) => {
+                        info!("WebSocket closed by server.");
+                        break;
+                    },
+                    Err(e) => {
+                        error!("WebSocket error: {:?}", e);
+                        break;
+                    },
+                    _ => {}
+                }
+            }
+        })
+    }
+
     pub async fn register_user(&mut self) -> Result<(), ClientError> {
         let req = json!({
             "action" : "register",
@@ -127,23 +180,20 @@ impl Client {
             "bundle": self.bundle.clone().to_base64()
         });
 
-        match self.send_encrypted_message(req).await {
-            Left(Ok(response)) => {
-                match response.code {
-                    ResponseCode::Ok => {
-                        Ok(())
-                    }
-                    ResponseCode::Conflict => {
-                        Err(ClientError::UserAlreadyExistsError)
-                    }
-                    _ => {
-                        Err(ClientError::ServerResponseError)
-                    }
-                }
+        let response_json = self.send_encrypted_message(req).await?;
+        let response = ServerResponse::from_json(response_json.to_string())
+            .ok_or(ClientError::ServerResponseError)?;
+        match response.code {
+            ResponseCode::Ok => {
+                Ok(())
             }
-            _ => {Err(ClientError::ServerResponseError)}
+            ResponseCode::Conflict => {
+                Err(ClientError::UserAlreadyExistsError)
+            }
+            _ => {
+                Err(ClientError::ServerResponseError)
+            }
         }
-
     }
 
     pub async fn get_user_prekey_bundle(
@@ -155,11 +205,9 @@ impl Client {
             "who": username,
         });
 
-        let response = match self.send_encrypted_message(req).await {
-            Left(Ok(response)) => response,
-            _ => {return Err(ClientError::ServerResponseError)}
-        };
-
+        let response_json = self.send_encrypted_message(req).await?;
+        let response = ServerResponse::from_json(response_json.to_string())
+            .ok_or(ClientError::ServerResponseError)?;
         match response.code {
             ResponseCode::Ok => {
                 let pb = PreKeyBundle::try_from(response.text)?;
@@ -169,50 +217,49 @@ impl Client {
                 )?;
                 let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data));
                 self.friends.insert(username.clone(), Friend::new(friend_session, pb.clone()));
-                let req = json!({
-                                "action": "send_message",
-                                "type": "initial",
-                                "from": self.username,
-                                "to": username,
-                                "text": pb.clone().to_base64(),
-                                "timestamp": Utc::now().to_rfc3339()
-                            });
-
-                self.send_encrypted_message(req).await;
                 Ok(())
+            },
+            ResponseCode::NotFound => {
+                Err(ClientError::UserNotFoundError)
+            },
+            _ => {
+                Err(ClientError::ServerResponseError)
             }
-            _ => {Err(ClientError::ServerResponseError)}
         }
     }
 
-    async fn send_encrypted_message(&mut self, req: Value) -> TypeOr<Result<ServerResponse, ()>, ()> {
+    async fn send_encrypted_message(&mut self, req: Value) -> Result<Value, ClientError> {
+        let request_id = Uuid::new_v4().to_string();
+        let wrapper = RequestWrapper{ request_id: request_id.clone(), body: req };
+        let serialized = serde_json::to_string(&wrapper)
+            .map_err(|_| ClientError::SerializationError)?;
+
 
         let enc = self.session
             .get_encryption_key()
             .unwrap()
             .encrypt(
-                req.to_string().as_bytes(),
+                serialized.as_bytes(),
                 &self.session.get_associated_data().unwrap(),
-            )
-            .expect("Failed to encrypt request");
+            )?;
+
+
+        let (tx, rx) = oneshot::channel();
+
+        {
+            // Insert the sender into the HashMap so the read loop can find it
+            let mut lock = self.pending.lock().await;
+            lock.insert(request_id, tx);
+        }
+
 
         self.write
             .send(Message::Text(Utf8Bytes::from(enc)))
             .await
-            .expect("Failed to send request.");
+            .map_err(|_| ClientError::SendError)?;
 
-        if req.get("action") != serde_json::from_str("send_message").ok().as_ref() {
-            if let Some(Ok(Message::Text(response))) = StreamExt::next(&mut self.read).await {
-                match decrypt_server_request(response.to_string(), &self.session.get_decryption_key().unwrap()) {
-                    Ok((r, _aad)) => Left(ServerResponse::try_from(r)),
-                    Err(_) => Left(Err(())),
-                }
-            } else {
-                panic!("Did not received any request.")
-            }
-        } else{
-            Right(())
-        }
+        // 7. Wait for the response from the read loop
+        rx.await.map_err(|_| ClientError::ServerResponseError)
     }
 
     pub fn set_username(&mut self, username: String) {
@@ -220,7 +267,14 @@ impl Client {
     }
 
     pub async fn disconnect(&mut self) {
+        if let Some(listener) = self.listener.take() {
+            listener.abort();
+        }
         self.write.close().await.expect("Failed to close connection");
+    }
+
+    pub fn is_registered(&self) -> bool {
+        self.username != "".to_string()
     }
 }
 
@@ -260,35 +314,13 @@ impl Friend {
     }
 }
 
-fn decrypt_server_request(req: String, dk: &DecryptionKey) -> Result<(Value, AssociatedData), ()> {
-    common::decrypt_request(&req, dk)
+fn decrypt_server_request(req: String, dk: &DecryptionKey) -> Result<Value, ()> {
+    match common::decrypt_request(&req, dk) {
+        Ok((dec, _)) => Ok(dec),
+        Err(_) => Err(())
+    }
 }
 
-fn prompt(text: &str) -> String {
-    print!("{} ", text);
-
-    let mut response = String::new();
-    std::io::stdin()
-        .read_line(&mut response)
-        .expect("Failed to get input");
-
-    response.trim_end().to_string()
-}
-
-
-
-
-
-
-
-async fn send_message(
-    to: &str,
-    session: &mut SessionKeys,
-    text: &str,
-    write: &mut Sender,
-    read: &mut Receiver,
-) {
-}
 
 #[cfg(test)]
 mod tests {

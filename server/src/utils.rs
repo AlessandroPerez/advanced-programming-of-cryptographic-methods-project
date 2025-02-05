@@ -1,12 +1,13 @@
 use crate::errors::ServerError;
 use chrono::{DateTime, Utc};
-use common::{RegisterRequest, SendMessageRequest};
+use common::{RegisterRequest, RequestWrapper, ResponseWrapper, SendMessageRequest};
 use log::error;
 use protocol::utils::{AssociatedData, DecryptionKey, PreKeyBundle};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Message;
+use uuid::Uuid;
 
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;
@@ -52,14 +53,22 @@ impl<'a> EstablishConnection<'a> {
 pub(crate) fn decrypt_client_request(
     req: &str,
     dk: &DecryptionKey,
-) -> Result<(Action, AssociatedData), ServerError> {
-    let (req, aad) = match common::decrypt_request(req, dk) {
-        Ok(dec) => dec,
+) -> Result<(Action, String), ServerError> {
+    let decrypted = match common::decrypt_request(req, dk) {
+        Ok((dec, _ )) => dec,
         Err(_) => return Err(ServerError::InvalidRequest),
     };
 
+
+    let (id, req )= match serde_json::from_str::<RequestWrapper>(&decrypted.to_string()){
+        Ok(request) => {
+            (request.request_id, request.body)
+        }
+        Err(_) => return Err(ServerError::InvalidRequest)
+    };
+
     match Action::from_json(&req) {
-        Some(action) => Ok((action, aad)),
+        Some(action) => Ok((action, id.to_string())),
         None => {
             error!("Failed to parse request");
             Err(ServerError::InvalidRequest)
