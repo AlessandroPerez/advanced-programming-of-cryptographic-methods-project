@@ -121,7 +121,6 @@ impl App {
 
 async fn task_receiver(incoming_messages: Arc<RwLock<Vec<ChatMessage>>>, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>){
     while let Some(msg) = chat_rx.recv().await {
-        println!("Incoming message: {:?}", &msg);
         incoming_messages.write().await.push(msg);
     }
 }
