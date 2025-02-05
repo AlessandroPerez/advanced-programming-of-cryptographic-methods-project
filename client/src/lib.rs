@@ -1,6 +1,8 @@
 pub mod errors;
 
 use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
+use std::fmt::Display;
+use std::ops::Add;
 use std::sync::Arc;
 use aes_gcm::aes::cipher::typenum::Le;
 use chrono::{DateTime, Utc};
@@ -21,25 +23,21 @@ use protocol::{
 use serde_json::{json, Value};
 
 use tokio::net::TcpStream;
-use tokio::sync::{oneshot, Mutex};
+use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio_tungstenite::{
     tungstenite::{Message, Utf8Bytes},
     MaybeTlsStream, WebSocketStream,
 };
 use uuid::Uuid;
 use protocol::utils::PublicKey;
+use serde::{Deserialize, Serialize};
 use crate::errors::ClientError;
-use crate::TypeOr::{Left, Right};
 
 pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
 pub const SERVER_IK: &str = "KidEmuJzis1xt3+XwkzEBx4rB8hjuEvHK0LV0vY5aE8=";
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
-enum TypeOr<L, R> {
-    Left(L),
-    Right(R)
-}
 
 
 pub struct Client {
@@ -53,17 +51,21 @@ pub struct Client {
     signed_prekey: PrivateKey,
     one_time_prekey: Vec<PrivateKey>,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>,
-    listener: Option<tokio::task::JoinHandle<()>>
+    listener: Option<tokio::task::JoinHandle<()>>,
+
+    chat_tx: mpsc::Sender<ChatMessage>,
+
 }
 
 
 impl Client {
 
-    pub async fn new() -> Result<Self, ClientError> {
+    pub async fn new(chat_tx: mpsc::Sender<ChatMessage>) -> Result<Self, ClientError> {
         let (write, read) = Self::connect().await?;
         let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(10);
         let session = SessionKeys::new();
         let username = "".to_string();
+
         let mut client = Self {
             friends: HashMap::new(),
             session,
@@ -75,8 +77,10 @@ impl Client {
             signed_prekey: spk,
             one_time_prekey: otpk,
             pending: Arc::new(Mutex::new(HashMap::new())),
-            listener: None
+            listener: None,
+            chat_tx,
         };
+
         client.establish_connection().await?;
         client.listener = Some(client.start_read_loop());
         Ok(client)
@@ -137,25 +141,28 @@ impl Client {
         let mut read = self.read.take().expect("Reader already taken");
         let pending_map = Arc::clone(&self.pending);
         let decryption_key = self.session.get_decryption_key().unwrap();
+        let chat_tx = self.chat_tx.clone();
         tokio::task::spawn( async move {
             while let Some(msg_result) = StreamExt::next(&mut read).await {
                 match msg_result {
                     Ok(Message::Text(msg)) => {
                         if let Ok(decrypted) = decrypt_server_request(msg.to_string(), &decryption_key) {
-                            match serde_json::from_str::<ResponseWrapper>(&decrypted.to_string()) {
-                                Ok(response) => {
-                                    // Look up the request_id in the pending map
-                                    let mut lock = pending_map.lock().await;
-                                    if let Some(tx) = lock.remove(&response.request_id) {
-                                        // Send the "body" to whoever is waiting
-                                        let _ = tx.send(response.body);
-                                    }
-                                },
-                                Err(e) => {
-                                    // Possibly a broadcast or push message with no request_id
-                                    // handle it differently or log error
-                                    error!("Failed to parse ResponseWrapper: {:?}", e);
+                            if let Ok(response) = serde_json::from_str::<ResponseWrapper>(&decrypted.to_string()) {
+
+                                // Look up the request_id in the pending map
+                                let mut lock = pending_map.lock().await;
+                                if let Some(tx) = lock.remove(&response.request_id) {
+                                    // Send the "body" to whoever is waiting
+                                    let _ = tx.send(response.body);
                                 }
+
+                            } else if let Ok(chat_msg) = serde_json::from_str::<ChatMessage>(&decrypted.to_string()) {
+                                // Forward to the chat channel
+                                let _ = chat_tx.send(chat_msg).await;
+                            }
+                            // 4) Otherwise, ignore or log unknown format
+                            else {
+                                eprintln!("Unknown inbound message: {}", decrypted);
                             }
                         }
                     },
@@ -202,7 +209,7 @@ impl Client {
     ) -> Result<(), ClientError> {
         let req = json!({
             "action": "get_prekey_bundle",
-            "who": username,
+            "who": username.clone(),
         });
 
         let response_json = self.send_encrypted_message(req).await?;
@@ -215,8 +222,16 @@ impl Client {
                     self.identity_key.clone(),
                     pb.clone()
                 )?;
-                let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data));
+                let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
                 self.friends.insert(username.clone(), Friend::new(friend_session, pb.clone()));
+                let chat_message = ChatMessage::new(
+                    "initial_message".to_string(),
+                    username.clone(),
+                    self.username.clone(),
+                    im.to_base64(),
+                    Utc::now()
+                );
+                self.send_chat_message(chat_message).await?;
                 Ok(())
             },
             ResponseCode::NotFound => {
@@ -276,17 +291,63 @@ impl Client {
     pub fn is_registered(&self) -> bool {
         self.username != "".to_string()
     }
+
+    pub async fn send_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
+        let mut req = json!(message.clone());
+        req["action"] = serde_json::from_str::<Value>("\"send_message\"").unwrap();
+        let mut req = req.to_string();
+        if message.msg_type != "initial_message".to_string() {
+            let (friend_ek, friend_aad) = if let Some(friend) = self.friends.get(&message.to) {
+                (
+                    friend.get_friend_keys().get_encryption_key().unwrap(),
+                    friend.get_friend_keys().get_associated_data().unwrap(),
+                )
+            } else {
+                return Err(ClientError::UserNotFoundError);
+            };
+            let enc_text = friend_ek.encrypt(
+                message.text.as_bytes(),
+                &friend_aad,
+            )?;
+
+            message.text = enc_text;
+            req = json!(message.clone()).to_string();
+        }
+        let enc = self.session
+                .get_encryption_key()
+                .unwrap()
+                .encrypt(
+                    req.as_bytes(),
+                    &self.session.get_associated_data().unwrap(),
+                )?;
+
+        self.write
+                .send(Message::Text(Utf8Bytes::from(enc)))
+                .await
+                .map_err(|_| ClientError::SendError)?;
+
+        Ok(())
+    }
 }
 
-struct ChatMessage {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ChatMessage {
+    msg_type: String,
+    to: String,
     from: String,
     text: String,
-    timestamp: DateTime<Utc>
+    timestamp: String
 }
 
 impl ChatMessage {
-    fn new(from: String, text: String, timestamp: DateTime<Utc>) -> Self {
-        Self { from, text, timestamp }
+    fn new(msg_type: String, to: String,  from: String, text: String, timestamp: DateTime<Utc>) -> Self {
+        Self { msg_type, to, from, text, timestamp: timestamp.to_rfc3339() }
+    }
+}
+
+impl Display for ChatMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.from, self.text)
     }
 }
 
@@ -321,9 +382,3 @@ fn decrypt_server_request(req: String, dk: &DecryptionKey) -> Result<Value, ()> 
     }
 }
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-}

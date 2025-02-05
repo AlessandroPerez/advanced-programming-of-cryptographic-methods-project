@@ -148,17 +148,17 @@ pub struct SendMessageRequest {
     pub from: String,
     pub to: String,
     pub text: String,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: String,
 }
 
 impl SendMessageRequest {
     pub fn to_json(&self) -> String {
         json!({
-            "type": self.msg_type,
+            "msg_type": self.msg_type,
             "from": self.from,
             "to": self.to,
             "text": self.text,
-            "timestamp": self.timestamp.to_rfc3339()
+            "timestamp": self.timestamp
         })
         .to_string()
     }

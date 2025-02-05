@@ -60,20 +60,26 @@ pub(crate) fn decrypt_client_request(
     };
 
 
-    let (id, req )= match serde_json::from_str::<RequestWrapper>(&decrypted.to_string()){
-        Ok(request) => {
-            (request.request_id, request.body)
+    if let Ok(req) = serde_json::from_str::<RequestWrapper>(&decrypted.to_string()) {
+        let id = req.request_id;
+        let body = req.body;
+        match Action::from_json(&body) {
+            Some(action) => Ok((action, id.to_string())),
+            None => {
+                error!("Failed to parse request");
+                Err(ServerError::InvalidRequest)
+            }
         }
-        Err(_) => return Err(ServerError::InvalidRequest)
-    };
-
-    match Action::from_json(&req) {
-        Some(action) => Ok((action, id.to_string())),
-        None => {
-            error!("Failed to parse request");
-            Err(ServerError::InvalidRequest)
+    } else  {
+        match Action::from_json(&decrypted) {
+            None => Err(ServerError::InvalidRequest),
+            Some(action) => {
+                Ok((action, String::new()))
+            }
         }
     }
+
+
 }
 
 pub(crate) enum Action {
@@ -83,8 +89,6 @@ pub(crate) enum Action {
 }
 
 impl Action {
-    // TODO: BUG: This function is not working as expected, the char " is being added to the string
-    //      when it is parsed from the json but server does not work without it
     pub(crate) fn from_json(request: &serde_json::Value) -> Option<Self> {
         let action = request.get("action")?.as_str()?;
         match action {
@@ -94,13 +98,12 @@ impl Action {
             })),
 
             "send_message" => {
-                let timestamp: DateTime<Utc> = request
+                let timestamp = request
                     .get("timestamp")?
                     .as_str()?
-                    .parse()
-                    .unwrap_or(Utc::now());
+                    .to_string();
                 Some(Self::SendMessage(SendMessageRequest {
-                    msg_type: request.get("type")?.as_str()?.to_string(),
+                    msg_type: request.get("msg_type")?.as_str()?.to_string(),
                     from: request.get("from")?.as_str()?.to_string(),
                     to: request.get("to")?.as_str()?.to_string(),
                     text: request.get("text")?.as_str()?.to_string(),
@@ -108,9 +111,7 @@ impl Action {
                 }))
             }
             "get_prekey_bundle" => {
-                // TODO: understand why this is not working
                 let user = request.get("who")?.as_str()?.to_string();
-                // let user = request.get("who")?.to_string();
                 Some(Self::GetPrekeyBundle(user))
             }
 

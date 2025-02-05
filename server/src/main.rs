@@ -297,17 +297,11 @@ async fn task_receiver(
                                         Some(peer) => {
                                             // send message to the thread that handles the recipient
                                             // connection
-                                            let wrapper = common::RequestWrapper {
-                                                request_id,
-                                                body: serde_json::from_str(&send_message_request.to_json()).unwrap(),
-                                            };
 
-                                            let serialized = serde_json::to_string(&wrapper)
-                                                .map_err(|_| ())
-                                                .expect("Failed to serialize request");
                                             peer.sender
-                                                .send(Message::from(serialized))
+                                                .send(Message::from(send_message_request.to_json()))
                                                 .expect("Failed to send message");
+                                            info!("Message sent to {}", &send_message_request.to);
                                         }
                                     }
                                 }
@@ -437,6 +431,7 @@ async fn task_sender(
                         send_message(sender.clone(), enc)
                             .await
                             .expect("Failed to send message.");
+                        info!("Message forwarded: {}", msg_result.to_string());
                     }
                     Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
                 }

@@ -3,7 +3,7 @@ use crossterm::event;
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui::backend::Backend;
-use client::{Client};
+use client::{ChatMessage, Client};
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Clear};
@@ -49,8 +49,11 @@ pub struct App {
 
     pub(crate) active_window: usize,
     pub(crate) selected_chat: usize,
-    pub (crate) active_chat: usize,
+    pub(crate) active_chat: usize,
     pub(crate) show_popup: bool,
+    chat_listener: Option<tokio::task::JoinHandle<()>>,
+
+
 }
 
 #[derive(Debug, Clone)]
@@ -70,8 +73,8 @@ impl PartialEq for InputMode {
 
 impl App {
 
-    pub(crate) fn new(client: Client) -> Self {
-        Self {
+    pub(crate) fn new(client: Client, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>) -> Self {
+        let mut app = Self {
             running: true,
             state: AppState::default(),
             client,
@@ -83,7 +86,18 @@ impl App {
             selected_chat: 0,
             active_chat: 0,
             show_popup: false,
-        }
+            chat_listener: None,
+        };
+
+        app.chat_listener = Some(tokio::spawn(async move {
+            while let Some(msg) = chat_rx.recv().await {
+                println!("Received message: {}", msg);
+            }
+        }));
+
+        app
+
+
     }
 
 
@@ -94,6 +108,7 @@ impl App {
 
             terminal.draw(|frame| self.draw(frame))?;
             handle_key_events(event::read()?, self).await?;
+
         }
 
         Ok(())
@@ -160,6 +175,8 @@ impl App {
     pub async fn quit(&mut self) {
         self.running = false;
         self.client.disconnect().await;
+        let listener = self.chat_listener.take().unwrap();
+        listener.abort();
     }
 
 

@@ -12,7 +12,8 @@ use crate::app::{App, AppResult};
 async fn main() -> AppResult<()> {
 
     // Init client
-    let client = Client::new().await.unwrap_or_else(|_| {
+    let (chat_tx, chat_rx) = tokio::sync::mpsc::channel(100);
+    let client = Client::new(chat_tx).await.unwrap_or_else(|_| {
         eprintln!("Failed to establish the connection with the server");
         std::process::exit(1);
     });
@@ -21,7 +22,7 @@ async fn main() -> AppResult<()> {
     let mut terminal = ratatui::init();
 
     // Run app
-    let app_result = App::new(client).run(&mut terminal).await;
+    let app_result = App::new(client, chat_rx).run(&mut terminal).await;
     // Restore terminal
     ratatui::restore();
 
