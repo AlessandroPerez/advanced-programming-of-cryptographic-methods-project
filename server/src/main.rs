@@ -437,6 +437,8 @@ async fn task_sender(
                     Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
                 }
             }
+        } else {
+            return;
         }
     }
 }
