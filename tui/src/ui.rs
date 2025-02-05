@@ -34,22 +34,34 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
         },
         AppState::Chats => {
-            frame.render_widget(
-                ChatsWidget::new(
-                    app.input.clone(),
-                    app.character_index,
-                    app.input_mode.clone(),
-                    String::from("Marco Wang"),
-                    vec![
-                        String::from("Item 1"),
-                        String::from("Item 2"),
-                        String::from("Item 3"),
-                    ],
-                    app.selected_chat,
-                    app.active_window,
-                ),
-                frame.area()
-            );
+            let chats = app.client.get_open_chats();
+            if chats.is_empty() {
+                let area = frame.area();
+                let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
+                let horizontal = Layout::horizontal([Constraint::Length(30)]).flex(Flex::Center);
+                let [area] = vertical.areas(area);
+                let [area] = horizontal.areas(area);
+                frame.render_widget(Clear, area); //this clears out the background
+                frame.render_widget(
+                    Paragraph::new("No chats available")
+                        .style(Style::default().fg(Color::White))
+                        .alignment(Alignment::Center),
+                    area,
+                );
+            }else {
+                frame.render_widget(
+                    ChatsWidget::new(
+                        app.input.clone(),
+                        app.character_index,
+                        app.input_mode.clone(),
+                        chats[app.active_chat].clone(),
+                        chats,
+                        app.selected_chat,
+                        app.active_window,
+                    ),
+                    frame.area()
+                );
+            }
             let area = frame.area();
             if app.show_popup {
                 let error_message = match &app.error {

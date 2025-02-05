@@ -351,6 +351,7 @@ async fn task_receiver(
             Message::Close(_) => {
                 peers.write().await.remove(&user);
                 info!("Connection closed with {}", &addr);
+                return;
             }
             _ => {}
         }

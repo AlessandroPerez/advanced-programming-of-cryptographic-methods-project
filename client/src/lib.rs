@@ -355,6 +355,10 @@ impl Client {
     pub fn get_chat_messages(&self, username: &str) -> Option<&Vec<ChatMessage>> {
         self.friends.get(username).map(|f| &f.chat)
     }
+
+    pub fn get_open_chats(&self) -> Vec<String> {
+        self.friends.keys().cloned().collect()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

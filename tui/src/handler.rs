@@ -22,8 +22,9 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
                     }
                 },
 
-                KeyCode::Char('a') => {
+                KeyCode::Char('a') if app.state == AppState::Chats => {
                     app.show_popup = !app.show_popup;
+                    app.input_mode = InputMode::Insert;
                     app.error = None;
                     app.input.clear();
                 },
@@ -53,8 +54,13 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
                     }
                 },
 
-                KeyCode::Esc if app.show_popup => {
+                KeyCode::Esc if app.state == AppState::Chats && app.show_popup => {
                     app.show_popup = false;
+                },
+
+                KeyCode::Enter if app.state == AppState::Chats && !app.show_popup => {
+                    app.submit_message().await;
+
                 },
 
                 _ => {}
