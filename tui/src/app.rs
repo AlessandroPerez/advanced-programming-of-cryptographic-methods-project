@@ -101,7 +101,7 @@ impl App {
         Ok(())
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
 
         match self.state {
             AppState::Animation => {
@@ -142,13 +142,17 @@ impl App {
                 );
                 let area = frame.area();
                 if self.show_popup {
-
-                    let area = popup_area(area, 30, 10);
+                    let error_message = match &self.error {
+                        Some(e) => e.to_string(),
+                        None => String::new(),
+                    };
+                    let area = popup_area(area, 30, 4);
                     frame.render_widget(Clear, area); //this clears out the background
                     frame.render_widget(PopupWidget::new(
                         self.input.clone(),
                         self.character_index,
                         self.input_mode.clone(),
+                        error_message,
                     ), area);
                 }
             },
@@ -163,9 +167,9 @@ impl App {
 
 }
 
-fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
-    let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
+fn popup_area(area: Rect, len_x: u16, len_y: u16) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(len_y)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Length(len_x)]).flex(Flex::Center);
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);
     area

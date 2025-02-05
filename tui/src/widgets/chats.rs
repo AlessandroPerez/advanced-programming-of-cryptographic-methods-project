@@ -34,13 +34,22 @@ impl ChatsWidget {
 
 impl Widget for ChatsWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
+
+        let pippo = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![
+                Constraint::Percentage(99),
+                Constraint::Length(1),
+            ])
+            .split(area);
+
         let main_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
                 Constraint::Percentage(25),
                 Constraint::Percentage(75),
             ])
-            .split(area);
+            .split(pippo[0]);
 
         let left = Block::default()
             .borders(Borders::ALL)
@@ -118,6 +127,23 @@ impl Widget for ChatsWidget {
 
             chat_rows_layout.render(chats_layout[i], buf);
         }
+
+        let bottom_text = match self.input_mode {
+            InputMode::Normal => Line::from(vec![
+                Span::styled(" NORMAL ", Style::default().fg(Color::Black).bg(Color::Rgb(130, 170, 255))),
+                Span::styled(" | Press 'a' to add a friend, 'i' to enter INSERT mode, 'q' to quit", Style::default().fg(Color::White)),
+            ]),
+
+            InputMode::Insert => Line::from(vec![
+                Span::styled(" INSERT ", Style::default().fg(Color::Black).bg(Color::Rgb(195, 232, 141))),
+                Span::styled(" | Press 'ESC' to enter NORMAL mode", Style::default().fg(Color::White)),
+            ])
+        };
+
+        let bottom_paragraph = Paragraph::new(bottom_text)
+            .block(Block::default().style(Style::default())); // Background color
+
+        bottom_paragraph.render(pippo[1], buf);
     }
 
     // fn render(self, area: Rect, buf: &mut Buffer) {

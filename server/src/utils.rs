@@ -80,8 +80,8 @@ impl Action {
         let action = request.get("action")?.as_str()?;
         match action {
             "register" => Some(Self::Register(RegisterRequest {
-                username: request.get("username")?.to_string(),
-                bundle: request.get("bundle")?.to_string(),
+                username: request.get("username")?.as_str()?.to_string(),
+                bundle: request.get("bundle")?.as_str()?.to_string(),
             })),
 
             "send_message" => {
@@ -91,17 +91,17 @@ impl Action {
                     .parse()
                     .unwrap_or(Utc::now());
                 Some(Self::SendMessage(SendMessageRequest {
-                    msg_type: request.get("type")?.to_string(),
-                    from: request.get("from")?.to_string(),
-                    to: request.get("to")?.to_string(),
-                    text: request.get("text")?.to_string(),
+                    msg_type: request.get("type")?.as_str()?.to_string(),
+                    from: request.get("from")?.as_str()?.to_string(),
+                    to: request.get("to")?.as_str()?.to_string(),
+                    text: request.get("text")?.as_str()?.to_string(),
                     timestamp,
                 }))
             }
             "get_prekey_bundle" => {
                 // TODO: understand why this is not working
-                // let user = request.get("who")?.as_str()?.to_string();
-                let user = request.get("who")?.to_string();
+                let user = request.get("who")?.as_str()?.to_string();
+                // let user = request.get("who")?.to_string();
                 Some(Self::GetPrekeyBundle(user))
             }
 

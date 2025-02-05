@@ -112,6 +112,8 @@ impl TryFrom<Value> for ServerResponse {
         let message = value
             .get("message")
             .unwrap_or(&Value::String("".to_string()))
+            .as_str()
+            .unwrap_or("")
             .to_string();
         Ok(Self::new(code, message))
     }

@@ -44,7 +44,7 @@ pub struct Client {
     session: SessionKeys,
     write: Sender,
     read: Receiver,
-    username: String,
+    pub username: String,
     bundle: PreKeyBundle,
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
@@ -174,7 +174,8 @@ impl Client {
                                 "type": "initial",
                                 "from": self.username,
                                 "to": username,
-                                "text": pb.clone().to_base64()
+                                "text": pb.clone().to_base64(),
+                                "timestamp": Utc::now().to_rfc3339()
                             });
 
                 self.send_encrypted_message(req).await;

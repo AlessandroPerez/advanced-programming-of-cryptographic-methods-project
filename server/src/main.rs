@@ -77,7 +77,7 @@ async fn handle_connection(stream: TcpStream, peers: PeerMap) {
     let task_receiver = tokio::spawn(task_receiver(
         sender.clone(),
         receiver,
-        tx.clone(),
+        tx,
         peers.clone(),
         addr.to_string(),
         session.clone(),
@@ -131,13 +131,11 @@ async fn handle_registration(
     ek: EncryptionKey,
     aad: AssociatedData,
 ) -> Result<String, ()> {
-    request
-        .bundle
-        .retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
+
     let mut response = String::new();
     let mut ret = Err(());
-    let is_alphanumeric = request.username.is_empty() ||
-        !request.username.chars().all(char::is_alphanumeric);
+    let is_alphanumeric = !request.username.is_empty() &&
+        request.username.chars().all(char::is_alphanumeric);
 
     if !peers.read().await.contains_key(&request.username) && is_alphanumeric {
         match PreKeyBundle::try_from(request.bundle) {
@@ -245,7 +243,7 @@ async fn task_receiver(
                                             register_request,
                                             peers.clone(),
                                             sender.clone(),
-                                            tx.clone(),
+                                            tx.to_owned(),
                                             ek,
                                             aad,
                                         )
@@ -281,20 +279,30 @@ async fn task_receiver(
                                             // connection
                                             peer.sender
                                                 .send(Message::from(send_message_request.to_json()))
-                                                .expect("Failed to send message.");
+                                                .expect("Failed to send message");
                                         }
                                     }
                                 }
-                                Action::GetPrekeyBundle(user) => {
-                                    handle_get_bundle_request(
-                                        peers.clone(),
-                                        user,
-                                        &session,
-                                        sender.clone(),
-                                        &aad,
-                                        &addr,
-                                    )
-                                    .await;
+                                Action::GetPrekeyBundle(user_asked) => {
+                                    if user != user_asked {
+                                        handle_get_bundle_request(
+                                            peers.clone(),
+                                            user_asked,
+                                            &session,
+                                            sender.clone(),
+                                            &aad,
+                                            &addr,
+                                        )
+                                            .await;
+                                    } else {
+                                        let r = ServerResponse::new(
+                                            ResponseCode::BadRequest,
+                                            "You can't ask for your own bundle".to_string(),
+                                        ).to_string();
+                                        send_message(sender.clone(), r)
+                                            .await
+                                            .expect("Failed to send message.");
+                                    }
                                 }
                             }
                         }
@@ -353,8 +361,10 @@ async fn handle_get_bundle_request(
 
             match session.read().await.get_encryption_key() {
                 Some(ek) => {
+                    info!("Sending response: {}", &response);
                     match ek.encrypt(&response.into_bytes(), aad) {
                         Ok(enc) => {
+                            info!("Sent encrypted response: {}", &enc);
                             send_message(sender.clone(), enc)
                                 .await
                                 .expect("Failed to send message.");
@@ -388,16 +398,18 @@ async fn task_sender(
     sender: SharedSink,
     mut receiver: mpsc::UnboundedReceiver<Message>,
 ) {
-    while let Ok(msg_result) = receiver.try_recv() {
-        if let Some(ek) = session.read().await.get_encryption_key() {
-            let aad = session.read().await.get_associated_data().unwrap();
-            match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
-                Ok(enc) => {
-                    send_message(sender.clone(), enc)
-                        .await
-                        .expect("Failed to send message.");
+    loop {
+        if let Some(msg_result) = receiver.recv().await {
+            if let Some(ek) = session.read().await.get_encryption_key() {
+                let aad = session.read().await.get_associated_data().unwrap();
+                match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
+                    Ok(enc) => {
+                        send_message(sender.clone(), enc)
+                            .await
+                            .expect("Failed to send message.");
+                    }
+                    Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
                 }
-                Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
             }
         }
     }

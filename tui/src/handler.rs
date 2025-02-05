@@ -14,29 +14,43 @@ pub async fn handle_key_events(key_event: Event, app: &mut App) -> AppResult<()>
                 InputMode::Normal if key.kind == KeyEventKind::Press => match key.code {
                     KeyCode::Char('i') => {
                         app.input_mode = InputMode::Insert;
+                        app.input.clear();
                     },
                     KeyCode::Char('q') => {
-                        app.quit().await;
+                        if !app.show_popup {
+                            app.quit().await;
+                        }
                     },
 
                     KeyCode::Char('a') => {
-                        app.show_popup = !app.show_popup
+                        app.show_popup = !app.show_popup;
+                        app.error = None;
+                        app.input.clear();
                     },
 
                     KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
-                        app.active_window = 0;
+                        if !app.show_popup {
+                            app.active_window = 0;
+                        }
                     },
 
                     KeyCode::Right | KeyCode::Char('l') if app.state == AppState::Chats => {
-                        app.active_window = 1;
+                        if !app.show_popup {
+                            app.active_window = 1;
+                        }
                     },
 
                     KeyCode::Down | KeyCode::Char('j') if app.state == AppState::Chats && app.active_window == 0 => {
-                        app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
+                        if !app.show_popup {
+                            app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
+                        }
+
                     },
 
                     KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
-                        app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
+                        if !app.show_popup {
+                            app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
+                        }
                     },
 
                     KeyCode::Esc if app.show_popup => {
@@ -170,19 +184,16 @@ impl App {
                             if self.active_window == 0 {
                                 self.active_chat = self.selected_chat;
                             }
-                        } else {
-                            match self.client.get_user_prekey_bundle(self.input.clone()).await {
-                                Ok(_) => {
-                                    self.show_popup = false;
-                                },
-                                Err(e) => {
-                                    self.error = Some(TuiError::from(e));
-                                }
-                            }
                         }
                     },
                     InputMode::Insert => {
                         if self.show_popup {
+
+                            if self.input == self.client.username {
+                                self.error = Some(TuiError::InvalidUser("Cannot add yourself".to_string()));
+                                return;
+                            }
+
                             match self.client.get_user_prekey_bundle(self.input.clone()).await {
                                 Ok(_) => {
                                     self.show_popup = false;
