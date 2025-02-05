@@ -1,12 +1,12 @@
 use std::error;
+use tokio::sync::RwLock;
+use std::sync::Arc;
 use crossterm::event;
-use crossterm::event::{Event, KeyEventKind, KeyCode};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui::backend::Backend;
 use client::{ChatMessage, Client};
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
-use ratatui::style::{Color, Style};
-use ratatui::widgets::{Block, Clear};
+use ratatui::widgets::Clear;
 use crate::widgets::register::RegistrationWidget;
 use crate::widgets::chats::ChatsWidget;
 use crate::widgets::popup::PopupWidget;
@@ -52,6 +52,7 @@ pub struct App {
     pub(crate) active_chat: usize,
     pub(crate) show_popup: bool,
     chat_listener: Option<tokio::task::JoinHandle<()>>,
+    pub(crate) incoming_messages: Arc<RwLock<Vec<ChatMessage>>>,
 
 
 }
@@ -87,16 +88,14 @@ impl App {
             active_chat: 0,
             show_popup: false,
             chat_listener: None,
+            incoming_messages: Arc::new(RwLock::new(Vec::new())),
         };
 
+        let incoming_messages = app.incoming_messages.clone();
         app.chat_listener = Some(tokio::spawn(async move {
-            while let Some(msg) = chat_rx.recv().await {
-                println!("Received message: {}", msg);
-            }
+            task_receiver(incoming_messages, chat_rx).await;
         }));
-
         app
-
 
     }
 
@@ -105,9 +104,20 @@ impl App {
 
         // Main app loop
         while self.running {
+            if self.incoming_messages.read().await.len() > 0 {
+                let messages = self.incoming_messages
+                    .write()
+                    .await
+                    .drain(..)
+                    .collect::<Vec<ChatMessage>>();
 
+                for message in messages {
+                    self.handle_incoming_chat_message(message).await;
+                }
+            }
             terminal.draw(|frame| self.draw(frame))?;
             handle_key_events(event::read()?, self).await?;
+
 
         }
 
@@ -188,5 +198,12 @@ fn popup_area(area: Rect, len_x: u16, len_y: u16) -> Rect {
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);
     area
+}
+
+async fn task_receiver(incoming_messages: Arc<RwLock<Vec<ChatMessage>>>, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>){
+    while let Some(msg) = chat_rx.recv().await {
+        println!("Incoming message: {:?}", &msg);
+        incoming_messages.write().await.push(msg);
+    }
 }
 

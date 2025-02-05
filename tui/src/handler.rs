@@ -1,6 +1,8 @@
 use std::cmp::PartialEq;
+use client::ChatMessage;
 use crate::app::{App, AppResult, AppState, InputMode};
 use crossterm::event::{Event, KeyCode, KeyEventKind};
+use protocol::x3dh::{process_initial_message, process_server_initial_message};
 use crate::errors::TuiError;
 
 
@@ -210,5 +212,18 @@ impl App {
         }
         self.input.clear();
         self.reset_cursor();
+    }
+
+    pub(crate) async fn handle_incoming_chat_message(&mut self, message: ChatMessage) {
+        match message.msg_type.as_str() {
+            "initial_message" => {
+                println!("Hakuna Matata");
+                self.client.add_friend(message.clone()).expect("Cannot add friend");
+            },
+            "chat" => {
+                self.client.add_chat_message(message);
+            },
+            _ => {}
+        }
     }
 }

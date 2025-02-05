@@ -162,7 +162,7 @@ impl Client {
                             }
                             // 4) Otherwise, ignore or log unknown format
                             else {
-                                eprintln!("Unknown inbound message: {}", decrypted);
+                                error!("Unknown message format: {}", decrypted);
                             }
                         }
                     },
@@ -223,7 +223,7 @@ impl Client {
                     pb.clone()
                 )?;
                 let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
-                self.friends.insert(username.clone(), Friend::new(friend_session, pb.clone()));
+                self.friends.insert(username.clone(), Friend::new(friend_session, Some(pb.clone())));
                 let chat_message = ChatMessage::new(
                     "initial_message".to_string(),
                     username.clone(),
@@ -293,9 +293,11 @@ impl Client {
     }
 
     pub async fn send_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
+
         let mut req = json!(message.clone());
-        req["action"] = serde_json::from_str::<Value>("\"send_message\"").unwrap();
+        req["action"] = serde_json::from_str("\"send_message\"").unwrap();
         let mut req = req.to_string();
+
         if message.msg_type != "initial_message".to_string() {
             let (friend_ek, friend_aad) = if let Some(friend) = self.friends.get(&message.to) {
                 (
@@ -311,7 +313,7 @@ impl Client {
             )?;
 
             message.text = enc_text;
-            req = json!(message.clone()).to_string();
+            req = json!(message).to_string();
         }
         let enc = self.session
                 .get_encryption_key()
@@ -328,20 +330,51 @@ impl Client {
 
         Ok(())
     }
+
+
+    pub fn add_friend(&mut self, message: ChatMessage) -> Result<(), ClientError> {
+        let im = InitialMessage::try_from(message.text.clone())?;
+        let (ek, dk) = process_initial_message(
+            self.identity_key.clone(),
+            self.signed_prekey.clone(),
+            self.one_time_prekey.pop(),
+            im.clone()
+        )?;
+        let friend_session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
+        let friend = Friend::new(friend_session, None);
+        self.friends.insert(message.from, friend);
+        Ok(())
+    }
+
+    pub fn add_chat_message(&mut self, message: ChatMessage) {
+        if let Some(friend) = self.friends.get_mut(&message.from) {
+            friend.add_message(message);
+        }
+    }
+
+    pub fn get_chat_messages(&self, username: &str) -> Option<&Vec<ChatMessage>> {
+        self.friends.get(username).map(|f| &f.chat)
+    }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatMessage {
-    msg_type: String,
-    to: String,
-    from: String,
-    text: String,
-    timestamp: String
+    pub msg_type: String,
+    pub to: String,
+    pub from: String,
+    pub text: String,
+    pub timestamp: String
 }
 
 impl ChatMessage {
     fn new(msg_type: String, to: String,  from: String, text: String, timestamp: DateTime<Utc>) -> Self {
-        Self { msg_type, to, from, text, timestamp: timestamp.to_rfc3339() }
+        Self {
+            msg_type,
+            to,
+            from,
+            text,
+            timestamp: timestamp.to_rfc3339()
+        }
     }
 }
 
@@ -353,16 +386,20 @@ impl Display for ChatMessage {
 
 struct Friend {
     keys: SessionKeys,
-    pb: PreKeyBundle,
+    pb: Option<PreKeyBundle>,
     chat: Vec<ChatMessage>
 }
 
 impl Friend {
-    fn new(keys: SessionKeys, pb: PreKeyBundle) -> Self {
-        Self { keys, pb, chat: Vec::new() }
+    fn new(keys: SessionKeys, pb: Option<PreKeyBundle>) -> Self {
+        Self {
+            keys,
+            pb,
+            chat: Vec::new()
+        }
     }
 
-    fn get_friend_bundle(&self) -> PreKeyBundle {
+    fn get_friend_bundle(&self) -> Option<PreKeyBundle> {
         self.pb.clone()
     }
 
