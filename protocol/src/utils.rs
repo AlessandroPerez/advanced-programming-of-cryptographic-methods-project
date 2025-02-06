@@ -437,7 +437,7 @@ impl PublicKey {
 
 /* SIGNATURE */
 #[derive(Clone, Debug)]
-pub(crate) struct Signature( pub [u8; SIGNATURE_LENGTH]);
+pub struct Signature( pub [u8; SIGNATURE_LENGTH]);
 
 impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
     fn as_ref(&self) -> &[u8; SIGNATURE_LENGTH] {

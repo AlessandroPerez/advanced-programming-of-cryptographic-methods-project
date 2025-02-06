@@ -24,14 +24,29 @@ impl Peer {
     }
 
     pub(crate) fn get_bundle(&mut self) -> PreKeyBundle {
-        // let otpk = self.pb.otpk.pop();
-        let mut pb = self.pb.clone();
-        // pb.otpk = vec![otpk.unwrap()];
-        pb.otpk = vec![];
-        pb
+        let mut old_bundle = self.pb.clone();
+
+        // We need at least one key in 'otpk' to split
+        let last_key = old_bundle.otpk.pop();
+
+        // Build a new PreKeyBundle that just contains the last key in its 'otpk'
+        let new_bundle_with_last = PreKeyBundle {
+            verifying_key: old_bundle.verifying_key.clone(),
+            ik: old_bundle.ik.clone(),
+            spk: old_bundle.spk.clone(),
+            sig: old_bundle.sig.clone(),
+            otpk: if last_key.is_some() {
+                vec![last_key.unwrap()]
+            } else {
+                vec![]
+            },
+        };
+
+        // Now update the *peer's* bundle (remove last key from its 'otpk').
+        // old_bundle no longer has the last key, because we popped it above.
+        self.pb = old_bundle;
+        new_bundle_with_last
     }
-
-
 }
 
 pub(crate) struct EstablishConnection<'a>(pub &'a str);

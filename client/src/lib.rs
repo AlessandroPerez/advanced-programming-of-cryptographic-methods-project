@@ -66,7 +66,7 @@ impl Client {
 
     pub async fn new(chat_tx: mpsc::Sender<ChatMessage>) -> Result<Self, ClientError> {
         let (write, read) = Self::connect().await?;
-        let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(10);
+        let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(31);
         let session = SessionKeys::new();
         let username = "".to_string();
 
@@ -124,7 +124,7 @@ impl Client {
                 let (ek, dk) = process_server_initial_message(
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
-                    Some(self.one_time_prekey.pop().unwrap()),
+                    self.one_time_prekey.pop(),
                     &PublicKey::from_base64(SERVER_IK.to_string()).unwrap(),
                     initial_message.clone(),
                 )?;
@@ -185,6 +185,7 @@ impl Client {
     }
 
     pub async fn register_user(&mut self) -> Result<(), ClientError> {
+        self.bundle.otpk.pop();
         let req = json!({
             "action" : "register",
             "username" : self.username.clone(),
@@ -339,8 +340,7 @@ impl Client {
         let (ek, dk) = process_initial_message(
             self.identity_key.clone(),
             self.signed_prekey.clone(),
-            None,
-            // self.one_time_prekey.pop(),
+            self.one_time_prekey.pop(),
             im.clone()
         )?;
         let friend_session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));

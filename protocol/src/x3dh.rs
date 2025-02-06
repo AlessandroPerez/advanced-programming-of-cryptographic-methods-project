@@ -69,15 +69,17 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
     // DH3 = DH(EKA, SPKB)
     let dh3 = ek.diffie_hellman(&bundle.spk);
 
+    let otpk = bundle.otpk.pop();
+
 
     let (sk1, sk2) = hkdf(
         "X3DH".to_string(),
         dh1,
         dh2,
         dh3,
-        if !bundle.otpk.is_empty() {
+        if let Some(otpk) = &otpk {
             // DH4 = DH(EKA, OTPK)
-            Some(ek.diffie_hellman(&bundle.otpk.last().unwrap()))
+            Some(ek.diffie_hellman(otpk))
         } else {
             None
         },
@@ -95,8 +97,11 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
                 identity_key: PublicKey::from(&ik),
                 ephemeral_key: p_ek,
                 prekey_hash: bundle.spk.hash(),
-                one_time_key_hash: if !bundle.otpk.is_empty() {
-                    Some(bundle.otpk.pop().unwrap().hash())} else {None},
+                one_time_key_hash: if let Some(otpk) = otpk {
+                    Some(otpk.hash())
+                } else {
+                    None
+                },
                 associated_data: ad
             },
             EncryptionKey::from(sk1),
