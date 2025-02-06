@@ -133,7 +133,18 @@ impl Widget for ChatsWidget {
         ]);
 
         let input_paragraph = Paragraph::new(input_with_cursor)
-            .block(Block::default().borders(Borders::ALL).title("Input"));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Input")
+                    .style(Style::default().fg(
+                        if self.active_window == 1 {
+                            Color::LightGreen
+                        } else {
+                            Color::White
+                        }
+                    ))
+            );
         input_paragraph.render(chat_area[1], buf);
 
         let inner_chats_area = main_layout[0].inner(Margin { vertical: 1, horizontal: 1 });

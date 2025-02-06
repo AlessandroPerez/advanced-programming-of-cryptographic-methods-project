@@ -21,7 +21,6 @@ async fn main() -> AppResult<()> {
 
     // TODO: correct known bugs:
     //  1. when press the char 'é' the app crashes
-    //  2. disable input when the AppState is Chats and the InputMode is Insert but the active window is 0
 
     // Init client
     let (chat_tx, chat_rx) = tokio::sync::mpsc::channel(100);

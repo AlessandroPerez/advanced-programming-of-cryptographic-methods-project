@@ -66,7 +66,14 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
             },
 
             InputMode::Insert if key.kind == KeyEventKind::Press => match key.code {
-                KeyCode::Char(to_insert) => app.enter_char(to_insert),
+                KeyCode::Char(to_insert) => {
+                    if app.state == AppState::Chats &&
+                        !app.show_popup &&
+                        app.active_window == 0 {
+                        return Ok(());
+                    }
+                    app.enter_char(to_insert)
+                },
                 KeyCode::Enter => app.submit_message().await,
                 KeyCode::Backspace => app.delete_char(),
                 KeyCode::Left => app.move_cursor_left(),
