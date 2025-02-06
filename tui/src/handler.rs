@@ -1,8 +1,7 @@
-use std::cmp::PartialEq;
+use chrono::{DateTime, Utc};
 use client::ChatMessage;
 use crate::app::{App, AppResult, AppState, InputMode};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
-use protocol::x3dh::{process_initial_message, process_server_initial_message};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use crate::errors::TuiError;
 
 
@@ -208,6 +207,22 @@ impl App {
                                     self.error = Some(TuiError::from(e));
                                 }
                             }
+                        } else {
+                            if self.active_window == 1 && !self.input.is_empty() {
+
+                                let message = ChatMessage::new(
+                                    "chat".to_string(), // msg_type
+                                    self.client.get_open_chats()[self.active_chat].clone(), // to
+                                    self.client.username.clone(), // from
+                                    self.input.clone(), // text
+                                    DateTime::from(Utc::now()), // timestamp
+                                );
+
+                                self.client.send_chat_message(message.clone()).await.expect("Failed to send message");
+                                self.client.add_chat_message(message.clone(), &message.to);
+                                self.input.clear();
+                                self.reset_cursor();
+                            }
                         }
                     }
                 }
@@ -221,10 +236,10 @@ impl App {
     pub(crate) async fn handle_incoming_chat_message(&mut self, message: ChatMessage) {
         match message.msg_type.as_str() {
             "initial_message" => {
-                self.client.add_friend(message.clone()).expect("Cannot add friend");
+                self.client.add_friend(message).expect("Cannot add friend");
             },
             "chat" => {
-                self.client.add_chat_message(message);
+                self.client.decrypt_chat_message(message).expect("Failed to decrypt message");
             },
             _ => {}
         }

@@ -1,3 +1,4 @@
+use client::ChatMessage;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Modifier},
@@ -6,6 +7,7 @@ use ratatui::{
     buffer::Buffer,
 };
 use ratatui::layout::{Alignment, Margin};
+use ratatui::widgets::{List, ListItem};
 use crate::app::InputMode;
 
 pub(crate) struct ChatsWidget {
@@ -16,10 +18,20 @@ pub(crate) struct ChatsWidget {
     chats: Vec<String>,
     selected_chat: usize,
     active_window: usize,
+    message_history: Option<Vec<ChatMessage>>,
 }
 
 impl ChatsWidget {
-    pub fn new(input: String, character_index: usize, input_mode: InputMode, active_chat: String, chats: Vec<String>, selected_chat: usize, active_window: usize) -> Self {
+    pub fn new(
+        input: String,
+        character_index: usize,
+        input_mode: InputMode,
+        active_chat: String,
+        chats: Vec<String>,
+        selected_chat: usize,
+        active_window: usize,
+        message_history: Option<Vec<ChatMessage>>,
+    ) -> Self {
         Self {
             input,
             character_index,
@@ -28,6 +40,7 @@ impl ChatsWidget {
             chats,
             selected_chat,
             active_window,
+            message_history
         }
     }
 }
@@ -73,25 +86,55 @@ impl Widget for ChatsWidget {
 
         left.render(main_layout[0], buf);
 
-        let right = Block::default()
-            .borders(Borders::ALL)
-            .title(format!(" {} ", self.active_chat))
-            .title_alignment(Alignment::Center)
-            .border_style(Style::default().fg(
-                if self.active_window == 1 {
+        let chat_area = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(1),      // The messages area grows as much as possible
+                Constraint::Length(3),   // The input area has a fixed height
+            ])
+            .split(main_layout[1]);
+
+        let messages = self.message_history.unwrap_or(vec![])
+            .iter()
+            .map(|msg| {
+                ListItem::new(format!("{}: {}", msg.from, msg.text))
+                    .style(Style::default().fg(Color::White))
+            })
+            .collect::<Vec<_>>();
+
+        let right = List::new(messages).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(" {} ", self.active_chat))
+                .title_alignment(Alignment::Center)
+                .border_style(Style::default().fg(
+                        if self.active_window == 1 {
                         Color::LightGreen
                     } else {
                         Color::White
                     }
                 ).add_modifier(
-                if self.active_window == 1 {
+                    if self.active_window == 1 {
                         Modifier::BOLD
                     } else {
                         Modifier::empty()
                     }
                 )
-            );
-        right.render(main_layout[1], buf);
+            )
+        );
+
+        right.render(chat_area[0], buf);
+
+        let (before_cursor, after_cursor) = self.input.split_at(self.character_index);
+        let input_with_cursor = Line::from(vec![
+            Span::raw(before_cursor),
+            Span::styled("|", Style::default().fg(Color::Gray)),
+            Span::raw(after_cursor),
+        ]);
+
+        let input_paragraph = Paragraph::new(input_with_cursor)
+            .block(Block::default().borders(Borders::ALL).title("Input"));
+        input_paragraph.render(chat_area[1], buf);
 
         let inner_chats_area = main_layout[0].inner(Margin { vertical: 1, horizontal: 1 });
 

@@ -1,17 +1,8 @@
 use std::error;
 use tokio::sync::RwLock;
 use std::sync::Arc;
-use crossterm::event;
-use ratatui::{DefaultTerminal, Frame};
-use ratatui::backend::Backend;
 use client::{ChatMessage, Client};
-use ratatui::layout::{Constraint, Flex, Layout, Rect};
-use ratatui::widgets::Clear;
-use crate::widgets::register::RegistrationWidget;
-use crate::widgets::chats::ChatsWidget;
-use crate::widgets::popup::PopupWidget;
 use crate::errors::TuiError;
-use crate::handler::handle_key_events;
 
 // Application result type
 pub type AppResult<T> = Result<T, Box<dyn error::Error>>;
@@ -97,7 +88,6 @@ impl App {
 
     }
 
-
     pub async fn tick(&mut self) {
         let messages = self.incoming_messages.write().await.drain(..).collect::<Vec<ChatMessage>>();
         for message in messages {
@@ -105,19 +95,13 @@ impl App {
         }
     }
 
-
-
     pub async fn quit(&mut self) {
         self.running = false;
         self.client.disconnect().await;
         let listener = self.chat_listener.take().unwrap();
         listener.abort();
     }
-
-
 }
-
-
 
 async fn task_receiver(incoming_messages: Arc<RwLock<Vec<ChatMessage>>>, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>){
     while let Some(msg) = chat_rx.recv().await {

@@ -24,9 +24,10 @@ impl Peer {
     }
 
     pub(crate) fn get_bundle(&mut self) -> PreKeyBundle {
-        let otpk = self.pb.otpk.pop();
+        // let otpk = self.pb.otpk.pop();
         let mut pb = self.pb.clone();
-        pb.otpk = vec![otpk.unwrap()];
+        // pb.otpk = vec![otpk.unwrap()];
+        pb.otpk = vec![];
         pb
     }
 

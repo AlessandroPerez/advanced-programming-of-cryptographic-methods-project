@@ -268,6 +268,7 @@ async fn task_receiver(
                                 Action::SendMessage(send_message_request) => {
                                     match peers.read().await.get(&send_message_request.to) {
                                         None => {
+                                            error!("User not found: {}", &send_message_request.to);
                                             if let Some(ek) =
                                                 session.read().await.get_encryption_key()
                                             {

@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::string::FromUtf8Error;
 use serde_json::Value;
 use tokio_tungstenite::tungstenite::Error as WsError;
 use protocol::errors::X3DHError;
@@ -11,6 +12,7 @@ pub enum ClientError {
     UserAlreadyExistsError,
     UserNotFoundError,
     SerializationError,
+    GenericError(String),
     SendError,
 }
 
@@ -24,6 +26,7 @@ impl Display for ClientError {
             ClientError::UserNotFoundError => write!(f, "User not found"),
             ClientError::SerializationError => write!(f, "Serialization error"),
             ClientError::SendError => write!(f, "Failed to send message"),
+            ClientError::GenericError(e) => write!(f, "Error: {}", e),
 
         }
     }
@@ -45,6 +48,18 @@ impl From<X3DHError> for ClientError {
 impl From<()> for ClientError {
     fn from(_: ()) -> Self {
         ClientError::ServerResponseError
+    }
+}
+
+impl From<base64::DecodeError> for ClientError {
+    fn from(_: base64::DecodeError) -> Self {
+        ClientError::GenericError("Failed to decode base64".to_string())
+    }
+}
+
+impl From<FromUtf8Error> for ClientError {
+    fn from(_: FromUtf8Error) -> Self {
+        ClientError::GenericError("Failed to decode utf8".to_string())
     }
 }
 

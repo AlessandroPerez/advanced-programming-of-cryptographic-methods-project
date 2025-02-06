@@ -35,6 +35,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         },
         AppState::Chats => {
             let chats = app.client.get_open_chats();
+
             if chats.is_empty() {
                 let area = frame.area();
                 let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
@@ -49,6 +50,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     area,
                 );
             }else {
+                let active_chat_history = app.client.get_chat_history(&chats[app.active_chat]);
                 frame.render_widget(
                     ChatsWidget::new(
                         app.input.clone(),
@@ -58,6 +60,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                         chats,
                         app.selected_chat,
                         app.active_window,
+                        active_chat_history,
                     ),
                     frame.area()
                 );

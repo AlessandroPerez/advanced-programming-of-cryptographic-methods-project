@@ -5,6 +5,9 @@ use std::fmt::Display;
 use std::ops::Add;
 use std::sync::Arc;
 use aes_gcm::aes::cipher::typenum::Le;
+use arrayref::array_ref;
+use base64::Engine;
+use base64::engine::general_purpose;
 use chrono::{DateTime, Utc};
 use common::{ResponseCode, ServerResponse, ResponseWrapper, RequestWrapper};
 use futures_util::{
@@ -31,6 +34,7 @@ use tokio_tungstenite::{
 use uuid::Uuid;
 use protocol::utils::PublicKey;
 use serde::{Deserialize, Serialize};
+use protocol::constants::AES256_NONCE_LENGTH;
 use crate::errors::ClientError;
 
 pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
@@ -293,11 +297,6 @@ impl Client {
     }
 
     pub async fn send_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
-
-        let mut req = json!(message.clone());
-        req["action"] = serde_json::from_str("\"send_message\"").unwrap();
-        let mut req = req.to_string();
-
         if message.msg_type != "initial_message".to_string() {
             let (friend_ek, friend_aad) = if let Some(friend) = self.friends.get(&message.to) {
                 (
@@ -313,8 +312,11 @@ impl Client {
             )?;
 
             message.text = enc_text;
-            req = json!(message).to_string();
         }
+        let mut req = json!(message.clone());
+        req["action"] = serde_json::from_str("\"send_message\"").unwrap();
+        let req = req.to_string();
+
         let enc = self.session
                 .get_encryption_key()
                 .unwrap()
@@ -337,7 +339,8 @@ impl Client {
         let (ek, dk) = process_initial_message(
             self.identity_key.clone(),
             self.signed_prekey.clone(),
-            self.one_time_prekey.pop(),
+            None,
+            // self.one_time_prekey.pop(),
             im.clone()
         )?;
         let friend_session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
@@ -346,19 +349,47 @@ impl Client {
         Ok(())
     }
 
-    pub fn add_chat_message(&mut self, message: ChatMessage) {
-        if let Some(friend) = self.friends.get_mut(&message.from) {
+    pub fn add_chat_message(&mut self, message: ChatMessage, friend: &str) {
+        if let Some(friend) = self.friends.get_mut(friend) {
             friend.add_message(message);
         }
     }
 
-    pub fn get_chat_messages(&self, username: &str) -> Option<&Vec<ChatMessage>> {
-        self.friends.get(username).map(|f| &f.chat)
+    pub fn decrypt_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
+        let dk = self.friends
+            .get(&message.from)
+            .ok_or(ClientError::UserNotFoundError)?
+            .get_friend_keys()
+            .get_decryption_key()
+            .ok_or(ClientError::GenericError("No decryption key found".to_string()))?;
+
+        let enc_text = general_purpose::STANDARD.decode(message.text)?;
+
+        let nonce = array_ref!(enc_text, 0, AES256_NONCE_LENGTH);
+        let aad = AssociatedData::try_from(array_ref!(
+            enc_text,
+            AES256_NONCE_LENGTH,
+            AssociatedData::SIZE
+        ))?;
+        let offset = AES256_NONCE_LENGTH + AssociatedData::SIZE;
+        let end = enc_text.len();
+        let cipher_text = &enc_text[offset..end];
+        let text = dk.decrypt(cipher_text, nonce, &aad)?;
+        message.text = String::from_utf8(text)?;
+
+        self.add_chat_message(message.clone(), &message.from);
+
+        Ok(())
+    }
+
+    pub fn get_chat_history(&self, username: &str) -> Option<Vec<ChatMessage>> {
+        self.friends.get(username).map(|f| &f.chat).cloned()
     }
 
     pub fn get_open_chats(&self) -> Vec<String> {
         self.friends.keys().cloned().collect()
     }
+
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -371,7 +402,7 @@ pub struct ChatMessage {
 }
 
 impl ChatMessage {
-    fn new(msg_type: String, to: String,  from: String, text: String, timestamp: DateTime<Utc>) -> Self {
+    pub fn new(msg_type: String, to: String,  from: String, text: String, timestamp: DateTime<Utc>) -> Self {
         Self {
             msg_type,
             to,
