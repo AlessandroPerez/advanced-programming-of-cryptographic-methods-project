@@ -9,7 +9,7 @@ use arrayref::array_ref;
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::{DateTime, Utc};
-use common::{ResponseCode, ServerResponse, ResponseWrapper, RequestWrapper};
+use common::{ResponseCode, ServerResponse, ResponseWrapper, RequestWrapper, CONFIG};
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -37,8 +37,6 @@ use serde::{Deserialize, Serialize};
 use protocol::constants::AES256_NONCE_LENGTH;
 use crate::errors::ClientError;
 
-pub const SERVER_URL: &str = "ws://127.0.0.1:3333";
-pub const SERVER_IK: &str = "KidEmuJzis1xt3+XwkzEBx4rB8hjuEvHK0LV0vY5aE8=";
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
@@ -91,7 +89,7 @@ impl Client {
     }
 
     async fn connect() -> Result<(Sender, Receiver), ClientError> {
-        let (ws_stream, _) = tokio_tungstenite::connect_async(SERVER_URL).await?;
+        let (ws_stream, _) = tokio_tungstenite::connect_async(CONFIG.clone().get_server_url()).await?;
         let (write, read) = ws_stream.split();
         Ok((write, read))
     }
@@ -125,7 +123,7 @@ impl Client {
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
                     self.one_time_prekey.pop(),
-                    &PublicKey::from_base64(SERVER_IK.to_string()).unwrap(),
+                    &PublicKey::from_base64(CONFIG.clone().get_public_key_server()).unwrap(),
                     initial_message.clone(),
                 )?;
 

@@ -12,3 +12,4 @@ protocol = { path = "../protocol" }
 serde_json = "1.0.137"
 serde = { version = "1.0.217", features = ["derive"] }
 uuid = "1.13.1"
+toml = "0.8.20"

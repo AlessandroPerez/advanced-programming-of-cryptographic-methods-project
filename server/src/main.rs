@@ -3,8 +3,9 @@ mod utils;
 mod errors;
 mod tests;
 
+use std::clone::Clone;
 use crate::utils::{Peer, PeerMap};
-use common::{RegisterRequest, ResponseCode, ServerResponse};
+use common::{CONFIG, RegisterRequest, ResponseCode, ServerResponse};
 use futures::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::{SinkExt, StreamExt};
@@ -25,27 +26,20 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 use uuid::Uuid;
 use utils::{decrypt_client_request, Action, EstablishConnection, Tx};
 
-// Keys for testing
-const PRIVATE_KEY: &str = "QPdkjPrBYWzwTq70jdeVbr4f4kdS140HeuOXi88hgPc=";
-
-
-// server address
-const IP: &str = "127.0.0.1";
-const PORT: &str = "3333";
-
 type SharedSink = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
 type SharedSession = Arc<RwLock<SessionKeys>>;
 
 #[tokio::main]
 async fn main() {
-    env::set_var("RUST_LOG", "info");
+
+    env::set_var("RUST_LOG", CONFIG.clone().get_log_level());
     env_logger::init();
 
     let peers: PeerMap = Arc::new(RwLock::new(HashMap::new()));
-    let addr = format!("{}:{}", IP, PORT);
+    let addr = format!("{}:{}", CONFIG.clone().get_server_ip(), CONFIG.clone().get_server_port());
 
     let listener = TcpListener::bind(&addr).await.unwrap();
-    info!("WebSocket server started listening on port {}", PORT);
+    info!("WebSocket server started listening on port {}", CONFIG.clone().get_server_port());
 
     while let Ok((stream, _)) = listener.accept().await {
         let peers = peers.clone();
@@ -101,7 +95,7 @@ async fn send_message(sink: SharedSink, msg: String) -> anyhow::Result<()> {
 fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String> {
     if let Ok(bundle) = PreKeyBundle::try_from(bundle) {
         match process_prekey_bundle(
-            PrivateKey::from_base64(PRIVATE_KEY.to_string()).unwrap(),
+            PrivateKey::from_base64(CONFIG.clone().get_private_key_server()).unwrap(),
             bundle,
         ) {
             Ok((im, ek, dk)) => {

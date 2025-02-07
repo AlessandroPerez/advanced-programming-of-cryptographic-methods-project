@@ -13,6 +13,8 @@ use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use serde::de::Error;
 use uuid::Uuid;
+use std::fs;
+use std::sync::LazyLock;
 
 pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, AssociatedData), ()> {
     let enc_req = match general_purpose::STANDARD.decode(req.to_string()) {
@@ -163,3 +165,51 @@ impl SendMessageRequest {
         .to_string()
     }
 }
+
+#[derive(Clone, Deserialize)]
+pub struct Config {
+    server_ip: String,
+    server_port: String,
+    private_key_server: String,
+    public_key_server: String,
+    log_level: String,
+
+    #[serde(skip_deserializing)]
+    server_url: String,
+}
+impl Config {
+    fn new(filename: &str) -> Self {
+        let config = fs::read_to_string(filename).expect("Unable to read the configuration file");
+        let mut config: Config = toml::from_str(&config).expect("Unable to parse the configuration file");
+
+        config.server_url = format!("ws://{}:{}", config.server_ip, config.server_port);
+
+        config
+    }
+
+    pub fn get_server_ip(self) -> String {
+        self.server_ip.clone()
+    }
+
+    pub fn get_server_port(self) -> String {
+        self.server_port.clone()
+    }
+
+    pub fn get_private_key_server(self) -> String {
+        self.private_key_server.clone()
+    }
+
+    pub fn get_public_key_server(self) -> String {
+        self.public_key_server.clone()
+    }
+
+    pub fn get_log_level(self) -> String {
+        self.log_level.clone()
+    }
+
+    pub fn get_server_url(self) -> String {
+        self.server_url.clone()
+    }
+}
+
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::new("../config/config.toml"));
