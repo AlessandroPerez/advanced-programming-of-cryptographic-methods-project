@@ -386,6 +386,21 @@ impl Client {
         self.friends.keys().cloned().collect()
     }
 
+    pub async fn close_chat(&mut self, f: String) -> Result<(), ClientError> {
+
+        self.send_chat_message(ChatMessage::new(
+            "close_chat".to_string(),
+            f.clone(),
+            self.username.clone(),
+            "".to_string(),
+            Utc::now()
+        )).await?;
+        Ok(())
+    }
+
+    pub fn remove_friend(&mut self, f: String) {
+        self.friends.remove(&f);
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

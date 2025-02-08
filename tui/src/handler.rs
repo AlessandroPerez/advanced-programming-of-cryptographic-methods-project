@@ -251,6 +251,10 @@ impl App {
             "chat" => {
                 self.client.decrypt_chat_message(message).expect("Failed to decrypt message");
             },
+
+            "close_chat" => {
+                self.client.remove_friend(message.from);
+            },
             _ => {}
         }
     }

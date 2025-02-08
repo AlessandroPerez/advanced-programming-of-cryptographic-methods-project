@@ -96,6 +96,9 @@ impl App {
     }
 
     pub async fn quit(&mut self) {
+        for f in self.client.get_open_chats() {
+            self.client.close_chat(f).await;
+        }
         self.running = false;
         self.client.disconnect().await;
         let listener = self.chat_listener.take().unwrap();
