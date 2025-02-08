@@ -1,6 +1,19 @@
 .idea/
 
-**/target/
+client/target
+common/target
+protocol/target
+config/update_server_keys/target/debug
+config/update_server_keys/target/.rustc_info.json
+config/update_server_keys/target/CACHEDIR.TAG
+server/target/debug
+server/target/.rustc_info.json
+server/target/CACHEDIR.TAG
+tui/target/debug
+tui/target/.rustc_info.json
+tui/target/CACHEDIR.TAG
+
+
 
 *.pem
 

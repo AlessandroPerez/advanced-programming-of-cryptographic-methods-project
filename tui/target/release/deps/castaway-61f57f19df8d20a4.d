@@ -1,0 +1,10 @@
+/home/sh4ring4n/University/crypto_methods/advanced-programming-of-cryptographic-methods-project/tui/target/release/deps/libcastaway-61f57f19df8d20a4.rmeta: /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lib.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/internal.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lifetime_free.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/utils.rs
+
+/home/sh4ring4n/University/crypto_methods/advanced-programming-of-cryptographic-methods-project/tui/target/release/deps/libcastaway-61f57f19df8d20a4.rlib: /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lib.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/internal.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lifetime_free.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/utils.rs
+
+/home/sh4ring4n/University/crypto_methods/advanced-programming-of-cryptographic-methods-project/tui/target/release/deps/castaway-61f57f19df8d20a4.d: /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lib.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/internal.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lifetime_free.rs /home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/utils.rs
+
+/home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lib.rs:
+/home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/internal.rs:
+/home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/lifetime_free.rs:
+/home/sh4ring4n/.cargo/registry/src/index.crates.io-6f17d22bba15001f/castaway-0.2.3/src/utils.rs:
