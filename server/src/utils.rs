@@ -1,13 +1,11 @@
 use crate::errors::ServerError;
-use chrono::{DateTime, Utc};
-use common::{RegisterRequest, RequestWrapper, ResponseWrapper, SendMessageRequest};
+use common::{RegisterRequest, RequestWrapper, SendMessageRequest};
 use log::error;
-use protocol::utils::{AssociatedData, DecryptionKey, PreKeyBundle};
+use protocol::utils::{DecryptionKey, PreKeyBundle};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Message;
-use uuid::Uuid;
 
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;

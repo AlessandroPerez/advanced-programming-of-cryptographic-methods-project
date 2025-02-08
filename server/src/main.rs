@@ -9,21 +9,20 @@ use common::{CONFIG, RegisterRequest, ResponseCode, ServerResponse};
 use futures::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::{SinkExt, StreamExt};
-use log::{error, info};
-use protocol::utils::{AssociatedData, EncryptionKey, PreKeyBundle, PrivateKey, PublicKey, SessionKeys};
+use log::{debug, error, info, warn};
+use protocol::utils::{AssociatedData, EncryptionKey, PreKeyBundle, PrivateKey, SessionKeys};
 use protocol::x3dh::process_prekey_bundle;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use std::ops::Deref;
 use std::sync::Arc;
+use tokio::io::join;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 use tokio::sync::{mpsc, Mutex};
 use tokio_tungstenite::tungstenite::Utf8Bytes;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
-use uuid::Uuid;
 use utils::{decrypt_client_request, Action, EstablishConnection, Tx};
 
 type SharedSink = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
@@ -42,9 +41,19 @@ async fn main() {
     let listener = TcpListener::bind(&addr).await.unwrap();
     info!("WebSocket server started listening on port {}", CONFIG.get_server_port());
 
+    let mut connections = vec![];
+
     while let Ok((stream, _)) = listener.accept().await {
         let peers = peers.clone();
-        tokio::spawn(handle_connection(stream, peers));
+        connections.push(tokio::spawn(handle_connection(stream, peers)));
+    }
+
+    // Handle the results of each thread
+    for (i, handle) in connections.into_iter().enumerate() {
+        match handle.await {
+            Ok(result) => warn!("Thread {} returned: {:?}", i, result),
+            Err(e) => warn!("Thread {} panicked: {:?}", i, e),
+        }
     }
 }
 
@@ -95,22 +104,27 @@ async fn send_message(sink: SharedSink, msg: String) -> anyhow::Result<()> {
 
 fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String> {
     if let Ok(bundle) = PreKeyBundle::try_from(bundle) {
+        debug!("Key bundle parsed correctly");
         match process_prekey_bundle(
             PrivateKey::from_base64(CONFIG.clone().get_private_key_server()).unwrap(),
             bundle,
         ) {
             Ok((im, ek, dk)) => {
+                debug!("Key bundle processed successfully");
                 let session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
                 let msg = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
                 Ok((msg, session))
             }
-            Err(_) => Err(ServerResponse::new(
-                ResponseCode::BadRequest,
-                "Can't process bundle".to_string(),
-            )
-            .to_string()),
+            Err(_) => {
+                error!("Cannot process key bundle");
+                Err(ServerResponse::new(
+                    ResponseCode::BadRequest,
+                    "Can't process bundle".to_string(),
+                ).to_string())
+            },
         }
     } else {
+        error!("Cannot parse key bundle.");
         Err(ServerResponse::new(
             ResponseCode::BadRequest,
             "Prekey Bundle is malformed".to_string(),
@@ -120,7 +134,7 @@ fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String>
 }
 
 async fn handle_registration(
-    mut request: RegisterRequest,
+    request: RegisterRequest,
     peers: PeerMap,
     sender: SharedSink,
     tx: Tx,
@@ -137,6 +151,7 @@ async fn handle_registration(
     if !peers.read().await.contains_key(&request.username) && is_alphanumeric {
         match PreKeyBundle::try_from(request.bundle) {
             Ok(pb) => {
+                debug!("Key bundle parsed successfully");
                 let peer = Peer::new(tx, pb);
                 let user = request.username.clone();
                 peers.write().await.insert(request.username, peer);
@@ -145,7 +160,7 @@ async fn handle_registration(
                     "User registered successfully.".to_string(),
                 ).to_string();
 
-                info!("User registered: {}", &user);
+                debug!("User \"{}\" registered successfully", &user);
                 ret = Ok(user);
 
             }
@@ -154,7 +169,7 @@ async fn handle_registration(
                 response =
                     ServerResponse::new(ResponseCode::BadRequest, "Bad request".to_string())
                         .to_string();
-                error!("{}", response);
+                error!("Cannot parse key bundle. Registration failed.");
                 ret = Err(());
 
             }
@@ -163,12 +178,12 @@ async fn handle_registration(
         response =
             ServerResponse::new(ResponseCode::Conflict, "User already exists".to_string())
                 .to_string();
-        error!("{}", response);
+        debug!("UserAlready Exist");
         ret = Err(());
     } else {
         response = ServerResponse::new(ResponseCode::BadRequest, "The username must be alphanumeric.".to_string())
             .to_string();
-        error!("{}", response);
+        debug!("Username bust be alphanumeric.");
         ret = Err(());
     }
 
@@ -205,7 +220,7 @@ async fn task_receiver(
     while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
         match msg_result {
             Message::Text(text) => {
-                info!("Received message: \"{}\", from: {}", &text, &addr);
+                debug!("Received message: \"{}\", from: {}", &text, &addr);
                 if let Some(request) = EstablishConnection::from_json(
                     &serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null),
                 ) {
@@ -224,7 +239,8 @@ async fn task_receiver(
                                 .await
                                 .set_associated_data(s.get_associated_data().unwrap());
 
-                            info!("Sending message: {}", &msg);
+                            debug!("Sending message: {}, to {}", &msg, &addr);
+
                             send_message(sender.clone(), msg)
                                 .await
                                 .expect("Failed to send message.");
@@ -243,6 +259,7 @@ async fn task_receiver(
                         Ok((action, request_id)) => {
                             match action {
                                 Action::Register(register_request) => {
+                                    debug!("Received registration request");
                                     if let Some(ek) = session.read().await.get_encryption_key() {
                                         let aad = session.read().await.get_associated_data().unwrap();
                                         if let Ok(u) = handle_registration(
@@ -261,9 +278,10 @@ async fn task_receiver(
                                     }
                                 }
                                 Action::SendMessage(send_message_request) => {
+                                    debug!("Received send message request");
                                     match peers.read().await.get(&send_message_request.to) {
                                         None => {
-                                            error!("User not found: {}", &send_message_request.to);
+                                            debug!("User {} not found", &send_message_request.to);
                                             if let Some(ek) =
                                                 session.read().await.get_encryption_key()
                                             {
@@ -297,11 +315,11 @@ async fn task_receiver(
                                             peer.sender
                                                 .send(Message::from(send_message_request.to_json()))
                                                 .expect("Failed to send message");
-                                            info!("Message sent to {}", &send_message_request.to);
                                         }
                                     }
                                 }
                                 Action::GetPrekeyBundle(user_asked) => {
+                                    debug!("Received get user prekey bundle request");
                                     if user != user_asked {
 
                                         handle_get_bundle_request(
@@ -366,6 +384,7 @@ async fn handle_get_bundle_request(
     let ek = session.read().await.get_encryption_key().unwrap();
     match peers.write().await.get_mut(&user) {
         None => {
+            debug!("User {} not found.", &user);
             let response = ServerResponse::new(ResponseCode::NotFound, "User not found".to_string()).to_string();
             let wrapper = common::ResponseWrapper {
                 request_id,
@@ -384,7 +403,6 @@ async fn handle_get_bundle_request(
                     error!("Failed to encrypt response");
                 }
             }
-            error!("User not found: {}", &user);
         },
 
         Some(peer) => {
@@ -404,7 +422,7 @@ async fn handle_get_bundle_request(
                     send_message(sender.clone(), enc)
                         .await
                         .expect("Failed to send message.");
-                    info!("Sent prekey bundle of {} to {}", &user, addr);
+                    debug!("Sent prekey bundle of {} to {}", &user, addr);
                 }
                 Err(_) => {
                     error!("Failed to encrypt response");
@@ -428,7 +446,7 @@ async fn task_sender(
                         send_message(sender.clone(), enc)
                             .await
                             .expect("Failed to send message.");
-                        info!("Message forwarded: {}", msg_result.to_string());
+                        debug!("Message forwarded: {}", msg_result.to_string());
                     }
                     Err(_) => error!("Failed to encrypt: {}", msg_result.to_string()),
                 }

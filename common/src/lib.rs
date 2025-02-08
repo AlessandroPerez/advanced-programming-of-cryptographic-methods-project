@@ -1,6 +1,6 @@
 use arrayref::array_ref;
 use base64::{engine::general_purpose, Engine as _};
-use log::{error, info};
+use log::{debug, error, info};
 use protocol::{
     constants::AES256_NONCE_LENGTH,
     utils::{AssociatedData, DecryptionKey},
@@ -36,7 +36,7 @@ pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, Associat
         Err(_) => return Err(()),
     };
 
-    info!(
+    debug!(
         "Decrypted request: {}",
         String::from_utf8(text.clone()).unwrap()
     );
