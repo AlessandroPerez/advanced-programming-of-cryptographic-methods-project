@@ -98,7 +98,7 @@ While in `NORMAL` mode:
 
 Here's an overview of the server and clients in action (with two clients for demonstration purposes):
 
-<img alt="Server and Clients Overview" src="assets/screenshots/overview.png" width="100%">
+<img alt="Server and Clients Overview" src="assets/demo/demo.gif" width="100%">
 
 # Contacts
 
