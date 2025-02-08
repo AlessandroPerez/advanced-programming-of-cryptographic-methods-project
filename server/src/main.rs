@@ -32,14 +32,15 @@ type SharedSession = Arc<RwLock<SessionKeys>>;
 #[tokio::main]
 async fn main() {
 
-    env::set_var("RUST_LOG", CONFIG.clone().get_log_level());
+
+    env::set_var("RUST_LOG", CONFIG.get_log_level());
     env_logger::init();
 
     let peers: PeerMap = Arc::new(RwLock::new(HashMap::new()));
-    let addr = format!("{}:{}", CONFIG.clone().get_server_ip(), CONFIG.clone().get_server_port());
+    let addr = format!("{}:{}", CONFIG.get_server_ip(), CONFIG.get_server_port());
 
     let listener = TcpListener::bind(&addr).await.unwrap();
-    info!("WebSocket server started listening on port {}", CONFIG.clone().get_server_port());
+    info!("WebSocket server started listening on port {}", CONFIG.get_server_port());
 
     while let Ok((stream, _)) = listener.accept().await {
         let peers = peers.clone();

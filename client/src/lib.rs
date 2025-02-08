@@ -89,7 +89,7 @@ impl Client {
     }
 
     async fn connect() -> Result<(Sender, Receiver), ClientError> {
-        let (ws_stream, _) = tokio_tungstenite::connect_async(CONFIG.clone().get_server_url()).await?;
+        let (ws_stream, _) = tokio_tungstenite::connect_async(CONFIG.get_server_url()).await?;
         let (write, read) = ws_stream.split();
         Ok((write, read))
     }
@@ -123,7 +123,7 @@ impl Client {
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
                     self.one_time_prekey.pop(),
-                    &PublicKey::from_base64(CONFIG.clone().get_public_key_server()).unwrap(),
+                    &PublicKey::from_base64(CONFIG.get_public_key_server()).unwrap(),
                     initial_message.clone(),
                 )?;
 

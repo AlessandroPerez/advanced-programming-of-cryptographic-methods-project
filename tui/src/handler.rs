@@ -21,7 +21,7 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
                     }
                 },
 
-                KeyCode::Char('a') if app.state == AppState::Chats => {
+                KeyCode::Char('a') | KeyCode::Char('/') if app.state == AppState::Chats => {
                     app.show_popup = !app.show_popup;
                     app.input_mode = InputMode::Insert;
                     app.error = None;

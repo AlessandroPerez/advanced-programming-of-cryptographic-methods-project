@@ -1,8 +1,5 @@
 use arrayref::array_ref;
-use base64::write;
 use base64::{engine::general_purpose, Engine as _};
-use chrono::DateTime;
-use chrono::Utc;
 use log::{error, info};
 use protocol::{
     constants::AES256_NONCE_LENGTH,
@@ -11,8 +8,6 @@ use protocol::{
 use serde_json::{json, Value};
 use std::fmt::Display;
 use serde::{Serialize, Deserialize};
-use serde::de::Error;
-use uuid::Uuid;
 use std::fs;
 use std::sync::LazyLock;
 
@@ -60,7 +55,7 @@ pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, Associat
 #[derive(Serialize, Deserialize)]
 pub struct RequestWrapper {
     pub request_id: String,
-    pub body: serde_json::Value,
+    pub body: Value,
 }
 
 
@@ -68,7 +63,7 @@ pub struct RequestWrapper {
 #[derive(Serialize, Deserialize)]
 pub struct ResponseWrapper {
     pub request_id: String,
-    pub body: serde_json::Value,
+    pub body: Value,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -187,27 +182,27 @@ impl Config {
         config
     }
 
-    pub fn get_server_ip(self) -> String {
+    pub fn get_server_ip(&self) -> String {
         self.server_ip.clone()
     }
 
-    pub fn get_server_port(self) -> String {
+    pub fn get_server_port(&self) -> String {
         self.server_port.clone()
     }
 
-    pub fn get_private_key_server(self) -> String {
+    pub fn get_private_key_server(&self) -> String {
         self.private_key_server.clone()
     }
 
-    pub fn get_public_key_server(self) -> String {
+    pub fn get_public_key_server(&self) -> String {
         self.public_key_server.clone()
     }
 
-    pub fn get_log_level(self) -> String {
+    pub fn get_log_level(&self) -> String {
         self.log_level.clone()
     }
 
-    pub fn get_server_url(self) -> String {
+    pub fn get_server_url(&self) -> String {
         self.server_url.clone()
     }
 }
