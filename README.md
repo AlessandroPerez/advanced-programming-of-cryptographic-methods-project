@@ -1,5 +1,20 @@
 <img alt="" src="assets/logo/banner.png" width="100%"><br>
 
+# Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Getting Started](#getting-started)
+  - [Server](#server)
+  - [Client](#client)
+    - [Registration](#registration)
+    - [Main Window](#main-window)
+    - [Adding Friends](#adding-friends)
+    - [Navigating Chats](#navigating-chats)
+  - [Final Overview](#final-overview)
+- [Contacts](#contacts)
+
 # Introduction
 
 **T**he **R**ust **U**nique **S**ecure **T**alk (T.R.U.S.T.) is a secure chat application written in Rust.
