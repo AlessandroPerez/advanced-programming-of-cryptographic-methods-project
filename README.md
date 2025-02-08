@@ -1,12 +1,10 @@
-<img alt="" src="assets/logo/banner.png" width="100%">
-<br>
-<br>
+<img alt="" src="assets/logo/banner.png" width="100%"><br>
 
-The Rust Unique Secure Talk is a secure chat application written in Rust
+# Introduction
 
-# Getting Started
+**T**he **R**ust **U**nique **S**ecure **T**alk (T.R.U.S.T.) is a secure chat application written in Rust.
 
-## Installation
+# Installation
 
 1. Clone the repository:
 
@@ -20,7 +18,7 @@ The Rust Unique Secure Talk is a secure chat application written in Rust
     chmod u+x server.sh tui.sh
     ```
 
-## Configuration
+# Configuration
 
 You can modify the `config.toml` file located in the `config` directory to specify different application configurations:
 
@@ -31,7 +29,7 @@ You can modify the `config.toml` file located in the `config` directory to speci
 > [!WARNING]  
 > Do not modify `private_key_server` and `public_key_server`, as these will be automatically generated when the server is started.
 
-## Running the Application
+# Getting Started
 
 ### Server
 
@@ -51,18 +49,40 @@ The client operates in two modes:
 
 #### Registration
 
-Before using the client, you need to register by choosing a unique username. The application does not support multiple users with the same username at the same time, and the username cannot be empty.
+Before using the client, you need to register by choosing a unique username. Usernames must be non-empty and unique—multiple users cannot share the same username simultaneously.
 
-<img alt="" src="assets/screenshots/registration.png" width="100%">
+<img alt="Registration Screen" src="assets/screenshots/registration.png" width="100%">
 
-After registration, you will be taken to the main window, where you can add new friends to chat with by pressing the `a` key in the `NORMAL` mode
+#### Main Window
 
-<img alt="" src="assets/screenshots/add_a_friend.png" width="100%">
+After registration, you'll be taken to the main window. Initially, your chats list will be empty.
 
- see all active chats, along with the currently selected chat.
+<img alt="Empty Chat List" src="assets/screenshots/no_chats.png" width="100%">
 
+#### Adding Friends
 
+To start chatting, you can add new friends at any time by pressing the `a` key in `NORMAL` mode.
 
+> [!WARNING]  
+> The person you want to chat with **must be online**.
+
+<img alt="Add a Friend" src="assets/screenshots/add_a_friend.png" width="100%">
+
+#### Navigating Chats
+
+While in `NORMAL` mode:
+- Use the **left/right arrow keys** to switch between the chats list and the selected chat.
+- In the chats list:
+    - Use the **up/down arrow keys** to navigate through your chats.
+    - Press `ENTER` to select a chat and start messaging.
+
+<img alt="Chat Interface" src="assets/screenshots/chat.png" width="100%">
+
+### Final Overview
+
+Here's an overview of the server and clients in action (with two clients for demonstration purposes):
+
+<img alt="Server and Clients Overview" src="assets/screenshots/overview.png" width="100%">
 
 # Contacts
 
