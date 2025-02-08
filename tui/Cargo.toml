@@ -23,3 +23,8 @@ log = "0.4.25"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 ratatui = "0.29.0"
 futures = "0.3.31"
+unicode-segmentation = "1.12.0"
+tui = "*"
+tui-textarea = { version = "*", features = ["tuirs-crossterm"], default-features = false }
+
+

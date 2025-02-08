@@ -125,7 +125,13 @@ impl Widget for ChatsWidget {
 
         right.render(chat_area[0], buf);
 
-        let (before_cursor, after_cursor) = self.input.split_at(self.character_index);
+        let byte_index = self.input
+            .char_indices()
+            .map(|(i, _)| i)
+            .nth(self.character_index)
+            .unwrap_or_else(|| self.input.len());
+
+        let (before_cursor, after_cursor) = self.input.split_at(byte_index);
         let input_with_cursor = Line::from(vec![
             Span::raw(before_cursor),
             Span::styled("|", Style::default().fg(Color::Gray)),
@@ -137,13 +143,20 @@ impl Widget for ChatsWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Input")
-                    .style(Style::default().fg(
+                    .border_style(Style::default().fg(
                         if self.active_window == 1 {
                             Color::LightGreen
                         } else {
                             Color::White
                         }
-                    ))
+                    ).add_modifier(
+                        if self.active_window == 1 {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }
+                    )
+                )
             );
         input_paragraph.render(chat_area[1], buf);
 

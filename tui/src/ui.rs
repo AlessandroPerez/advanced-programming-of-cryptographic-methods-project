@@ -10,6 +10,7 @@ use crate::app::{App, AppState};
 use crate::widgets::chats::ChatsWidget;
 use crate::widgets::popup::PopupWidget;
 use crate::widgets::register::RegistrationWidget;
+use crate::widgets::empty_page::EmptyPage;
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
@@ -37,23 +38,24 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             let chats = app.client.get_open_chats();
 
             if chats.is_empty() {
-                let area = frame.area();
-                let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
-                let horizontal = Layout::horizontal([Constraint::Length(30)]).flex(Flex::Center);
-                let [area] = vertical.areas(area);
-                let [area] = horizontal.areas(area);
-                frame.render_widget(Clear, area); //this clears out the background
-                frame.render_widget(
-                    Paragraph::new("No chats available")
-                        .style(Style::default().fg(Color::White))
-                        .alignment(Alignment::Center),
-                    area,
-                );
+                // let area = frame.area();
+                // let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
+                // let horizontal = Layout::horizontal([Constraint::Length(30)]).flex(Flex::Center);
+                // let [area] = vertical.areas(area);
+                // let [area] = horizontal.areas(area);
+                frame.render_widget(Clear, frame.area()); //this clears out the background
+                frame.render_widget(EmptyPage::new(app.input_mode.clone()), frame.area());
+                // frame.render_widget(
+                //     Paragraph::new("No chats available")
+                //         .style(Style::default().fg(Color::White))
+                //         .alignment(Alignment::Center),
+                //     area,
+                // );
             }else {
                 let active_chat_history = app.client.get_chat_history(&chats[app.active_chat]);
                 frame.render_widget(
                     ChatsWidget::new(
-                        app.input.clone(),
+                        if app.show_popup {String::new()} else { app.input.clone() },
                         app.character_index,
                         app.input_mode.clone(),
                         chats[app.active_chat].clone(),

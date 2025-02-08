@@ -92,37 +92,40 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
 
 impl App {
     pub(crate) fn move_cursor_left(&mut self) {
-        let cursor_moved_left = self.character_index.saturating_sub(1);
-        self.character_index = self.clamp_cursor(cursor_moved_left);
+        if self.character_index > 0 {
+            // Move one character left safely
+            self.character_index -= 1;
+        }
+        self.character_index = self.clamp_cursor(self.character_index);
     }
 
     pub(crate) fn move_cursor_right(&mut self) {
-        let cursor_moved_right = self.character_index.saturating_add(1);
-        self.character_index = self.clamp_cursor(cursor_moved_right);
+        if self.character_index < self.input.chars().count() {
+            // Move one character right safely
+            self.character_index += 1;
+        }
+        self.character_index = self.clamp_cursor(self.character_index);
     }
 
     pub(crate) fn enter_char(&mut self, new_char: char) {
-
         if self.input_mode == InputMode::Insert {
             match self.state {
                 AppState::Register => {
                     if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
-                        return;
+                        return; // Disallow whitespace and non-alphanumeric characters in Register state
                     }
                 },
                 AppState::Chats => {
-                    if self.show_popup {
-                        if new_char.is_whitespace() || !new_char.is_ascii_alphanumeric() {
-                            return;
-                        }
+                    if self.show_popup && (new_char.is_whitespace() || !new_char.is_ascii_alphanumeric()) {
+                        return; // Restrict input when popup is shown in Chats state
                     }
                 },
                 _ => {}
             }
 
-            let index = self.byte_index();
-            self.input.insert(index, new_char);
-            self.move_cursor_right();
+            let index = self.byte_index(); // Get byte index corresponding to the cursor position
+            self.input.insert(index, new_char); // Insert the new character at the correct byte index
+            self.move_cursor_right(); // Move the cursor right after insertion
         }
     }
 
