@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
-use serde_json::Value;
 use tokio_tungstenite::tungstenite::Error as WsError;
 use protocol::errors::X3DHError;
 

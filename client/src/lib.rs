@@ -1,10 +1,8 @@
 pub mod errors;
 
-use std::{collections::HashMap, env::set_var, hash::Hash, process::exit};
+use std::collections::HashMap;
 use std::fmt::Display;
-use std::ops::Add;
 use std::sync::Arc;
-use aes_gcm::aes::cipher::typenum::Le;
 use arrayref::array_ref;
 use base64::Engine;
 use base64::engine::general_purpose;
@@ -15,10 +13,10 @@ use futures_util::{
     SinkExt, StreamExt,
 };
 use log::{error, info};
-use protocol::x3dh::{generate_prekey_bundle, generate_prekey_bundle_with_otpk, process_initial_message, process_server_initial_message};
+use protocol::x3dh::{generate_prekey_bundle_with_otpk, process_initial_message, process_server_initial_message};
 use protocol::{
     utils::{
-        AssociatedData, DecryptionKey, EncryptionKey, InitialMessage, PreKeyBundle, PrivateKey,
+        AssociatedData, DecryptionKey, InitialMessage, PreKeyBundle, PrivateKey,
         SessionKeys,
     },
     x3dh::process_prekey_bundle,
@@ -43,7 +41,7 @@ type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
 
 pub struct Client {
-    pub friends: HashMap<String, Friend>,
+    pub(crate) friends: HashMap<String, Friend>,
     session: SessionKeys,
     write: Sender,
     read: Option<Receiver>,

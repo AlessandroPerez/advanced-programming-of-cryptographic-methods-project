@@ -2,7 +2,7 @@ use client::ChatMessage;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Modifier},
-    text::{Text, Line, Span},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
     buffer::Buffer,
 };

@@ -65,7 +65,7 @@ impl PartialEq for InputMode {
 
 impl App {
 
-    pub(crate) fn new(client: Client, mut chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>) -> Self {
+    pub(crate) fn new(client: Client, chat_rx: tokio::sync::mpsc::Receiver<ChatMessage>) -> Self {
         let mut app = Self {
             running: true,
             state: AppState::default(),

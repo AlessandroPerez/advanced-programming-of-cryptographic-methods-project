@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
+use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc;
 
@@ -53,8 +53,8 @@ impl EventHandler {
                                 _sender.send(Event::Key(key)).unwrap();
                                 }
                             },
-                            CrosstermEvent::Mouse(mouse) => {},
-                            CrosstermEvent::Resize(x, y) => {},
+                            CrosstermEvent::Mouse(_mouse) => {},
+                            CrosstermEvent::Resize(_x, _y) => {},
                             CrosstermEvent::FocusLost => {},
                             CrosstermEvent::FocusGained => {},
                             CrosstermEvent::Paste(_) => {},

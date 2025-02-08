@@ -1,6 +1,6 @@
 use arrayref::array_ref;
 use base64::{engine::general_purpose, Engine as _};
-use log::{debug, error, info};
+use log::{debug, error};
 use protocol::{
     constants::AES256_NONCE_LENGTH,
     utils::{AssociatedData, DecryptionKey},
