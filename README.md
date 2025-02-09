@@ -38,6 +38,10 @@ The core of the project revolves around the **Extended Triple Diffie-Hellman** (
 
    - For **Windows systems**, use the provided bat scripts: [server.bat](server.bat) and [tui.bat](tui.bat).
 
+> [!WARNING]  
+> There were some issues building the releases for macOS. However, you can still run the project by using `cargo run` in the [`server`](server) and [`tui`](tui) directories.
+
+
 # Configuration
 
 You can modify the `config.toml` file located in the `config` directory to specify different application configurations:
