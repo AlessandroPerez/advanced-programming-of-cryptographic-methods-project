@@ -19,8 +19,6 @@ use crate::tui::Tui;
 #[tokio::main]
 async fn main() -> AppResult<()> {
 
-    // TODO: correct known bugs:
-    //  1. when press the char 'é' the app crashes
 
     // Init client
     let (chat_tx, chat_rx) = tokio::sync::mpsc::channel(100);
