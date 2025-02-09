@@ -28,11 +28,15 @@ The core of the project revolves around the **Extended Triple Diffie-Hellman** (
     git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
     ```
 
-2. Make the `server.sh` and `tui.sh` scripts executable:
+2. **Depending on your operating system:**
 
-    ```bash
-    chmod u+x server.sh tui.sh
-    ```
+   - For **Unix-like systems** (e.g., *Linux* or *macOS*), use the provided bash scripts: [server.sh](server.sh) and [tui.sh](tui.sh).  
+     Before running them, make sure they are executable by running:
+     ```bash
+     chmod u+x server.sh tui.sh
+     ```
+
+   - For **Windows systems**, use the provided batch scripts: [server.bat](server.bat) and [tui.bat](tui.bat).
 
 # Configuration
 
@@ -49,13 +53,13 @@ You can modify the `config.toml` file located in the `config` directory to speci
 
 ### Server
 
-Start the server by executing the [server.sh](server.sh) script from the root directory. You should see something like:
+Start the server by executing the `server.*` script from the root directory. You should see something like:
 
 <img alt="" src="assets/screenshots/server.png" width="100%">
 
 ### Client
 
-After the server is running, you can start the client by executing the [tui.sh](tui.sh) script from the root directory.
+After the server is running, you can start the client by executing the `tui.*` script from the root directory.
 
 The client operates in two modes:
 
