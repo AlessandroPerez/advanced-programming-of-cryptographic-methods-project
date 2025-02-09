@@ -14,6 +14,7 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
                 KeyCode::Char('i') => {
                     app.input_mode = InputMode::Insert;
                     app.input.clear();
+                    app.reset_cursor();
                 },
                 KeyCode::Char('q') => {
                     if !app.show_popup {
@@ -26,6 +27,7 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
                     app.input_mode = InputMode::Insert;
                     app.error = None;
                     app.input.clear();
+                    app.reset_cursor();
                 },
 
                 KeyCode::Left | KeyCode::Char('h') if app.state == AppState::Chats => {
@@ -249,7 +251,7 @@ impl App {
                 self.client.add_friend(message).expect("Cannot add friend");
             },
             "chat" => {
-                self.client.decrypt_chat_message(message).expect("Failed to decrypt message");
+                self.client.decrypt_chat_message(message).ok();
             },
 
             "close_chat" => {
