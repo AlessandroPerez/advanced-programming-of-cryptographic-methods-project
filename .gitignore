@@ -13,9 +13,22 @@ tui/target/debug
 tui/target/.rustc_info.json
 tui/target/CACHEDIR.TAG
 
-
-
 *.pem
 
 **/.vscode/
 **/__pycache__/
+
+build_all.bat
+
+client/target/release/*
+common/target/release/*
+protocol/target/release/*
+config/update_server_keys/target/release/*
+server/target/release/*
+tui/target/release/*
+
+!server/target/release/server
+!server/target/release/server.exe
+
+!tui/target/release/tui
+!tui/target/release/tui.exe
