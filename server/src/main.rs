@@ -102,7 +102,7 @@ async fn send_message(sink: SharedSink, msg: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String> {
+fn handle_establish_connection(bundle: String) -> Result<(String, SessionKeys), String> {
     if let Ok(bundle) = PreKeyBundle::try_from(bundle) {
         debug!("Key bundle parsed correctly");
         match process_prekey_bundle(
@@ -133,7 +133,7 @@ fn establish_connection(bundle: String) -> Result<(String, SessionKeys), String>
     }
 }
 
-async fn handle_registration(
+async fn handle_registration_request(
     request: RegisterRequest,
     peers: PeerMap,
     sender: SharedSink,
@@ -224,7 +224,7 @@ async fn task_receiver(
                     if let Some(request) = EstablishConnection::from_json(
                         &serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null),
                     ) {
-                        match establish_connection(request.0.to_string()) {
+                        match handle_establish_connection(request.0.to_string()) {
                             Ok((msg, s)) => {
                                 session
                                     .write()
@@ -263,7 +263,7 @@ async fn task_receiver(
                                     debug!("Received registration request");
                                     if let Some(ek) = session.read().await.get_encryption_key() {
                                         let aad = session.read().await.get_associated_data().unwrap();
-                                        if let Ok(u) = handle_registration(
+                                        if let Ok(u) = handle_registration_request(
                                             register_request,
                                             peers.clone(),
                                             sender.clone(),

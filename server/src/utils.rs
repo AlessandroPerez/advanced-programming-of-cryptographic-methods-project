@@ -56,7 +56,7 @@ impl<'a> EstablishConnection<'a> {
             Some(req) => {
                 let req = req.as_str()?;
                 match req {
-                    "EstablishConnection" => Some(Self(request.get("bundle")?.as_str()?)),
+                    "establish_connection" => Some(Self(request.get("bundle")?.as_str()?)),
                     _ => None,
                 }
             }

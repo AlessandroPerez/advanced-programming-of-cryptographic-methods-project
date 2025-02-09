@@ -12,7 +12,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use log::{error, info};
+use log::{debug, error, info};
 use protocol::x3dh::{generate_prekey_bundle_with_otpk, process_initial_message, process_server_initial_message};
 use protocol::{
     utils::{
@@ -30,7 +30,7 @@ use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
 };
 use uuid::Uuid;
-use protocol::utils::PublicKey;
+use protocol::utils::{PublicKey, Sha256Hash};
 use serde::{Deserialize, Serialize};
 use protocol::constants::AES256_NONCE_LENGTH;
 use crate::errors::ClientError;
@@ -49,14 +49,13 @@ pub struct Client {
     bundle: PreKeyBundle,
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
-    one_time_prekey: Vec<PrivateKey>,
-    pending: Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>,
+    one_time_prekey: HashMap<Sha256Hash, PrivateKey>,
+    pending: Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>,
     listener: Option<tokio::task::JoinHandle<()>>,
 
     chat_tx: mpsc::Sender<ChatMessage>,
 
 }
-
 
 impl Client {
 
@@ -65,6 +64,13 @@ impl Client {
         let (bundle, ik, spk, otpk) = generate_prekey_bundle_with_otpk(31);
         let session = SessionKeys::new();
         let username = "".to_string();
+        let public_otpk = bundle.otpk.clone();
+        let hash_otpk = public_otpk.iter().map(|v| v.hash()).collect::<Vec<Sha256Hash>>();
+        let otpk = hash_otpk
+            .iter()
+            .zip(otpk.iter())
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect();
 
         let mut client = Self {
             friends: HashMap::new(),
@@ -95,7 +101,7 @@ impl Client {
     pub async fn establish_connection(&mut self) -> Result<(), ClientError> {
 
         let msg = json!({
-        "request_type": "EstablishConnection",
+        "request_type": "establish_connection",
         "bundle": self.bundle.clone().to_base64()
         });
 
@@ -114,13 +120,18 @@ impl Client {
                     .ok_or(ClientError::ServerResponseError)?;
 
                 let mut im = resp.text;
-                info!("im: {}", &im);
+                debug!("im: {}", &im);
                 im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
                 let initial_message = InitialMessage::try_from(im)?;
+                let otpk_used = self.one_time_prekey.get(
+                    &initial_message.one_time_key_hash
+                        .clone()
+                        .unwrap()
+                );
                 let (ek, dk) = process_server_initial_message(
                     self.identity_key.clone(),
                     self.signed_prekey.clone(),
-                    self.one_time_prekey.pop(),
+                    otpk_used.cloned(),
                     &PublicKey::from_base64(CONFIG.get_public_key_server()).unwrap(),
                     initial_message.clone(),
                 )?;
@@ -333,10 +344,15 @@ impl Client {
 
     pub fn add_friend(&mut self, message: ChatMessage) -> Result<(), ClientError> {
         let im = InitialMessage::try_from(message.text.clone())?;
+        let otpk_used = self.one_time_prekey.get(
+            &im.one_time_key_hash
+                .clone()
+                .unwrap()
+        );
         let (ek, dk) = process_initial_message(
             self.identity_key.clone(),
             self.signed_prekey.clone(),
-            self.one_time_prekey.pop(),
+            otpk_used.cloned(),
             im.clone()
         )?;
         let friend_session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));

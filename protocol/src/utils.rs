@@ -415,7 +415,7 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 }
 
 impl PublicKey {
-    pub(crate) fn hash(&self) -> Sha256Hash {
+    pub fn hash(&self) -> Sha256Hash {
         let digest = Sha256::digest(self.0.as_ref());
         Sha256Hash(*array_ref![digest, 0, SHA256_HASH_LENGTH])
     }
