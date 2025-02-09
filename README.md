@@ -13,6 +13,7 @@
     - [Adding Friends](#adding-friends)
     - [Navigating Chats](#navigating-chats)
   - [Final Overview](#final-overview)
+- [Resources](#resources)
 - [Contacts](#contacts)
 
 # Introduction
@@ -107,6 +108,10 @@ While in `NORMAL` mode:
 Here's an overview of the server and clients in action (with two clients for demonstration purposes):
 
 <img alt="Server and Clients Overview" src="assets/demo/demo.gif" width="100%">
+
+# Resources
+
+[Report](report/report.pdf)
 
 # Contacts
 
