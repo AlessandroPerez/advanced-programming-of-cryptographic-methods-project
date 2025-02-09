@@ -30,7 +30,7 @@ The core of the project revolves around the **Extended Triple Diffie-Hellman** (
 
 2. **Depending on your operating system:**
 
-   - For **Unix-like systems** (e.g., *Linux* or *macOS*), use the provided bash scripts: [server.sh](server.sh) and [tui.sh](tui.sh).  
+   - For **Unix-like systems** (e.g., *Linux*), use the provided bash scripts: [server.sh](server.sh) and [tui.sh](tui.sh).  
      Before running them, make sure they are executable by running:
      ```bash
      chmod u+x server.sh tui.sh
