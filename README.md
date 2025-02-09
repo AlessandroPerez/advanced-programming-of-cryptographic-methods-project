@@ -36,7 +36,7 @@ The core of the project revolves around the **Extended Triple Diffie-Hellman** (
      chmod u+x server.sh tui.sh
      ```
 
-   - For **Windows systems**, use the provided batch scripts: [server.bat](server.bat) and [tui.bat](tui.bat).
+   - For **Windows systems**, use the provided bat scripts: [server.bat](server.bat) and [tui.bat](tui.bat).
 
 # Configuration
 
