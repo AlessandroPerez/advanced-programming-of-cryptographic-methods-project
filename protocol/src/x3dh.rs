@@ -181,31 +181,7 @@ pub fn process_server_initial_message(
     if msg.identity_key.hash() != server_ik.hash(){
         return Err(X3DHError::InvalidInitialMessage);
     }
-    // DH1 = DH(SPKB, IKA)
-    let dh1 = signed_prekey.diffie_hellman(server_ik);
-    // DH2 = DH(IKB, EKA)
-    let dh2 = identity_key.diffie_hellman(&msg.ephemeral_key);
-    // DH3 = DH(SPKB, EKA)
-    let dh3 = signed_prekey.diffie_hellman(&msg.ephemeral_key);
-
-    let (sk1, sk2) = hkdf(
-        "X3DH".to_string(),
-        dh1,
-        dh2,
-        dh3,
-        if msg.one_time_key_hash.is_some() {
-            // DH4 = DH(OTPK, EKA)
-            let dh4 = one_time_prekey.unwrap().diffie_hellman(&msg.ephemeral_key);
-            Some(dh4)
-        } else {
-            None
-        },
-    )?;
-    Ok((
-        EncryptionKey::from(sk2),
-        DecryptionKey::from(sk1),
-    ))
-
+    process_initial_message(identity_key, signed_prekey, one_time_prekey, msg)
 }
 
 #[cfg(test)]
@@ -323,27 +299,27 @@ mod tests {
     }
 
     #[test]
-    fn test_process_prekey_bundle_with_otkp() {
-        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+    fn test_process_prekey_bundle_with_otpk() {
+        let (pb, ik, spk, otpk)= generate_prekey_bundle_with_otpk(5);
         let pik = PublicKey::from(&ik);
         let b64 = pb.to_base64();
         let pb = PreKeyBundle::try_from(b64).unwrap();
         let (im, ek, dk) = process_prekey_bundle(ik, pb).unwrap();
         assert_eq!(im.identity_key.as_ref(), pik.as_ref());
-        assert_eq!(im.one_time_key_hash.unwrap(), PublicKey::from(&otkp[0]).hash());
+        assert_eq!(im.one_time_key_hash.unwrap(), PublicKey::from(&otpk[0]).hash());
     }
 
 
     #[test]
     fn test_process_initial_message_with_otpk() {
-        let (pb, ik, spk, otkp)= generate_prekey_bundle_with_otpk(5);
+        let (pb, ik, spk, otpk)= generate_prekey_bundle_with_otpk(5);
         let pik = PublicKey::from(&ik);
         let b64 = pb.to_base64();
         let pb = PreKeyBundle::try_from(b64).unwrap();
         let (im, ek, dk) = process_prekey_bundle(ik.clone(), pb).unwrap();
         let im_b64 = im.to_base64();
         let im = InitialMessage::try_from(im_b64).unwrap();
-        let (ek1, dk1) = process_initial_message(ik, spk, Some(otkp[0].clone()), im).unwrap();
+        let (ek1, dk1) = process_initial_message(ik, spk, Some(otpk[0].clone()), im).unwrap();
         assert_eq!(ek1.as_ref(), dk.as_ref());
         assert_eq!(ek.as_ref(), dk1.as_ref());
     }

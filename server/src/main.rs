@@ -214,44 +214,45 @@ async fn task_receiver(
     addr: String,
     session: SharedSession,
 ) {
-    // TODO: check if errors make the application vulnerable
-    // example: Decryption Oracle attack
+
     let mut user = String::new();
     while let Some(Ok(msg_result)) = StreamExt::next(&mut receiver).await {
         match msg_result {
             Message::Text(text) => {
                 debug!("Received message: \"{}\", from: {}", &text, &addr);
-                if let Some(request) = EstablishConnection::from_json(
-                    &serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null),
-                ) {
-                    match establish_connection(request.0.to_string()) {
-                        Ok((msg, s)) => {
-                            session
-                                .write()
-                                .await
-                                .set_encryption_key(s.get_encryption_key().unwrap());
-                            session
-                                .write()
-                                .await
-                                .set_decryption_key(s.get_decryption_key().unwrap());
-                            session
-                                .write()
-                                .await
-                                .set_associated_data(s.get_associated_data().unwrap());
+                if session.read().await.get_decryption_key().is_none() {
+                    if let Some(request) = EstablishConnection::from_json(
+                        &serde_json::from_str::<Value>(text.as_str()).unwrap_or(Value::Null),
+                    ) {
+                        match establish_connection(request.0.to_string()) {
+                            Ok((msg, s)) => {
+                                session
+                                    .write()
+                                    .await
+                                    .set_encryption_key(s.get_encryption_key().unwrap());
+                                session
+                                    .write()
+                                    .await
+                                    .set_decryption_key(s.get_decryption_key().unwrap());
+                                session
+                                    .write()
+                                    .await
+                                    .set_associated_data(s.get_associated_data().unwrap());
 
-                            debug!("Sending message: {}, to {}", &msg, &addr);
+                                debug!("Sending confirmation message: {}, to {}", &msg, &addr);
 
-                            send_message(sender.clone(), msg)
-                                .await
-                                .expect("Failed to send message.");
+                                send_message(sender.clone(), msg)
+                                    .await
+                                    .expect("Failed to send message.");
 
-                            info!("Connection established with: {}", &addr);
-                        }
+                                info!("Connection established with: {}", &addr);
+                            }
 
-                        Err(e) => {
-                            send_message(sender.clone(), e)
-                                .await
-                                .expect("Failed to send message.");
+                            Err(e) => {
+                                send_message(sender.clone(), e)
+                                    .await
+                                    .expect("Failed to send message.");
+                            }
                         }
                     }
                 } else if let Some(dk) = session.read().await.get_decryption_key() {
@@ -348,17 +349,6 @@ async fn task_receiver(
                             error!("Failed to decrypt request: {}", text.to_string())
                         }
                     }
-                } else {
-                    send_message(
-                        sender.clone(),
-                        ServerResponse::new(
-                            ResponseCode::BadRequest,
-                            "Establish a secure connection first".to_string(),
-                        )
-                        .to_string(),
-                    )
-                    .await
-                    .expect("Failed to send message.");
                 }
             }
 
