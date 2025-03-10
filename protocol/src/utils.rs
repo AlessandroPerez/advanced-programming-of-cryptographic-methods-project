@@ -1,7 +1,4 @@
-use crate::constants::{
-    AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH,
-    SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
-};
+use crate::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CHALLENGE_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH};
 use crate::errors::X3DHError;
 use aes::cipher::generic_array::sequence::GenericSequence;
 use aes_gcm::aead::{Aead, Buffer, Payload};
@@ -512,6 +509,28 @@ impl PartialEq for Sha256Hash {
     }
 }
 
+/* CHALLENGE */
+#[derive(Clone, Debug)]
+pub struct Challenge(pub(crate) [u8; CHALLENGE_LENGTH]);
+
+impl From<&[u8; CHALLENGE_LENGTH]> for Challenge {
+    fn from(value: &[u8; CHALLENGE_LENGTH]) -> Challenge {
+        Challenge(*value)
+    }
+}
+
+impl TryFrom<&[u8]> for Challenge {
+    type Error = X3DHError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != CHALLENGE_LENGTH {
+            return Err(X3DHError::InvalidChallenge)
+        }
+        let data = *array_ref!(value, 0, CHALLENGE_LENGTH);
+        Ok(Challenge(data))
+    }
+}
+
 /* INITIAL MESSAGE */
 #[derive(Clone)]
 pub struct InitialMessage {
@@ -519,6 +538,7 @@ pub struct InitialMessage {
     pub ephemeral_key: PublicKey,
     pub prekey_hash: Sha256Hash,
     pub one_time_key_hash: Option<Sha256Hash>,
+    pub challenge: Challenge,
     pub associated_data: AssociatedData,
 }
 
@@ -527,6 +547,7 @@ impl InitialMessage {
     pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + SHA256_HASH_LENGTH
+        + CHALLENGE_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH;
 
@@ -537,9 +558,11 @@ impl InitialMessage {
         out.extend_from_slice(self.identity_key.0.as_ref());
         out.extend_from_slice(self.ephemeral_key.0.as_ref());
         out.extend_from_slice(self.prekey_hash.0.as_ref());
+
         if let Some(one_time_key_hash) = self.one_time_key_hash {
             out.extend_from_slice(one_time_key_hash.0.as_ref());
         }
+        out.extend_from_slice(self.challenge.0.as_ref());
         out.extend_from_slice(self.associated_data.to_bytes().as_ref());
         out
     }
@@ -583,9 +606,14 @@ impl TryFrom<String> for InitialMessage {
                 2 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH,
                 SHA256_HASH_LENGTH
             ]);
-            let associated_data = AssociatedData::try_from(array_ref![
+            let challenge = Challenge(*array_ref![
                 bytes,
                 2 * CURVE25519_PUBLIC_LENGTH + 2 * SHA256_HASH_LENGTH,
+                CHALLENGE_LENGTH
+            ]);
+            let associated_data = AssociatedData::try_from(array_ref![
+                bytes,
+                2 * CURVE25519_PUBLIC_LENGTH + 2 * SHA256_HASH_LENGTH + CHALLENGE_LENGTH,
                 2 * CURVE25519_PUBLIC_LENGTH
             ])?;
 
@@ -594,12 +622,18 @@ impl TryFrom<String> for InitialMessage {
                 ephemeral_key,
                 prekey_hash,
                 one_time_key_hash: Some(one_time_key_hash),
+                challenge,
                 associated_data,
             })
         } else {
-            let associated_data = AssociatedData::try_from(array_ref![
+            let challenge = Challenge(*array_ref![
                 bytes,
                 2 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH,
+                CHALLENGE_LENGTH
+            ]);
+            let associated_data = AssociatedData::try_from(array_ref![
+                bytes,
+                2 * CURVE25519_PUBLIC_LENGTH + SHA256_HASH_LENGTH + CHALLENGE_LENGTH,
                 2 * CURVE25519_PUBLIC_LENGTH
             ])?;
             Ok(Self {
@@ -607,11 +641,14 @@ impl TryFrom<String> for InitialMessage {
                 ephemeral_key,
                 prekey_hash,
                 one_time_key_hash: None,
+                challenge,
                 associated_data,
             })
         }
     }
 }
+
+
 
 /* Encryption Key */
 #[derive(Zeroize, ZeroizeOnDrop, Clone)]
@@ -634,6 +671,16 @@ impl EncryptionKey {
         let b64 = general_purpose::STANDARD.encode(output);
 
         Ok(b64)
+    }
+
+    pub(crate) fn encrypt_challenge(&self, data: &[u8]) -> Result<Challenge, X3DHError> {
+        let nonce = b"hello world!";
+        let nonce = Nonce::from_slice(nonce);
+        let cipher = Aes256Gcm::new_from_slice(&self.0);
+        let encrypt_msg = cipher?.encrypt(nonce, data)?;
+        let mut output = vec![];
+        output.extend_from_slice(encrypt_msg.as_ref());
+        Ok(Challenge::try_from(output.as_slice())?)
     }
 }
 
@@ -667,6 +714,14 @@ impl DecryptionKey {
             msg: data,
         };
         let output = cipher?.decrypt(nonce, payload)?;
+        Ok(output)
+    }
+
+    pub(crate) fn decrypt_challenge(&self, data: &Challenge) -> Result<Vec<u8>, X3DHError> {
+        let nonce = b"hello world!";
+        let nonce = Nonce::from_slice(nonce);
+        let cipher = Aes256Gcm::new_from_slice(&self.0);
+        let output = cipher?.decrypt(nonce, data.0.as_ref())?;
         Ok(output)
     }
 }

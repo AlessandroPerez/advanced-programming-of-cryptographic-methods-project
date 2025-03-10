@@ -1,6 +1,6 @@
-use std::fmt::{Display, Formatter};
 use aes::cipher::crypto_common;
 use ed25519_dalek::SignatureError;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub enum X3DHError {
@@ -13,6 +13,8 @@ pub enum X3DHError {
     InvalidInitialMessage,
     InvalidPrivateKey,
     InvalidPublicKey,
+    InvalidKey,
+    InvalidChallenge,
 }
 
 
@@ -29,6 +31,8 @@ impl Display for X3DHError {
             X3DHError::InvalidInitialMessage => write!(f, "Invalid initial message"),
             X3DHError::InvalidPrivateKey => write!(f, "Invalid private key"),
             X3DHError::InvalidPublicKey => write!(f, "Invalid public key"),
+            X3DHError::InvalidKey => write!(f, "Invalid key"),
+            X3DHError::InvalidChallenge => write!(f, "Invalid challenge length")
         }
     }
 }

@@ -11,3 +11,5 @@ pub(crate) const SHA256_HASH_LENGTH: usize = 32;
 pub(crate) const AES256_SECRET_LENGTH: usize = 32;
 // byte size of aes256 nonce
 pub const AES256_NONCE_LENGTH: usize = 12;
+
+pub(crate) const CHALLENGE_LENGTH: usize = 48;

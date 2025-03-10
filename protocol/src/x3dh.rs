@@ -1,8 +1,5 @@
-use arrayref::array_ref;
-use hkdf::Hkdf;
-use sha2::Sha256;
-use crate::errors::X3DHError;
 use crate::constants::AES256_SECRET_LENGTH;
+use crate::errors::X3DHError;
 use crate::utils::{
     AssociatedData,
     DecryptionKey,
@@ -14,6 +11,9 @@ use crate::utils::{
     SharedSecret,
     SignedPreKey
 };
+use arrayref::array_ref;
+use hkdf::Hkdf;
+use sha2::Sha256;
 
 pub fn generate_prekey_bundle()
     -> (PreKeyBundle, PrivateKey, PrivateKey) {
@@ -91,6 +91,10 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
         responder_identity_key: bundle.ik,
     };
 
+    let ek = EncryptionKey::from(sk1);
+    let dk = DecryptionKey::from(sk2);
+    let challenge  = ek.encrypt_challenge(PublicKey::from(&ik).as_ref())?;
+
     Ok(
         (
             InitialMessage {
@@ -102,10 +106,11 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
                 } else {
                     None
                 },
+                challenge,
                 associated_data: ad
             },
-            EncryptionKey::from(sk1),
-            DecryptionKey::from(sk2)
+            ek,
+            dk
         )
     )
 }
@@ -164,9 +169,17 @@ pub fn process_initial_message(
             None
         },
     )?;
+    let ek = EncryptionKey::from(sk2);
+    let dk = DecryptionKey::from(sk1);
+
+    let challenge = dk.decrypt_challenge(&msg.challenge)?;
+    if challenge != msg.identity_key.as_ref() {
+        return Err(X3DHError::InvalidKey);
+    }
+
     Ok((
-        EncryptionKey::from(sk2),
-        DecryptionKey::from(sk1),
+        ek,
+        dk,
     ))
 }
 
@@ -190,9 +203,9 @@ mod tests {
     use base64::Engine;
 
     use super::*;
-    use std::convert::TryFrom;
     use crate::constants::{AES256_NONCE_LENGTH, CURVE25519_PUBLIC_LENGTH, SHA256_HASH_LENGTH};
     use crate::utils::SignedPreKey;
+    use std::convert::TryFrom;
 
     #[test]
     fn test_generate_prekey_bundle() {
@@ -323,4 +336,6 @@ mod tests {
         assert_eq!(ek1.as_ref(), dk.as_ref());
         assert_eq!(ek.as_ref(), dk1.as_ref());
     }
+
+
 }
