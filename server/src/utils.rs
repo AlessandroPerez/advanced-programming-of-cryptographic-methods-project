@@ -196,7 +196,7 @@ impl Receiver {
             match process_prekey_bundle(PrivateKey::from_base64(CONFIG.get_private_key_server())?, bundle)? {
                 Ok((im, ek, dk)) => {
                     debug!("Key bundle processed successfully");
-                    let mut session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
+                    self.session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
                     let response = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
                     self.send_response(response).await?;
                 }
