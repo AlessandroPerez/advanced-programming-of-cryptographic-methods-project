@@ -135,11 +135,13 @@ impl Display for ServerResponse {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct RegisterRequest {
     pub username: String,
     pub bundle: String,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct SendMessageRequest {
     pub msg_type: String,
     pub from: String,
@@ -148,18 +150,6 @@ pub struct SendMessageRequest {
     pub timestamp: String,
 }
 
-impl SendMessageRequest {
-    pub fn to_json(&self) -> String {
-        json!({
-            "msg_type": self.msg_type,
-            "from": self.from,
-            "to": self.to,
-            "text": self.text,
-            "timestamp": self.timestamp
-        })
-        .to_string()
-    }
-}
 
 #[derive(Clone, Deserialize)]
 pub struct Config {

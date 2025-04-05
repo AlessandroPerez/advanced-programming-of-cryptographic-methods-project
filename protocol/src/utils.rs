@@ -133,40 +133,14 @@ impl TryFrom<String> for PreKeyBundle {
 }
 
 
-/* NONCE */
-#[derive(Clone, Debug)]
-pub(crate) struct NonceArray(pub(crate) [u8; AES256_NONCE_LENGTH]);
 
-impl NonceArray {
-    pub(crate) fn generate() -> Self {
-        let mut rng = rand::thread_rng();
-        let mut bytes = [0u8; 12]; // Fixed-size array of 12 bytes
-        rng.fill(&mut bytes);
-        NonceArray(bytes)
-    }
-
-    pub(crate) fn increment(&mut self) {
-        let mut carry = 1; // Start incrementing from the least significant byte
-
-        for byte in &mut self.0 {
-            let (new_byte, new_carry) = byte.overflowing_add(carry);
-            *byte = new_byte;
-            carry = new_carry as u8; // Carry is either 0 or 1
-
-            if carry == 0 {
-                break; // Stop early if no carry
-            }
-        }
-    }
-
-}
 
 /* SESSION KEYS */
 #[derive(Clone)]
 pub struct SessionKeys {
     ek: Option<EncryptionKey>,
     dk: Option<DecryptionKey>,
-    nonce: NonceArray,
+
     aad: Option<AssociatedData>,
 }
 
@@ -175,7 +149,6 @@ impl SessionKeys {
         Self {
             ek: None,
             dk: None,
-            nonce: NonceArray::generate(),
             aad: None,
         }
     }
@@ -188,7 +161,6 @@ impl SessionKeys {
         Self {
             ek: Some(ek),
             dk: Some(dk),
-            nonce: NonceArray::generate(),
             aad,
         }
     }
@@ -217,15 +189,6 @@ impl SessionKeys {
         self.aad = Some(aad);
     }
 
-    pub fn get_nonce(&mut self) -> NonceArray {
-        let nonce = self.nonce.clone();
-        self.increment_nonce();
-        nonce
-    }
-
-    fn increment_nonce(&mut self) {
-        self.nonce.increment();
-    }
 }
 
 /* SHARED SECRET */
@@ -698,9 +661,8 @@ impl TryFrom<String> for InitialMessage {
 pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
-    pub fn encrypt(&self, nonce: NonceArray,data: &[u8], aad: &AssociatedData) -> Result<String, X3DHError> {
-        // let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
-        let nonce = Nonce::from_slice(&nonce.0);
+    pub fn encrypt(&self, data: &[u8], aad: &AssociatedData) -> Result<String, X3DHError> {
+        let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
         let cipher = Aes256Gcm::new_from_slice(&self.0);
         let payload = Payload {
             aad: &aad.clone().to_bytes(),

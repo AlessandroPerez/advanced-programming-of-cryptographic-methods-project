@@ -1,6 +1,7 @@
 use protocol::errors::X3DHError;
 use std::env;
 use std::fmt::Display;
+use anyhow::Error;
 
 #[derive(Debug)]
 pub(crate) enum ServerError {
@@ -11,6 +12,7 @@ pub(crate) enum ServerError {
     InvalidPreKeyBundle,
     InvalidRequest,
     Base64DecodeError(base64::DecodeError),
+    GenericError(Error),
 }
 
 impl Display for ServerError {
@@ -23,7 +25,13 @@ impl Display for ServerError {
             ServerError::InvalidPreKeyBundle => write!(f, "Invalid prekey bundle"),
             ServerError::InvalidRequest => write!(f, "Invalid request"),
             ServerError::Base64DecodeError(decode_error) => write!(f, "Error: {}", decode_error),
+            ServerError::GenericError(e) => write!(f, "Generic error: {}", e),
         }
+    }
+}
+impl From<Error> for ServerError {
+    fn from(value: Error) -> Self {
+        ServerError::GenericError(value)
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::errors::ServerError;
-use common::{RegisterRequest, RequestWrapper, ResponseCode, SendMessageRequest, ServerResponse, CONFIG};
+use common::{RegisterRequest, RequestWrapper, ResponseCode, ResponseWrapper, SendMessageRequest, ServerResponse, CONFIG};
 use log::{debug, error, info};
 use protocol::utils::{DecryptionKey, EncryptionKey, InitialMessage, PreKeyBundle, PrivateKey, SessionKeys};
 use std::collections::HashMap;
@@ -126,7 +126,8 @@ pub(crate) struct Receiver{
     peers: PeerMap,
     reader: SplitStream<WebSocketStream<TcpStream>>,
     writer: SharedSink,
-    tx: Option<Tx>
+    tx: Option<Tx>,
+    user: Option<String>,
 }
 
 impl Receiver {
@@ -141,21 +142,37 @@ impl Receiver {
                     debug!("Received message: {}", msg);
                     if let Some(dk) = self.session.read().await.get_decryption_key() {
                         match decrypt_client_request(&msg.to_string(), &dk) {
-                            Ok((action, id)) => {
-                                match action {
-                                    Action::Register(request) => {
-                                        if let Err(e) = self.handle_register(request).await {
-                                            error!("Failed to register: {}", e);
+                            Ok((request, id)) => {
+                                match request {
+                                    RequestType::Register(register_request) => {
+                                        match self.handle_registration(register_request, id).await {
+                                            Ok(_) => {
+                                                debug!("Registration successful");
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to register: {}", e);
+                                            }
                                         }
                                     }
-                                    Action::SendMessage(request) => {
-                                        if let Err(e) = self.handle_send_message(request).await {
-                                            error!("Failed to send message: {}", e);
+                                    RequestType::SendMessage(send_message_request) => {
+                                        match self.handle_send_message(send_message_request, id).await {
+                                            Ok(_) => {
+                                                debug!("Message sent successfully");
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to send message: {}", e);
+                                            }
                                         }
                                     }
-                                    Action::GetPrekeyBundle(user) => {
-                                        if let Err(e) = self.handle_get_prekey_bundle(user).await {
-                                            error!("Failed to get prekey bundle: {}", e);
+                                    RequestType::GetPrekeyBundle(prekey_bundle) => {
+                                        // Handle prekey bundle request
+                                        match self.handle_get_prekey_bundle(prekey_bundle, id).await {
+                                            Ok(_) => {
+                                                debug!("Prekey bundle sent successfully");
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to send prekey bundle: {}", e);
+                                            }
                                         }
                                     }
                                 }
@@ -198,25 +215,157 @@ impl Receiver {
                     debug!("Key bundle processed successfully");
                     self.session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
                     let response = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
-                    self.send_response(response).await?;
+                    self.send_response(response, None).await?;
                 }
                 Err(e) => {
                     error!("Failed to process prekey bundle: {}", e);
-                    self.send_response(ServerResponse::new(ResponseCode::BadRequest, "Failed to process prekey bundle".to_string())).await?;
+                    self.send_response(
+                        ServerResponse::new(
+                            ResponseCode::BadRequest,
+                            "Failed to process prekey bundle".to_string()
+                        ),
+                        None
+                    ).await?;
                     return Err(ServerError::InvalidRequest);
                 }
             }
         } else {
             error!("Failed to parse prekey bundle");
-            self.send_response(ServerResponse::new(ResponseCode::BadRequest, "Failed to parse prekey bundle".to_string())).await?;
+            self.send_response(
+                ServerResponse::new(
+                    ResponseCode::BadRequest,
+                    "Failed to parse prekey bundle".to_string()
+                ),
+                None
+            ).await?;
             return Err(ServerError::InvalidRequest);
         }
     }
 
-    async fn send_response(&mut self, response: ServerResponse)-> anyhow::Result<()>{
+    async fn send_response(&mut self, response: ServerResponse, id: Option<String>)-> Result<(), ServerError> {
+        if let Some(ek) = self.session.read().await.get_encryption_key() {
+            let aad = self.session.read().await.get_associated_data().unwrap();
+            let id = id.unwrap();
+            let response = ResponseWrapper {
+                request_id: id,
+                body: serde_json::from_str(&response.to_string()).unwrap(),
+            };
+            return match ek.encrypt(&response.to_string().into_bytes(), &aad) {
+                Ok(enc) => {
+                    self.writer.lock().await.send(Message::Text(Utf8Bytes::from(response))).await?;
+                    Ok(())
+                }
+                Err(e) => {
+                    error!("Failed to encrypt response: {}", e);
+                    Err(ServerError::X3DHError(e))
+                }
+            }
+        }
         self.writer.lock().await.send(Message::Text(Utf8Bytes::from(response.to_string()))).await?;
         Ok(())
     }
+
+    async fn handle_registration(
+        &mut self,
+        request: RegisterRequest,
+        id: String,
+    ) -> Result<(), ServerError> {
+        let is_alphanumeric = !request.username.is_empty() &&
+            request.username.chars().all(char::is_alphanumeric);
+        if is_alphanumeric && !self.peers.read().await.contains_key(&request.username) {
+            if let Ok(bundle) = PreKeyBundle::try_from(request.bundle) {
+                debug!("Key bundle parsed correctly");
+                let peer = Peer::new(self.tx.clone().unwrap(), bundle);
+                let username = request.username.clone();
+                self.peers.write().await.insert(request.username, peer);
+                let response = ServerResponse::new(ResponseCode::Ok, "User registered successfully!".to_string());
+                self.send_response(response, Some(id)).await?;
+                self.user = Some(username.clone());
+                Ok(())
+            } else {
+                error!("Failed to parse prekey bundle");
+                self.send_response(
+                    ServerResponse::new(
+                        ResponseCode::BadRequest,
+                        "Failed to parse prekey bundle".to_string()
+                    ),
+                    None
+                ).await?;
+                Err(ServerError::InvalidRequest)
+            }
+        } else if is_alphanumeric {
+            let response = ServerResponse::new(ResponseCode::Conflict, "Username already exists".to_string());
+            self.send_response(response, Some(id)).await?;
+            Err(ServerError::InvalidRequest)
+        }
+        else {
+            let response = ServerResponse::new(ResponseCode::BadRequest, "Invalid username".to_string());
+            self.send_response(response, Some(id)).await?;
+            Err(ServerError::InvalidRequest)
+        }
+    }
+
+    async fn handle_send_message(
+        &mut self,
+        request: SendMessageRequest,
+        id: String,
+    ) -> Result<(), ServerError> {
+        if let Some(peer) = self.peers.read().await.get(&request.to) {
+            peer.sender.send(Message::Text(Utf8Bytes::from(serde_json::to_string(&request)))).await.unwrap();
+        } else {
+            debug!("User {} not found", request.to);
+            if let Some(ek) = self.session.read().await.get_encryption_key() {
+                self.send_response(
+                    ServerResponse::new(
+                        ResponseCode::NotFound,
+                        "User not found".to_string()
+                    ),
+                    Some(id)
+                ).await?;
+            }
+            return Err(ServerError::UserNotFoundError);
+        }
+    }
+
+    async fn handle_get_prekey_bundle(
+        &mut self,
+        request: String,
+        id: String,
+    ) -> Result<(), ServerError> {
+        if self.user != Some(request.clone()) {
+            match self.peers.write().await.get_mut(&request) {
+                Some(peer) => {
+                    let bundle = peer.get_bundle();
+                    let response = ServerResponse::new(ResponseCode::Ok, bundle.to_base64());
+                    self.send_response(response, Some(id)).await?;
+                    Ok(())
+                }
+                None => {
+                    debug!("User {} not found", request);
+                    self.send_response(
+                        ServerResponse::new(
+                            ResponseCode::NotFound,
+                            "User not found".to_string()
+                        ),
+                        Some(id)
+                    ).await?;
+                    return Err(ServerError::UserNotFoundError);
+                }
+            }
+        } else {
+            debug!("User {} is asking for its own bundle", request);
+            self.send_response(
+                ServerResponse::new(
+                    ResponseCode::BadRequest,
+                    "User cannot ask for its own bundle".to_string()
+                ),
+                Some(id)
+            ).await?;
+            Err(ServerError::InvalidRequest)
+        }
+
+    }
+
 
 }
 
@@ -238,8 +387,7 @@ impl Sender {
                 if let Some(msg_result) = rx.recv().await {
                     if let Some(ek) = self.session.read().await.get_encryption_key() {
                         let aad = self.session.read().await.get_associated_data().unwrap();
-                        let nonce = self.session.write().await.get_nonce();
-                        match ek.encrypt(nonce, &msg_result.to_string().into_bytes(), &aad) {
+                        match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
                             Ok(enc) => {
                                 if self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await.is_err() {
                                     error!("Failed to send message.");
@@ -291,6 +439,7 @@ impl Connection {
                 tx: None,
                 writer: writer.clone(),
                 reader,
+                user: None,
             },
         }
     }
@@ -309,69 +458,32 @@ pub(crate) struct EstablishConnectionRequest<'a> {
 pub(crate) fn decrypt_client_request(
     req: &str,
     dk: &DecryptionKey,
-) -> Result<(Action, String), ServerError> {
+) -> Result<(RequestType, String), ServerError> {
     let decrypted = match common::decrypt_request(req, dk) {
         Ok((dec, _ )) => dec,
         Err(_) => return Err(ServerError::InvalidRequest),
     };
 
-
     if let Ok(req) = serde_json::from_str::<RequestWrapper>(&decrypted.to_string()) {
         let id = req.request_id;
         let body = req.body;
-        match Action::from_json(&body) {
-            Some(action) => Ok((action, id.to_string())),
-            None => {
-                error!("Failed to parse request");
-                Err(ServerError::InvalidRequest)
-            }
+        if let Some(registration) = serde_json::from_str::<RegisterRequest>(&body.to_string()) {
+            Ok((RequestType::Register(registration), id))
+        } else if let Some(message) = serde_json::from_str::<SendMessageRequest>(&body.to_string()) {
+            Ok((RequestType::SendMessage(message), id))
+        } else if let Some(one) = serde_json::from_str::<String>(&body.to_string()) {
+            Ok((RequestType::GetPrekeyBundle(one), id))
+        } else {
+            Err(ServerError::InvalidRequest)
         }
     } else  {
-        match Action::from_json(&decrypted) {
-            None => Err(ServerError::InvalidRequest),
-            Some(action) => {
-                Ok((action, String::new()))
-            }
-        }
+        error!("Failed to decrypt request");
+        Err(ServerError::InvalidRequest)
     }
-
-
 }
 
-pub(crate) enum Action {
+enum RequestType {
     Register(RegisterRequest),
     SendMessage(SendMessageRequest),
     GetPrekeyBundle(String),
-}
-
-impl Action {
-    pub(crate) fn from_json(request: &serde_json::Value) -> Option<Self> {
-        let action = request.get("action")?.as_str()?;
-        match action {
-            "register" => Some(Self::Register(RegisterRequest {
-                username: request.get("username")?.as_str()?.to_string(),
-                bundle: request.get("bundle")?.as_str()?.to_string(),
-            })),
-
-            "send_message" => {
-                let timestamp = request
-                    .get("timestamp")?
-                    .as_str()?
-                    .to_string();
-                Some(Self::SendMessage(SendMessageRequest {
-                    msg_type: request.get("msg_type")?.as_str()?.to_string(),
-                    from: request.get("from")?.as_str()?.to_string(),
-                    to: request.get("to")?.as_str()?.to_string(),
-                    text: request.get("text")?.as_str()?.to_string(),
-                    timestamp,
-                }))
-            }
-            "get_prekey_bundle" => {
-                let user = request.get("who")?.as_str()?.to_string();
-                Some(Self::GetPrekeyBundle(user))
-            }
-
-            _ => None,
-        }
-    }
 }
