@@ -1,20 +1,19 @@
 use crate::errors::ServerError;
-use common::{RegisterRequest, RequestWrapper, ResponseCode, ResponseWrapper, SendMessageRequest, ServerResponse, CONFIG};
+use common::{GetPreKeyBundleRequest, RegisterRequest, RequestWrapper, ResponseCode, ResponseWrapper, SendMessageRequest, ServerResponse, CONFIG};
 use log::{debug, error, info};
-use protocol::utils::{DecryptionKey, EncryptionKey, InitialMessage, PreKeyBundle, PrivateKey, SessionKeys};
+use protocol::utils::{DecryptionKey, PreKeyBundle, PrivateKey, SessionKeys};
 use std::collections::HashMap;
 use std::sync::Arc;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::runtime::Handle;
 use tokio::sync::{mpsc, Mutex, RwLock};
 
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::{Message, Utf8Bytes};
 use tokio_tungstenite::{accept_async, WebSocketStream};
-use protocol::errors::X3DHError;
 use protocol::x3dh::process_prekey_bundle;
 
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
@@ -80,7 +79,7 @@ impl Server {
     }
 
     pub(crate) async fn listen(&mut self) {
-        let listener = TcpListener::bind(format!("{}:{}", self.addr, self.port)).await.unwrap();
+        let listener = TcpListener::bind(format!("{}:{}", &self.addr, &self.port)).await.unwrap();
         while let Ok((stream, _)) = listener.accept().await {
             let peers = self.peers.clone();
             let addr = match stream.peer_addr() {
@@ -97,27 +96,22 @@ impl Server {
                     return;
                 }
             };
-            let new_connection = Connection::new(
+            let mut new_connection = Connection::new(
                 peers,
-                addr,
-                ws_stream
+                addr
             );
 
-            self.connections.push(tokio::spawn(self.handle_connection(new_connection)));
+            self.connections.push(tokio::spawn(async move {
+                        new_connection.run(ws_stream).await;
+                    }
+                )
+            );
         }
     }
 
-    pub(crate) async fn handle_connection(&mut self, mut connection: Connection) {
-        let (tx, rx) = mpsc::unbounded_channel();
-        connection.sender.set_rx(rx);
-        connection.receiver.set_tx(tx);
-        let task_receive = tokio::task::spawn(connection.receiver.receive());
-        let task_send =  tokio::task::spawn(connection.sender.send());
-        tokio::select! {
-            _ = task_receive => (),
-            _ = task_send => (),
-        }
-    }
+
+
+
 
 }
 
@@ -126,21 +120,21 @@ pub(crate) struct Receiver{
     peers: PeerMap,
     reader: SplitStream<WebSocketStream<TcpStream>>,
     writer: SharedSink,
-    tx: Option<Tx>,
+    tx: Tx,
     user: Option<String>,
 }
 
 impl Receiver {
-    fn set_tx(&mut self, tx: Tx) {
-        self.tx = Some(tx);
-    }
+
 
     async fn receive(&mut self){
         while let Some(Ok(msg_result)) = StreamExt::next(&mut self.reader).await {
             match msg_result {
                 Message::Text(msg) => {
                     debug!("Received message: {}", msg);
-                    if let Some(dk) = self.session.read().await.get_decryption_key() {
+                    let dk = self.session.read().await.get_decryption_key();
+                    if dk.is_some() {
+                        let dk = dk.unwrap();
                         match decrypt_client_request(&msg.to_string(), &dk) {
                             Ok((request, id)) => {
                                 match request {
@@ -164,9 +158,9 @@ impl Receiver {
                                             }
                                         }
                                     }
-                                    RequestType::GetPrekeyBundle(prekey_bundle) => {
+                                    RequestType::GetPrekeyBundle(request) => {
                                         // Handle prekey bundle request
-                                        match self.handle_get_prekey_bundle(prekey_bundle, id).await {
+                                        match self.handle_get_prekey_bundle(request, id).await {
                                             Ok(_) => {
                                                 debug!("Prekey bundle sent successfully");
                                             }
@@ -182,7 +176,7 @@ impl Receiver {
                             }
                         }
                     } else {
-                        if let Some(request) = serde_json::from_str::<EstablishConnectionRequest>(&msg.to_string()){
+                        if let Ok(request) = serde_json::from_str::<EstablishConnectionRequest>(&msg.to_string()){
                             if request.request_type == "establish_connection" {
                                 if let Err(e) = self.handle_establish_connection(request).await {
                                     error!("Failed to establish connection: {}", e);
@@ -210,12 +204,16 @@ impl Receiver {
     ) -> Result<(), ServerError> {
         if let Ok(bundle) = PreKeyBundle::try_from(request.bundle) {
             debug!("Key bundle parsed correctly");
-            match process_prekey_bundle(PrivateKey::from_base64(CONFIG.get_private_key_server())?, bundle)? {
+            match process_prekey_bundle(PrivateKey::from_base64(CONFIG.get_private_key_server())?, bundle) {
                 Ok((im, ek, dk)) => {
                     debug!("Key bundle processed successfully");
-                    self.session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
-                    let response = ServerResponse::new(ResponseCode::Ok, im.to_base64()).to_string();
+                    self.session.write().await.set_encryption_key(ek);
+                    self.session.write().await.set_decryption_key(dk);
+                    self.session.write().await.set_associated_data(im.get_associated_data());
+
+                    let response = ServerResponse::new(ResponseCode::Ok, im.to_base64());
                     self.send_response(response, None).await?;
+                    Ok(())
                 }
                 Err(e) => {
                     error!("Failed to process prekey bundle: {}", e);
@@ -242,22 +240,25 @@ impl Receiver {
         }
     }
 
-    async fn send_response(&mut self, response: ServerResponse, id: Option<String>)-> Result<(), ServerError> {
-        if let Some(ek) = self.session.read().await.get_encryption_key() {
-            let aad = self.session.read().await.get_associated_data().unwrap();
-            let id = id.unwrap();
-            let response = ResponseWrapper {
-                request_id: id,
-                body: serde_json::from_str(&response.to_string()).unwrap(),
-            };
-            return match ek.encrypt(&response.to_string().into_bytes(), &aad) {
-                Ok(enc) => {
-                    self.writer.lock().await.send(Message::Text(Utf8Bytes::from(response))).await?;
-                    Ok(())
-                }
-                Err(e) => {
-                    error!("Failed to encrypt response: {}", e);
-                    Err(ServerError::X3DHError(e))
+    async fn send_response(&self, response: ServerResponse, id: Option<String>)-> Result<(), ServerError> {
+        debug!("response: {}", response.to_string());
+        if let Some(req_id) = id {
+            if let Some(ek) = self.session.read().await.get_encryption_key() {
+                let aad = self.session.read().await.get_associated_data().unwrap();
+                let response = ResponseWrapper {
+                    request_id: req_id,
+                    body: serde_json::from_str(&response.to_string()).unwrap(),
+                };
+                let response = serde_json::to_string(&response).unwrap();
+                return match ek.encrypt(&response.as_bytes(), &aad) {
+                    Ok(enc) => {
+                        self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await?;
+                        Ok(())
+                    }
+                    Err(e) => {
+                        error!("Failed to encrypt response: {}", e);
+                        Err(ServerError::X3DHError(e))
+                    }
                 }
             }
         }
@@ -275,7 +276,7 @@ impl Receiver {
         if is_alphanumeric && !self.peers.read().await.contains_key(&request.username) {
             if let Ok(bundle) = PreKeyBundle::try_from(request.bundle) {
                 debug!("Key bundle parsed correctly");
-                let peer = Peer::new(self.tx.clone().unwrap(), bundle);
+                let peer = Peer::new(self.tx.clone(), bundle);
                 let username = request.username.clone();
                 self.peers.write().await.insert(request.username, peer);
                 let response = ServerResponse::new(ResponseCode::Ok, "User registered successfully!".to_string());
@@ -310,11 +311,18 @@ impl Receiver {
         request: SendMessageRequest,
         id: String,
     ) -> Result<(), ServerError> {
-        if let Some(peer) = self.peers.read().await.get(&request.to) {
-            peer.sender.send(Message::Text(Utf8Bytes::from(serde_json::to_string(&request)))).await.unwrap();
-        } else {
-            debug!("User {} not found", request.to);
-            if let Some(ek) = self.session.read().await.get_encryption_key() {
+        match self.peers.read().await.get(&request.to) {
+            Some(peer) => {
+                let serialized = serde_json::to_string(&request).unwrap();
+                peer.sender.send(Message::Text(Utf8Bytes::from(serialized))).map_err(|_| {
+                    error!("Failed to send message to peer");
+                    ServerError::SendError("Failed to send message to peer".to_string())
+                })?;
+                Ok(())
+            }
+            None => {
+                debug!("Peer not found: {}", request.to);
+                debug!("User {} not found", request.to);
                 self.send_response(
                     ServerResponse::new(
                         ResponseCode::NotFound,
@@ -322,18 +330,19 @@ impl Receiver {
                     ),
                     Some(id)
                 ).await?;
+
+                return Err(ServerError::UserNotFoundError);
             }
-            return Err(ServerError::UserNotFoundError);
         }
     }
 
     async fn handle_get_prekey_bundle(
         &mut self,
-        request: String,
+        request: GetPreKeyBundleRequest,
         id: String,
     ) -> Result<(), ServerError> {
-        if self.user != Some(request.clone()) {
-            match self.peers.write().await.get_mut(&request) {
+        if self.user != Some(request.who.clone()) {
+            match self.peers.write().await.get_mut(&request.who) {
                 Some(peer) => {
                     let bundle = peer.get_bundle();
                     let response = ServerResponse::new(ResponseCode::Ok, bundle.to_base64());
@@ -341,7 +350,7 @@ impl Receiver {
                     Ok(())
                 }
                 None => {
-                    debug!("User {} not found", request);
+                    debug!("User {} not found", request.who);
                     self.send_response(
                         ServerResponse::new(
                             ResponseCode::NotFound,
@@ -353,7 +362,7 @@ impl Receiver {
                 }
             }
         } else {
-            debug!("User {} is asking for its own bundle", request);
+            debug!("User {} is asking for its own bundle", request.who);
             self.send_response(
                 ServerResponse::new(
                     ResponseCode::BadRequest,
@@ -372,32 +381,27 @@ impl Receiver {
 pub(crate) struct Sender {
     session: Session,
     peers: PeerMap,
-    rx: Option<Rx>,
+    rx: Rx,
     writer: SharedSink
 }
-
 impl Sender {
-    fn set_rx(&mut self, rx: Rx) {
-        self.rx = Some(rx);
-    }
-
     async fn send(mut self) {
-        if let Some(mut rx) = self.rx.take() {
-            loop {
-                if let Some(msg_result) = rx.recv().await {
-                    if let Some(ek) = self.session.read().await.get_encryption_key() {
-                        let aad = self.session.read().await.get_associated_data().unwrap();
-                        match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
-                            Ok(enc) => {
-                                if self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await.is_err() {
-                                    error!("Failed to send message.");
-                                } else {
-                                    debug!("Message sent: {}", msg_result.to_string());
-                                }
-                            },
-                            _ => {}
-                        }
+        loop {
+            if let Some(msg_result) = self.rx.recv().await {
+                if let Some(ek) = self.session.read().await.get_encryption_key() {
+                    let aad = self.session.read().await.get_associated_data().unwrap();
+                    match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
+                        Ok(enc) => {
+                            if self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await.is_err() {
+                                error!("Failed to send message.");
+                            } else {
+                                debug!("Message sent: {}", msg_result.to_string());
+                            }
+                        },
+                        _ => {}
                     }
+                } else {
+                    debug!("Session encryption key not found");
                 }
             }
         }
@@ -408,39 +412,55 @@ pub(crate) struct Connection {
     pub(crate) session: Session,
     pub(crate) peers: PeerMap,
     pub(crate) addr: String,
-    pub(crate) sender: Sender,
-    pub(crate) receiver: Receiver,
+
 }
 
 impl Connection {
     pub(crate) fn new(
         peers: PeerMap,
         addr: String,
-        mut stream: WebSocketStream<TcpStream>,
+
     ) -> Self {
 
-        let (writer, reader) = stream.split();
-        let writer = Arc::new(Mutex::new(writer));
         let session =  Arc::new(RwLock::new(SessionKeys::new()));
         Self {
-            session: session.clone(),
+            session,
             peers: peers.clone() ,
-            addr,
-            sender: Sender {
-                session: session.clone(),
-                peers: peers.clone(),
-                rx: None,
-                writer: writer.clone()
-            },
+            addr
+        }
+    }
 
-            receiver: Receiver {
-                session: session.clone(),
-                peers: peers.clone(),
-                tx: None,
-                writer: writer.clone(),
-                reader,
-                user: None,
-            },
+    async fn run(&mut self, stream: WebSocketStream<TcpStream>,) {
+        let (tx, rx) = mpsc::unbounded_channel::<Message>();
+        let (writer, reader) = stream.split();
+        let writer = Arc::new(Mutex::new(writer));
+        let sender = Sender {
+            session: self.session.clone(),
+            peers: self.peers.clone(),
+            rx,
+            writer: writer.clone()
+        };
+
+        let mut receiver =  Receiver {
+            session: self.session.clone(),
+            peers: self.peers.clone(),
+            tx,
+            writer: writer.clone(),
+            reader,
+            user: None,
+        };
+
+        let task_receive = tokio::spawn(async move {
+            receiver.receive().await;
+        });
+
+        let task_send = tokio::spawn(async move {
+            sender.send().await;
+        });
+
+        tokio::select! {
+            _ = task_receive => (),
+            _ = task_send => (),
         }
     }
 
@@ -449,9 +469,9 @@ impl Connection {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct EstablishConnectionRequest<'a> {
-    request_type: &'a str,
-    bundle: &'a str,
+pub(crate) struct EstablishConnectionRequest{
+    request_type: String,
+    bundle: String,
 }
 
 
@@ -463,16 +483,16 @@ pub(crate) fn decrypt_client_request(
         Ok((dec, _ )) => dec,
         Err(_) => return Err(ServerError::InvalidRequest),
     };
-
-    if let Ok(req) = serde_json::from_str::<RequestWrapper>(&decrypted.to_string()) {
+    if let Ok(message) = serde_json::from_str::<SendMessageRequest>(&decrypted.to_string()) {
+        Ok((RequestType::SendMessage(message), "".to_string()))
+    } else if let Ok(req) = serde_json::from_str::<RequestWrapper>(&decrypted.to_string()) {
         let id = req.request_id;
         let body = req.body;
-        if let Some(registration) = serde_json::from_str::<RegisterRequest>(&body.to_string()) {
+        debug!("Decrypted request: {}", body.to_string());
+        if let Ok(registration) = serde_json::from_str::<RegisterRequest>(&body.to_string()) {
             Ok((RequestType::Register(registration), id))
-        } else if let Some(message) = serde_json::from_str::<SendMessageRequest>(&body.to_string()) {
-            Ok((RequestType::SendMessage(message), id))
-        } else if let Some(one) = serde_json::from_str::<String>(&body.to_string()) {
-            Ok((RequestType::GetPrekeyBundle(one), id))
+        }  else if let Ok(who) = serde_json::from_str::<GetPreKeyBundleRequest>(&body.to_string()) {
+            Ok((RequestType::GetPrekeyBundle(who), id))
         } else {
             Err(ServerError::InvalidRequest)
         }
@@ -482,8 +502,8 @@ pub(crate) fn decrypt_client_request(
     }
 }
 
-enum RequestType {
+pub(crate) enum RequestType {
     Register(RegisterRequest),
     SendMessage(SendMessageRequest),
-    GetPrekeyBundle(String),
+    GetPrekeyBundle(GetPreKeyBundleRequest),
 }

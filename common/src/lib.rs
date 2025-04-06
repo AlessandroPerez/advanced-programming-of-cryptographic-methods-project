@@ -150,6 +150,10 @@ pub struct SendMessageRequest {
     pub timestamp: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct GetPreKeyBundleRequest {
+    pub who: String,
+}
 
 #[derive(Clone, Deserialize)]
 pub struct Config {

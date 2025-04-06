@@ -194,7 +194,6 @@ impl Client {
     pub async fn register_user(&mut self) -> Result<(), ClientError> {
         self.bundle.otpk.pop();
         let req = json!({
-            "action" : "register",
             "username" : self.username.clone(),
             "bundle": self.bundle.clone().to_base64()
         });
@@ -220,7 +219,6 @@ impl Client {
         username: String,
     ) -> Result<(), ClientError> {
         let req = json!({
-            "action": "get_prekey_bundle",
             "who": username.clone(),
         });
 
@@ -321,15 +319,14 @@ impl Client {
 
             message.text = enc_text;
         }
-        let mut req = json!(message.clone());
-        req["action"] = serde_json::from_str("\"send_message\"").unwrap();
-        let req = req.to_string();
+        let mut req = serde_json::to_value(message)
+            .map_err(|_| ClientError::SerializationError)?;
 
         let enc = self.session
                 .get_encryption_key()
                 .unwrap()
                 .encrypt(
-                    req.as_bytes(),
+                    req.to_string().as_bytes(),
                     &self.session.get_associated_data().unwrap(),
                 )?;
 
@@ -422,8 +419,8 @@ impl Client {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatMessage {
     pub msg_type: String,
-    pub to: String,
     pub from: String,
+    pub to: String,
     pub text: String,
     pub timestamp: String
 }

@@ -559,6 +559,10 @@ impl InitialMessage {
 
     pub(crate) const SIZE_WITH_OTPK: usize = Self::BASE_SIZE + SHA256_HASH_LENGTH;
 
+    pub fn get_associated_data(&self) -> AssociatedData {
+        self.associated_data.clone()
+    }
+
     pub fn to_bytes(self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.identity_key.0.as_ref());

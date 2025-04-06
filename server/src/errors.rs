@@ -13,6 +13,8 @@ pub(crate) enum ServerError {
     InvalidRequest,
     Base64DecodeError(base64::DecodeError),
     GenericError(Error),
+    TokioTungsteniteError(tokio_tungstenite::tungstenite::Error),
+    SendError(String)
 }
 
 impl Display for ServerError {
@@ -26,7 +28,15 @@ impl Display for ServerError {
             ServerError::InvalidRequest => write!(f, "Invalid request"),
             ServerError::Base64DecodeError(decode_error) => write!(f, "Error: {}", decode_error),
             ServerError::GenericError(e) => write!(f, "Generic error: {}", e),
+            ServerError::TokioTungsteniteError(e) => write!(f, "Tokio Tungstenite error: {}", e),
+            ServerError::SendError(e) => write!(f, "Send error: {}", e),
         }
+    }
+}
+
+impl From<tokio_tungstenite::tungstenite::Error> for ServerError {
+    fn from(value: tokio_tungstenite::tungstenite::Error) -> Self {
+        ServerError::TokioTungsteniteError(value)
     }
 }
 impl From<Error> for ServerError {
