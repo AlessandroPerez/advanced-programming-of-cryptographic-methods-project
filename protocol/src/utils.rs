@@ -1,7 +1,7 @@
 use crate::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CHALLENGE_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH};
 use crate::errors::X3DHError;
 use aes_gcm::aead::{Aead, Buffer, Payload};
-use aes_gcm::{aead, AeadCore, Aes256Gcm, KeyInit, Nonce};
+use aes_gcm::{AeadCore, Aes256Gcm, KeyInit, Nonce};
 use arrayref::array_ref;
 use base64::{engine::general_purpose, Engine as _};
 use ed25519_dalek::ed25519::signature::SignerMut;

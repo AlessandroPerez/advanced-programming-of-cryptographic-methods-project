@@ -2,7 +2,6 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use aes_gcm::aead::Buffer;
-use aes_gcm::Nonce;
 use arrayref::array_ref;
 use base64::Engine;
 use base64::engine::general_purpose;
@@ -290,9 +289,8 @@ fn hkdf_ck(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::PublicKey;
     use crate::utils::SharedSecret;
-    use aes_gcm::{Aes256Gcm, KeyInit};
+    use aes_gcm::{KeyInit};
 
 
 
