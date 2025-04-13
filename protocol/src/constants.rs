@@ -13,3 +13,5 @@ pub(crate) const AES256_SECRET_LENGTH: usize = 32;
 pub const AES256_NONCE_LENGTH: usize = 12;
 
 pub(crate) const CHALLENGE_LENGTH: usize = 48;
+
+pub(crate) const MAX_SKIPS: u64 = 1000;

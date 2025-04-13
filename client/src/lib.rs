@@ -265,7 +265,10 @@ impl Client {
             .unwrap()
             .encrypt(
                 serialized.as_bytes(),
-                &self.session.get_associated_data().unwrap(),
+                &self.session
+                    .get_associated_data()
+                    .unwrap()
+                    .to_bytes(),
             )?;
 
 
@@ -314,7 +317,7 @@ impl Client {
             };
             let enc_text = friend_ek.encrypt(
                 message.text.as_bytes(),
-                &friend_aad,
+                &friend_aad.to_bytes(),
             )?;
 
             message.text = enc_text;
@@ -327,7 +330,10 @@ impl Client {
                 .unwrap()
                 .encrypt(
                     req.to_string().as_bytes(),
-                    &self.session.get_associated_data().unwrap(),
+                    &self.session
+                        .get_associated_data()
+                        .unwrap()
+                        .to_bytes(),
                 )?;
 
         self.write
@@ -383,7 +389,7 @@ impl Client {
         let offset = AES256_NONCE_LENGTH + AssociatedData::SIZE;
         let end = enc_text.len();
         let cipher_text = &enc_text[offset..end];
-        let text = dk.decrypt(cipher_text, nonce, &aad)?;
+        let text = dk.decrypt(cipher_text, nonce, &aad.to_bytes())?;
         message.text = String::from_utf8(text)?;
 
         self.add_chat_message(message.clone(), &message.from);

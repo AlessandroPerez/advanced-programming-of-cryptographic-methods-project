@@ -31,7 +31,7 @@ pub fn decrypt_request(req: &str, dk: &DecryptionKey) -> Result<(Value, Associat
     let offset = AES256_NONCE_LENGTH + AssociatedData::SIZE;
     let end = enc_req.len();
     let cipher_text = &enc_req[offset..end];
-    let text = match dk.decrypt(cipher_text, &nonce, &aad) {
+    let text = match dk.decrypt(cipher_text, &nonce, &aad.to_bytes()) {
         Ok(dec) => dec,
         Err(_) => return Err(()),
     };

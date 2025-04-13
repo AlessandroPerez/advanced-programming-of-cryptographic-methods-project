@@ -271,7 +271,7 @@ mod tests {
 
         let data = b"Hello World!";
         let aad = initial_message.associated_data;
-        let cipher_text = match encryption_key1.encrypt(data, &aad) {
+        let cipher_text = match encryption_key1.encrypt(data, &aad.clone().to_bytes()) {
             Ok(c) => c,
             Err(e) => {
                 println!("Error in encryption: {}", e);
@@ -290,7 +290,7 @@ mod tests {
         let nonce = *array_ref!(cipher_text, 0, AES256_NONCE_LENGTH);
         let add = *array_ref!(cipher_text, AES256_NONCE_LENGTH, AssociatedData::SIZE);
         let cipher_text = &cipher_text[AES256_NONCE_LENGTH + AssociatedData::SIZE..end];
-        let clear_text = match decryption_key2.decrypt(&cipher_text, &nonce, &aad) {
+        let clear_text = match decryption_key2.decrypt(&cipher_text, &nonce, &aad.to_bytes()) {
             Ok(d) => d,
             Err(e) => {
                 println!("Error in decryption: {}", e);

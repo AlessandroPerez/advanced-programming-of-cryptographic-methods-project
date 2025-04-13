@@ -192,7 +192,7 @@ impl SessionKeys {
 }
 
 /* SHARED SECRET */
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
 pub(crate) struct SharedSecret([u8; AES256_SECRET_LENGTH]);
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
@@ -366,7 +366,7 @@ impl From<&SigningKey> for PrivateKey {
 }
 
 /* PUBLIC KEY */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash)]
 pub struct PublicKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
@@ -411,12 +411,24 @@ impl From<&SigningKey> for PublicKey {
     }
 }
 
+impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
+    fn from(value: &[u8; CURVE25519_PUBLIC_LENGTH]) -> PublicKey {
+        PublicKey(value.clone())
+    }
+
+}
+
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
 }
 
+impl PartialEq for PublicKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_ref() == other.as_ref()
+    }
+}
 impl PublicKey {
     pub fn hash(&self) -> Sha256Hash {
         let digest = Sha256::digest(self.0.as_ref());
@@ -665,17 +677,17 @@ impl TryFrom<String> for InitialMessage {
 pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
-    pub fn encrypt(&self, data: &[u8], aad: &AssociatedData) -> Result<String, X3DHError> {
+    pub fn encrypt(&self, data: &[u8], aad: &[u8]) -> Result<String, X3DHError> {
         let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
         let cipher = Aes256Gcm::new_from_slice(&self.0);
         let payload = Payload {
-            aad: &aad.clone().to_bytes(),
+            aad: &aad.clone(),
             msg: data,
         };
         let encrypt_msg = cipher?.encrypt(nonce, payload)?;
         let mut output = vec![];
         output.extend_from_slice(&nonce.to_vec());
-        output.extend_from_slice(&aad.clone().to_bytes());
+        output.extend_from_slice(&aad.clone());
         output.extend_from_slice(&encrypt_msg);
         let b64 = general_purpose::STANDARD.encode(output);
 
@@ -714,12 +726,12 @@ impl DecryptionKey {
         &self,
         data: &[u8],
         nonce: &[u8; AES256_NONCE_LENGTH],
-        aad: &AssociatedData,
+        aad: &[u8],
     ) -> Result<Vec<u8>, X3DHError> {
         let cipher = Aes256Gcm::new_from_slice(&self.0);
         let nonce = Nonce::from_slice(nonce);
         let payload = Payload {
-            aad: &aad.clone().to_bytes(),
+            aad: &aad.clone(),
             msg: data,
         };
         let output = cipher?.decrypt(nonce, payload)?;
@@ -746,6 +758,7 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for DecryptionKey {
         &self.0
     }
 }
+
 
 #[cfg(test)]
 mod tests {

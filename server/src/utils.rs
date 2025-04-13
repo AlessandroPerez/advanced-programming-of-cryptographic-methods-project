@@ -1,6 +1,6 @@
 use crate::errors::ServerError;
 use common::{GetPreKeyBundleRequest, RegisterRequest, RequestWrapper, ResponseCode, ResponseWrapper, SendMessageRequest, ServerResponse, CONFIG};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use protocol::utils::{DecryptionKey, PreKeyBundle, PrivateKey, SessionKeys};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -19,9 +19,7 @@ use protocol::x3dh::process_prekey_bundle;
 pub(crate) type Tx = mpsc::UnboundedSender<Message>;
 pub(crate) type Rx = mpsc::UnboundedReceiver<Message>;
 pub(crate) type PeerMap = Arc<RwLock<HashMap<String, Peer>>>;
-
 pub(crate) type Session = Arc<RwLock<SessionKeys>>;
-
 type SharedSink = Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>;
 
 #[derive(Debug, Clone)]
@@ -106,13 +104,15 @@ impl Server {
                     }
                 )
             );
+
+            for (i, handle) in self.connections.iter().enumerate() {
+                match handle.await {
+                    Ok(result) => warn!("Thread {} returned: {:?}", i, result),
+                    Err(e) => warn!("Thread {} panicked: {:?}", i, e),
+                }
+            }
         }
     }
-
-
-
-
-
 }
 
 pub(crate) struct Receiver{
@@ -125,8 +125,6 @@ pub(crate) struct Receiver{
 }
 
 impl Receiver {
-
-
     async fn receive(&mut self){
         while let Some(Ok(msg_result)) = StreamExt::next(&mut self.reader).await {
             match msg_result {
@@ -192,7 +190,15 @@ impl Receiver {
                 Message::Binary(_) => {}
                 Message::Ping(_) => {}
                 Message::Pong(_) => {}
-                Message::Close(_) => {}
+                Message::Close(_) => {
+                    self.tx.send(Message::Close(None)).unwrap();
+                    if let Some(user ) = self.user.take(){
+                        self.peers.write().await.remove(&user);
+                        info!("Connection closed with {}", user);
+                        return;
+                    }
+                }
+
                 Message::Frame(_) => {}
             }
         }
@@ -238,32 +244,6 @@ impl Receiver {
             ).await?;
             return Err(ServerError::InvalidRequest);
         }
-    }
-
-    async fn send_response(&self, response: ServerResponse, id: Option<String>)-> Result<(), ServerError> {
-        debug!("response: {}", response.to_string());
-        if let Some(req_id) = id {
-            if let Some(ek) = self.session.read().await.get_encryption_key() {
-                let aad = self.session.read().await.get_associated_data().unwrap();
-                let response = ResponseWrapper {
-                    request_id: req_id,
-                    body: serde_json::from_str(&response.to_string()).unwrap(),
-                };
-                let response = serde_json::to_string(&response).unwrap();
-                return match ek.encrypt(&response.as_bytes(), &aad) {
-                    Ok(enc) => {
-                        self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await?;
-                        Ok(())
-                    }
-                    Err(e) => {
-                        error!("Failed to encrypt response: {}", e);
-                        Err(ServerError::X3DHError(e))
-                    }
-                }
-            }
-        }
-        self.writer.lock().await.send(Message::Text(Utf8Bytes::from(response.to_string()))).await?;
-        Ok(())
     }
 
     async fn handle_registration(
@@ -366,16 +346,39 @@ impl Receiver {
             self.send_response(
                 ServerResponse::new(
                     ResponseCode::BadRequest,
-                    "User cannot ask for its own bundle".to_string()
+                    "You cannot ask for its own bundle".to_string()
                 ),
                 Some(id)
             ).await?;
             Err(ServerError::InvalidRequest)
         }
-
     }
 
-
+    async fn send_response(&self, response: ServerResponse, id: Option<String>)-> Result<(), ServerError> {
+        debug!("response: {}", response.to_string());
+        if let Some(req_id) = id {
+            if let Some(ek) = self.session.read().await.get_encryption_key() {
+                let aad = self.session.read().await.get_associated_data().unwrap();
+                let response = ResponseWrapper {
+                    request_id: req_id,
+                    body: serde_json::from_str(&response.to_string()).unwrap(),
+                };
+                let response = serde_json::to_string(&response).unwrap();
+                return match ek.encrypt(&response.as_bytes(), &aad.to_bytes()) {
+                    Ok(enc) => {
+                        self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await?;
+                        Ok(())
+                    }
+                    Err(e) => {
+                        error!("Failed to encrypt response: {}", e);
+                        Err(ServerError::X3DHError(e))
+                    }
+                }
+            }
+        }
+        self.writer.lock().await.send(Message::Text(Utf8Bytes::from(response.to_string()))).await?;
+        Ok(())
+    }
 }
 
 pub(crate) struct Sender {
@@ -387,21 +390,33 @@ pub(crate) struct Sender {
 impl Sender {
     async fn send(mut self) {
         loop {
+
             if let Some(msg_result) = self.rx.recv().await {
-                if let Some(ek) = self.session.read().await.get_encryption_key() {
-                    let aad = self.session.read().await.get_associated_data().unwrap();
-                    match ek.encrypt(&msg_result.to_string().into_bytes(), &aad) {
-                        Ok(enc) => {
-                            if self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await.is_err() {
-                                error!("Failed to send message.");
-                            } else {
-                                debug!("Message sent: {}", msg_result.to_string());
+
+                match msg_result {
+                    Message::Text(msg) => {
+                        if let Some(ek) = self.session.read().await.get_encryption_key() {
+                            let aad = self.session.read().await.get_associated_data().unwrap();
+                            match ek.encrypt(&msg.to_string().into_bytes(), &aad.to_bytes()) {
+                                Ok(enc) => {
+                                    if self.writer.lock().await.send(Message::Text(Utf8Bytes::from(enc))).await.is_err() {
+                                        error!("Failed to send message.");
+                                    } else {
+                                        debug!("Message sent: {}", msg.to_string());
+                                    }
+                                },
+                                _ => {}
                             }
-                        },
-                        _ => {}
+                        } else {
+                            debug!("Session encryption key not found");
+                        }
                     }
-                } else {
-                    debug!("Session encryption key not found");
+
+                    Message::Close(_) => {
+                        self.rx.close();
+                        return;
+                    }
+                    _ => {}
                 }
             }
         }
