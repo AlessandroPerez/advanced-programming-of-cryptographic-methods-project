@@ -166,18 +166,15 @@ impl Ratchet {
         if self.sending_chain_key.is_none() || header.dhs != self.dh_receiving.clone().unwrap() {
             self.skip_message_keys(header.pn)?;
             self.dh_ratchet(header.clone())?;
-
-     }
+        }
         self.skip_message_keys(header.ns)?;
         let (ckr, mk) = hkdf_ck(self.receiving_chain_key.clone().unwrap())?;
         self.receiving_chain_key = Some(ckr);
-        println!("Decryption ckr: {:?}", self.receiving_chain_key.clone().as_ref());
         let mk = DecryptionKey::from(mk);
         self.n_messages_received += 1;
         let mut tmp = vec![];
         tmp.extend_from_slice(&header.to_bytes());
         tmp.extend_from_slice(&aad.clone().to_bytes());
-
         Ok(mk.decrypt(ciphertext, &nonce, &tmp)?)
 
     }
@@ -206,7 +203,7 @@ impl Ratchet {
         if self.n_messages_received + MAX_SKIPS < until {
             return Err(DRError::MaxSkipsExceeded);
         } else if self.receiving_chain_key.is_some() {
-            while self.n_messages_sent < until {
+            while self.n_messages_received < until {
                 let (ck, mk) = hkdf_ck(self.receiving_chain_key.clone().unwrap())?;
                 self.receiving_chain_key = Some(ck);
                 let mk = SharedSecret::from(mk);
@@ -214,6 +211,7 @@ impl Ratchet {
                     (self.dh_receiving.clone().unwrap(), self.n_messages_sent),
                     mk,
                 );
+
                 self.n_messages_sent += 1;
             }
         }
@@ -273,7 +271,6 @@ fn hkdf_ck(
     // HKDF input key material = F || KM, where KM is an input byte sequence containing secret key material, and F is a byte sequence containing 32 0xFF bytes if curve is X25519, and 57 0xFF bytes if curve is X448. F is used for cryptographic domain separation with XEdDSA [2].
     let mut dhs = vec![0xFFu8; 32];
     dhs.extend_from_slice(ck.as_ref());
-    println!("HKDF Input CK: {:?}", dhs);
     // HKDF salt = A zero-filled byte sequence with length equal to the hash output length.
     let hk = Hkdf::<Sha256>::new(Some(&[0u8; 32]), dhs.as_ref());
     let mut okm = [0u8; 2 * AES256_SECRET_LENGTH];
@@ -292,15 +289,15 @@ mod tests {
     use crate::utils::SharedSecret;
     use aes_gcm::{KeyInit};
 
-
-
     #[test]
     fn test_ratchet() {
+
+        // test 1: simple ratchet exchange
         let bob_ratchet = RatchetKeyPair::new();
         let sh = SharedSecret::from([0u8; 32]);
         let mut alice = Ratchet::init_alice(sh.clone(), bob_ratchet.public_key.clone());
         let mut bob = Ratchet::init_bob(sh, bob_ratchet.clone());
-        let plaintext = b"Hello, world!";
+        let plaintext = b"Hello, Bob!";
         let aad = AssociatedData{
             initiator_identity_key: bob_ratchet.public_key.clone(),
             responder_identity_key: alice.dh_sending.public_key.clone(),
@@ -313,5 +310,46 @@ mod tests {
             }
         };
         assert_eq!(decrypted, plaintext);
+        let plaintext = b"Hello, Alice!";
+        let aad = AssociatedData{
+            initiator_identity_key: bob_ratchet.public_key.clone(),
+            responder_identity_key: alice.dh_sending.public_key.clone(),
+        };
+        let ciphertext = bob.encrypt(plaintext, &aad.to_bytes()).unwrap();
+        let decrypted = match alice.decrypt(ciphertext) {
+            Ok(dec) => dec,
+            Err(e) => {
+                panic!("Decryption failed: {:?}", e);
+            }
+        };
+        assert_eq!(decrypted, plaintext);
+
+        // test 2: ratchet exchange with skipped message keys
+        let plaintext = b"How are you, Alice?";
+        let aad = AssociatedData{
+            initiator_identity_key: bob_ratchet.public_key.clone(),
+            responder_identity_key: alice.dh_sending.public_key.clone(),
+        };
+        let ciphertext = bob.encrypt(plaintext, &aad.to_bytes()).unwrap();
+        let decrypted = match alice.decrypt(ciphertext) {
+            Ok(dec) => dec,
+            Err(e) => {
+                panic!("Decryption failed: {:?}", e);
+            }
+        };
+        assert_eq!(decrypted, plaintext);
+
+        let plaintext = b"All good, Bob!";
+        let aad = AssociatedData{
+            initiator_identity_key: bob_ratchet.public_key.clone(),
+            responder_identity_key: alice.dh_sending.public_key.clone(),
+        };
+        let ciphertext = alice.encrypt(plaintext, &aad.to_bytes()).unwrap();
+        let decrypted = match bob.decrypt(ciphertext) {
+            Ok(dec) => dec,
+            Err(e) => {
+                panic!("Decryption failed: {:?}", e);
+            }
+        };
     }
 }
