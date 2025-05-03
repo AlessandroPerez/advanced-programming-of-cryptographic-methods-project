@@ -1,12 +1,39 @@
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use tokio_tungstenite::tungstenite::Error as WsError;
-use protocol::errors::X3DHError;
+use protocol::errors::{X3DHError, RatchetError};
+
 
 #[derive(Debug)]
-pub enum ClientError {
+pub enum ProtocolError {
+    X3DH(X3DHError),
+    Ratchet(RatchetError),
+}
+
+impl Display for ProtocolError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProtocolError::X3DH(e) => write!(f, "X3DH error: {}", e),
+            ProtocolError::Ratchet(e) => write!(f, "Ratchet error: {}", e),
+        }
+    }
+}
+
+impl From<X3DHError> for ProtocolError {
+    fn from(value: X3DHError) -> Self {
+        ProtocolError::X3DH(value)
+    }
+}
+
+impl From<RatchetError> for ProtocolError {
+    fn from(value: RatchetError) -> Self {
+        ProtocolError::Ratchet(value)
+    }
+}
+#[derive(Debug)]
+pub enum ClientError{
     ConnectionError(WsError),
-    ProtocolError(X3DHError),
+    ProtocolError(ProtocolError),
     ServerResponseError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -37,10 +64,14 @@ impl From<WsError> for ClientError {
     }
 }
 
-
 impl From<X3DHError> for ClientError {
     fn from(value: X3DHError) -> Self {
-        ClientError::ProtocolError(value)
+        ClientError::ProtocolError(ProtocolError::X3DH(value))
+    }
+}
+impl From<RatchetError> for ClientError {
+    fn from(value: RatchetError) -> Self {
+        ClientError::ProtocolError(ProtocolError::Ratchet(value))
     }
 }
 

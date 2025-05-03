@@ -71,7 +71,7 @@ impl From<base64::DecodeError> for X3DHError {
 }
 
 #[derive(Debug)]
-pub enum DRError {
+pub enum RatchetError {
     HkdfInvalidLengthError(hkdf::InvalidLength),
     InvalidHeaderLength(usize),
     DecryptionError(X3DHError),
@@ -79,26 +79,26 @@ pub enum DRError {
     ConversionError,
 }
 
-impl Display for DRError {
+impl Display for RatchetError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            DRError::HkdfInvalidLengthError(e) => write!(f, "Invalid length: {}", e),
-            DRError::InvalidHeaderLength(e) => write!(f, "Invalid header length: {}", e),
-            DRError::DecryptionError(e) => write!(f, "Decryption error: {}", e),
-            DRError::MaxSkipsExceeded => write!(f, "Max skips exceeded"),
-            DRError::ConversionError => write!(f, "Conversion error"),
+            RatchetError::HkdfInvalidLengthError(e) => write!(f, "Invalid length: {}", e),
+            RatchetError::InvalidHeaderLength(e) => write!(f, "Invalid header length: {}", e),
+            RatchetError::DecryptionError(e) => write!(f, "Decryption error: {}", e),
+            RatchetError::MaxSkipsExceeded => write!(f, "Max skips exceeded"),
+            RatchetError::ConversionError => write!(f, "Conversion error"),
         }
     }
 }
-impl From<hkdf::InvalidLength> for DRError {
+impl From<hkdf::InvalidLength> for RatchetError {
     fn from(value: hkdf::InvalidLength) -> Self {
-        DRError::HkdfInvalidLengthError(value)
+        RatchetError::HkdfInvalidLengthError(value)
     }
 }
 
-impl From<X3DHError> for DRError {
+impl From<X3DHError> for RatchetError {
     fn from(value: X3DHError) -> Self {
-        DRError::DecryptionError(value)
+        RatchetError::DecryptionError(value)
     }
 
 }

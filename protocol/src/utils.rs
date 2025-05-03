@@ -193,7 +193,23 @@ impl SessionKeys {
 
 /* SHARED SECRET */
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
-pub(crate) struct SharedSecret([u8; AES256_SECRET_LENGTH]);
+pub struct SharedSecret([u8; AES256_SECRET_LENGTH]);
+
+impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
+    fn from((ek, dk): (EncryptionKey, DecryptionKey)) -> SharedSecret {
+        let mut vec = ek.as_ref().to_vec();
+        vec.extend_from_slice(dk.as_ref());
+        SharedSecret(*array_ref!(vec, 0, AES256_SECRET_LENGTH))
+    }
+}
+
+impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
+    fn from((dk, ek): (DecryptionKey, EncryptionKey)) -> SharedSecret {
+        let mut vec = dk.as_ref().to_vec();
+        vec.extend_from_slice(ek.as_ref());
+        SharedSecret(*array_ref!(vec, 0, AES256_SECRET_LENGTH))
+    }
+}
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
     fn as_ref(&self) -> &[u8; AES256_SECRET_LENGTH] {

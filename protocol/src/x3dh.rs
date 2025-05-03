@@ -336,6 +336,4 @@ mod tests {
         assert_eq!(ek1.as_ref(), dk.as_ref());
         assert_eq!(ek.as_ref(), dk1.as_ref());
     }
-
-
 }

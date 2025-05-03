@@ -20,6 +20,8 @@ use protocol::{
         SessionKeys,
     },
     x3dh::process_prekey_bundle,
+    ratchet::{Ratchet, RatchetKeyPair},
+
 };
 use serde_json::{json, Value};
 
@@ -30,15 +32,13 @@ use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
 };
 use uuid::Uuid;
-use protocol::utils::{PublicKey, Sha256Hash};
+use protocol::utils::{PublicKey, Sha256Hash, SharedSecret};
 use serde::{Deserialize, Serialize};
 use protocol::constants::AES256_NONCE_LENGTH;
 use crate::errors::ClientError;
 
 type Sender = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type Receiver = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
-
-
 
 pub struct Client {
     pub(crate) friends: HashMap<String, Friend>,
@@ -49,12 +49,10 @@ pub struct Client {
     bundle: PreKeyBundle,
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
-    one_time_prekey: HashMap<Sha256Hash, PrivateKey>,
+    one_time_prekeys: HashMap<Sha256Hash, PrivateKey>,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>,
     listener: Option<tokio::task::JoinHandle<()>>,
-
     chat_tx: mpsc::Sender<ChatMessage>,
-
 }
 
 impl Client {
@@ -81,7 +79,7 @@ impl Client {
             bundle,
             identity_key: ik,
             signed_prekey: spk,
-            one_time_prekey: otpk,
+            one_time_prekeys: otpk,
             pending: Arc::new(Mutex::new(HashMap::new())),
             listener: None,
             chat_tx,
@@ -123,7 +121,7 @@ impl Client {
                 debug!("im: {}", &im);
                 im.retain(|c| !c.eq(&("\"".parse::<char>().unwrap())));
                 let initial_message = InitialMessage::try_from(im)?;
-                let otpk_used = self.one_time_prekey.get(
+                let otpk_used = self.one_time_prekeys.get(
                     &initial_message.one_time_key_hash
                         .clone()
                         .unwrap()
@@ -232,8 +230,10 @@ impl Client {
                     self.identity_key.clone(),
                     pb.clone()
                 )?;
-                let friend_session =  SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
-                self.friends.insert(username.clone(), Friend::new(friend_session, Some(pb.clone())));
+                let sk = SharedSecret::from((ek, dk));
+                let ratchet = Ratchet::init_alice(sk, pb.spk.clone());
+
+                self.friends.insert(username.clone(), Friend::new(ratchet, Some(pb.clone()), im.associated_data.clone()));
                 let chat_message = ChatMessage::new(
                     "initial_message".to_string(),
                     username.clone(),
@@ -307,20 +307,16 @@ impl Client {
 
     pub async fn send_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
         if message.msg_type != "initial_message".to_string() {
-            let (friend_ek, friend_aad) = if let Some(friend) = self.friends.get(&message.to) {
-                (
-                    friend.get_friend_keys().get_encryption_key().unwrap(),
-                    friend.get_friend_keys().get_associated_data().unwrap(),
-                )
+            let mut friend = self.friends.get_mut(&message.to);
+            if let Some(friend) = friend {
+               let aad = friend.get_friend_aad();
+                message.text = friend.ratchet.encrypt(
+                    message.text.as_bytes(),
+                    &aad.to_bytes(),
+                )?;
             } else {
                 return Err(ClientError::UserNotFoundError);
-            };
-            let enc_text = friend_ek.encrypt(
-                message.text.as_bytes(),
-                &friend_aad.to_bytes(),
-            )?;
-
-            message.text = enc_text;
+            }
         }
         let mut req = serde_json::to_value(message)
             .map_err(|_| ClientError::SerializationError)?;
@@ -346,8 +342,9 @@ impl Client {
 
 
     pub fn add_friend(&mut self, message: ChatMessage) -> Result<(), ClientError> {
+
         let im = InitialMessage::try_from(message.text.clone())?;
-        let otpk_used = self.one_time_prekey.get(
+        let otpk_used = self.one_time_prekeys.get(
             &im.one_time_key_hash
                 .clone()
                 .unwrap()
@@ -358,8 +355,15 @@ impl Client {
             otpk_used.cloned(),
             im.clone()
         )?;
-        let friend_session = SessionKeys::new_with_keys(ek, dk, Some(im.associated_data.clone()));
-        let friend = Friend::new(friend_session, None);
+
+        let sk = SharedSecret::from((dk, ek));
+        let keypair = RatchetKeyPair::new_from(
+            self.signed_prekey.clone(),
+            self.bundle.spk.clone(),
+        );
+        let ratchet = Ratchet::init_bob(sk, keypair);
+
+        let friend = Friend::new(ratchet, None, im.associated_data.clone());
         self.friends.insert(message.from, friend);
         Ok(())
     }
@@ -371,30 +375,17 @@ impl Client {
     }
 
     pub fn decrypt_chat_message(&mut self, mut message: ChatMessage) -> Result<(), ClientError> {
-        let dk = self.friends
-            .get(&message.from)
-            .ok_or(ClientError::UserNotFoundError)?
-            .get_friend_keys()
-            .get_decryption_key()
-            .ok_or(ClientError::GenericError("No decryption key found".to_string()))?;
+        let mut friend = self.friends.get_mut(&message.from);
 
-        let enc_text = general_purpose::STANDARD.decode(message.text)?;
+        if let Some(friend) = friend {
+            let text = friend.ratchet.decrypt(message.text)?;
+            message.text = String::from_utf8(text)?;
 
-        let nonce = array_ref!(enc_text, 0, AES256_NONCE_LENGTH);
-        let aad = AssociatedData::try_from(array_ref!(
-            enc_text,
-            AES256_NONCE_LENGTH,
-            AssociatedData::SIZE
-        ))?;
-        let offset = AES256_NONCE_LENGTH + AssociatedData::SIZE;
-        let end = enc_text.len();
-        let cipher_text = &enc_text[offset..end];
-        let text = dk.decrypt(cipher_text, nonce, &aad.to_bytes())?;
-        message.text = String::from_utf8(text)?;
-
-        self.add_chat_message(message.clone(), &message.from);
-
-        Ok(())
+            self.add_chat_message(message.clone(), &message.from);
+            Ok(())
+        } else {
+            Err(ClientError::UserNotFoundError)
+        }
     }
 
     pub fn get_chat_history(&self, username: &str) -> Option<Vec<ChatMessage>> {
@@ -450,17 +441,19 @@ impl Display for ChatMessage {
 }
 
 struct Friend {
-    keys: SessionKeys,
+    pub ratchet: Ratchet,
     pb: Option<PreKeyBundle>,
-    chat: Vec<ChatMessage>
+    chat: Vec<ChatMessage>,
+    aad: AssociatedData,
 }
 
 impl Friend {
-    fn new(keys: SessionKeys, pb: Option<PreKeyBundle>) -> Self {
+    fn new(ratchet: Ratchet, pb: Option<PreKeyBundle>, aad: AssociatedData) -> Self {
         Self {
-            keys,
+            ratchet,
             pb,
-            chat: Vec::new()
+            chat: Vec::new(),
+            aad,
         }
     }
 
@@ -468,8 +461,8 @@ impl Friend {
         self.pb.clone()
     }
 
-    fn get_friend_keys(&self) -> SessionKeys {
-        self.keys.clone()
+    fn get_friend_aad(&self) -> AssociatedData {
+        self.aad.clone()
     }
 
     fn add_message(&mut self, message: ChatMessage) {

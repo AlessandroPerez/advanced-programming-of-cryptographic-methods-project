@@ -104,13 +104,6 @@ impl Server {
                     }
                 )
             );
-
-            for (i, handle) in self.connections.iter().enumerate() {
-                match handle.await {
-                    Ok(result) => warn!("Thread {} returned: {:?}", i, result),
-                    Err(e) => warn!("Thread {} panicked: {:?}", i, e),
-                }
-            }
         }
     }
 }

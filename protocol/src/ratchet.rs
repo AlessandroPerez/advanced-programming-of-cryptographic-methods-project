@@ -1,3 +1,5 @@
+//! This module implements the Double Ratchet Algorithm for secure messaging.
+
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -10,11 +12,14 @@ use crate::utils::{AssociatedData, DecryptionKey, EncryptionKey, PrivateKey, Pub
 use hkdf::Hkdf;
 use sha2::Sha256;
 use crate::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CURVE25519_PUBLIC_LENGTH, MAX_SKIPS};
-use crate::errors::DRError;
-use crate::errors::DRError::ConversionError;
+use crate::errors::RatchetError;
+use crate::errors::RatchetError::ConversionError;
 
+
+/// Represents a Diffie-Hellman key pair used in the ratchet process.
+/// The `RatchetKeyPair` struct contains a public key and a private key, and provides methods for generating a new key pair and performing Diffie-Hellman key exchange.
 #[derive(Clone)]
-struct RatchetKeyPair {
+pub struct RatchetKeyPair {
     public_key: PublicKey,
     private_key: PrivateKey,
 }
@@ -29,6 +34,14 @@ impl RatchetKeyPair {
         }
     }
 
+    pub fn new_from(private_key: PrivateKey, public_key: PublicKey) -> Self {
+        Self {
+            public_key,
+            private_key,
+        }
+    }
+
+    /// Performs a Diffie-Hellman key exchange with another public key.
     fn diffie_hellman(
         &self,
         other_public_key: &PublicKey,
@@ -37,6 +50,8 @@ impl RatchetKeyPair {
     }
 }
 
+
+/// Represents a header for the encrypted message.
 #[derive(Clone)]
 struct Header {
     dhs : PublicKey,
@@ -45,7 +60,8 @@ struct Header {
 }
 
 impl Header {
-    const LENGTH: usize = AES256_SECRET_LENGTH + 8 + 8;
+    const LENGTH: usize = AES256_SECRET_LENGTH + size_of::<u64>() * 2;
+
     pub fn new(dhs: PublicKey, pn: u64, ns: u64) -> Self {
         Self { dhs, pn, ns }
     }
@@ -61,20 +77,34 @@ impl Header {
 
 impl TryFrom<&[u8; 48]> for Header {
 
-    type Error = DRError;
+    type Error = RatchetError;
 
     fn try_from(value: &[u8; 48]) -> Result<Self, Self::Error> {
         if value.len() != Self::LENGTH {
-            return Err(DRError::InvalidHeaderLength(value.len()))
+            return Err(RatchetError::InvalidHeaderLength(value.len()))
         }
         let dhs = PublicKey::from(array_ref!(value, 0, CURVE25519_PUBLIC_LENGTH));
-        let pn = u64::from_le_bytes(*array_ref!(value, CURVE25519_PUBLIC_LENGTH, 8));
-        let ns = u64::from_le_bytes(*array_ref!(value, CURVE25519_PUBLIC_LENGTH + 8, 8));
+        let pn = u64::from_le_bytes(
+            *array_ref!(
+                value,
+                CURVE25519_PUBLIC_LENGTH,
+                size_of::<u64>()
+            )
+        );
+        let ns = u64::from_le_bytes(
+            *array_ref!(
+                value,
+                CURVE25519_PUBLIC_LENGTH + size_of::<u64>(),
+                size_of::<u64>()
+            )
+        );
         Ok(Self { dhs, pn, ns })
     }
 }
 
-struct Ratchet {
+/// Represents a Diffie-Hellman key pair used in the ratchet process.
+#[derive(Clone)]
+pub struct Ratchet {
     dh_sending: RatchetKeyPair,
     dh_receiving: Option<PublicKey>,
     root_key: SharedSecret,
@@ -89,6 +119,7 @@ struct Ratchet {
 
 impl Ratchet {
     pub fn init_alice(shared_secret: SharedSecret, bob_pk: PublicKey) -> Self {
+        // TODO: make sure that also bob start the conversation
         let dh_sending = RatchetKeyPair::new();
         let dh = dh_sending.diffie_hellman(&bob_pk);
         let dh_receiving = Some(bob_pk);
@@ -134,21 +165,22 @@ impl Ratchet {
         }
     }
 
-    pub fn encrypt(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<String, DRError> {
+    pub fn encrypt(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<String, RatchetError> {
         let (ck, mk) = hkdf_ck(self.sending_chain_key.clone().unwrap())?;
         self.sending_chain_key = Some(ck);
         let h = Header::new(self.dh_sending.public_key.clone(), self.pn, self.n_messages_sent);
         self.n_messages_sent += 1;
         let mk = EncryptionKey::from(mk);
-        let mut tmp = vec![];
-        tmp.extend_from_slice(&h.to_bytes());
-        tmp.extend_from_slice(&aad);
-        Ok(mk.encrypt(plaintext, &tmp)?)
+        // Generate a new aad prepending the header to the original aad
+        let mut new_aad = vec![];
+        new_aad.extend_from_slice(&h.to_bytes());
+        new_aad.extend_from_slice(&aad);
+        Ok(mk.encrypt(plaintext, &new_aad)?)
     }
 
-    pub fn decrypt(&mut self, ciphertext: String) -> Result<Vec<u8>, DRError> {
+    pub fn decrypt(&mut self, ciphertext: String) -> Result<Vec<u8>, RatchetError> {
         let ciphertext = general_purpose::STANDARD.decode(ciphertext).map_err(|_| {
-            DRError::ConversionError
+            ConversionError
         })?;
         let nonce = *array_ref!(&ciphertext, 0, AES256_NONCE_LENGTH);
         let header = Header::try_from(array_ref!(&ciphertext, AES256_NONCE_LENGTH, Header::LENGTH))?;
@@ -185,7 +217,7 @@ impl Ratchet {
         ciphertext: &[u8],
         aad: AssociatedData,
         nonce: &[u8; AES256_NONCE_LENGTH]
-    ) -> Result<Option<Vec<u8>>, DRError> {
+    ) -> Result<Option<Vec<u8>>, RatchetError> {
         if self.mk_skipped.contains_key(&(header.dhs.clone(), header.ns)) {
             let mk = self.mk_skipped.get(&(header.dhs.clone(), header.ns)).unwrap();
             let mk = DecryptionKey::from(mk.clone());
@@ -199,9 +231,9 @@ impl Ratchet {
         }
     }
 
-    fn skip_message_keys(&mut self, until: u64) -> Result<(), DRError> {
+    fn skip_message_keys(&mut self, until: u64) -> Result<(), RatchetError> {
         if self.n_messages_received + MAX_SKIPS < until {
-            return Err(DRError::MaxSkipsExceeded);
+            return Err(RatchetError::MaxSkipsExceeded);
         } else if self.receiving_chain_key.is_some() {
             while self.n_messages_received < until {
                 let (ck, mk) = hkdf_ck(self.receiving_chain_key.clone().unwrap())?;
@@ -218,7 +250,7 @@ impl Ratchet {
         Ok(())
     }
 
-    fn dh_ratchet(&mut self, header: Header) -> Result<(), DRError> {
+    fn dh_ratchet(&mut self, header: Header) -> Result<(), RatchetError> {
         self.pn = self.n_messages_sent;
         self.n_messages_sent = 0;
         self.n_messages_received = 0;
@@ -239,21 +271,20 @@ impl Ratchet {
         self.sending_chain_key = Some(cks);
         Ok(())
     }
-
 }
-
 
 fn hkdf_rk(
     rk: SharedSecret,
     dh: SharedSecret,
-) -> Result<(SharedSecret, SharedSecret), DRError> {
-    let info = b"";
+) -> Result<(SharedSecret, SharedSecret), RatchetError> {
+    let info = b"RatchtetInfo";
     // HKDF input key material = F || KM, where KM is an input byte sequence containing secret key material, and F is a byte sequence containing 32 0xFF bytes if curve is X25519, and 57 0xFF bytes if curve is X448. F is used for cryptographic domain separation with XEdDSA [2].
     let mut dhs = vec![0xFFu8; 32];
     dhs.extend_from_slice(rk.as_ref());
     dhs.extend_from_slice(dh.as_ref());
-    // HKDF salt = A zero-filled byte sequence with length equal to the hash output length.
-    let hk = Hkdf::<Sha256>::new(Some(&[0u8; 32]), dhs.as_ref());
+
+    // Use the shared secret as the salt as per the X3DH spec.
+    let hk = Hkdf::<Sha256>::new(Some(rk.as_ref()), dhs.as_ref());
     let mut okm = [0u8; 2 * AES256_SECRET_LENGTH];
     // HKDF info = The info parameter from Section 2.1.
     hk.expand(info, &mut okm)?;
@@ -266,7 +297,7 @@ fn hkdf_rk(
 
 fn hkdf_ck(
     ck: SharedSecret,
-) -> Result<(SharedSecret, SharedSecret), DRError> {
+) -> Result<(SharedSecret, SharedSecret), RatchetError> {
     let info = b"";
     // HKDF input key material = F || KM, where KM is an input byte sequence containing secret key material, and F is a byte sequence containing 32 0xFF bytes if curve is X25519, and 57 0xFF bytes if curve is X448. F is used for cryptographic domain separation with XEdDSA [2].
     let mut dhs = vec![0xFFu8; 32];
