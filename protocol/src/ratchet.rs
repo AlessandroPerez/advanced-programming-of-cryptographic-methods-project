@@ -123,8 +123,9 @@ impl Ratchet {
         let dh_sending = RatchetKeyPair::new();
         let dh = dh_sending.diffie_hellman(&bob_pk);
         let dh_receiving = Some(bob_pk);
-        let (root_key, sending_chain_key) = hkdf_rk(shared_secret, dh).unwrap();
-        let receiving_chain_key = None;
+        let (root_key, sending_chain_key) = hkdf_rk(shared_secret.clone(), dh).unwrap();
+        let (receiving_chain_key, _) = hkdf_ck(shared_secret).unwrap();
+
         let n_messages_sent: u64 = 0;
         let n_messages_received: u64 = 0;
         let pn: u64 = 0;
@@ -134,7 +135,7 @@ impl Ratchet {
             dh_receiving,
             root_key,
             sending_chain_key: Some(sending_chain_key),
-            receiving_chain_key,
+            receiving_chain_key: Some(receiving_chain_key),
             n_messages_sent,
             n_messages_received,
             pn,
@@ -144,8 +145,8 @@ impl Ratchet {
     pub fn init_bob(shared_secret: SharedSecret, dk_sending: RatchetKeyPair) -> Self {
         let dh_sending = dk_sending;
         let dh_receiving = None;
-        let root_key = shared_secret;
-        let sending_chain_key = None;
+        let root_key = shared_secret.clone();
+        let (sending_chain_key, _) = hkdf_ck(shared_secret).unwrap();
         let receiving_chain_key = None;
         let n_messages_sent: u64 = 0;
         let n_messages_received: u64 = 0;
@@ -156,7 +157,7 @@ impl Ratchet {
             dh_sending,
             dh_receiving,
             root_key,
-            sending_chain_key,
+            sending_chain_key: Some(sending_chain_key),
             receiving_chain_key,
             n_messages_sent,
             n_messages_received,
@@ -195,7 +196,7 @@ impl Ratchet {
         if plaintext.is_some() {
             return Ok(plaintext.unwrap());
         }
-        if self.sending_chain_key.is_none() || header.dhs != self.dh_receiving.clone().unwrap() {
+        if self.sending_chain_key.is_none() || Some(header.dhs.clone()) != self.dh_receiving.clone() {
             self.skip_message_keys(header.pn)?;
             self.dh_ratchet(header.clone())?;
         }
@@ -204,10 +205,10 @@ impl Ratchet {
         self.receiving_chain_key = Some(ckr);
         let mk = DecryptionKey::from(mk);
         self.n_messages_received += 1;
-        let mut tmp = vec![];
-        tmp.extend_from_slice(&header.to_bytes());
-        tmp.extend_from_slice(&aad.clone().to_bytes());
-        Ok(mk.decrypt(ciphertext, &nonce, &tmp)?)
+        let mut new_aad = vec![];
+        new_aad.extend_from_slice(&header.to_bytes());
+        new_aad.extend_from_slice(&aad.clone().to_bytes());
+        Ok(mk.decrypt(ciphertext, &nonce, &new_aad)?)
 
     }
 
@@ -298,20 +299,18 @@ fn hkdf_rk(
 fn hkdf_ck(
     ck: SharedSecret,
 ) -> Result<(SharedSecret, SharedSecret), RatchetError> {
-    let info = b"";
-    // HKDF input key material = F || KM, where KM is an input byte sequence containing secret key material, and F is a byte sequence containing 32 0xFF bytes if curve is X25519, and 57 0xFF bytes if curve is X448. F is used for cryptographic domain separation with XEdDSA [2].
-    let mut dhs = vec![0xFFu8; 32];
-    dhs.extend_from_slice(ck.as_ref());
     // HKDF salt = A zero-filled byte sequence with length equal to the hash output length.
-    let hk = Hkdf::<Sha256>::new(Some(&[0u8; 32]), dhs.as_ref());
-    let mut okm = [0u8; 2 * AES256_SECRET_LENGTH];
+    let hk = Hkdf::<Sha256>::new(None, ck.as_ref());
+    let mut chain_key = [0u8; AES256_SECRET_LENGTH];
+    let mut message_key = [0u8; AES256_SECRET_LENGTH];
     // HKDF info = The info parameter from Section 2.1.
-    hk.expand(info, &mut okm)?;
+    hk.expand(b"ChainKey", &mut chain_key)?;
+    hk.expand(b"MessageKey", &mut message_key)?;
 
-    let shared_key1 = SharedSecret::from(*array_ref!(okm, 0, AES256_SECRET_LENGTH));
-    let shared_key2 =
-        SharedSecret::from(*array_ref!(okm, AES256_SECRET_LENGTH, AES256_SECRET_LENGTH));
-    Ok((shared_key1, shared_key2))
+    let chain_key = SharedSecret::from(*array_ref!(chain_key, 0, AES256_SECRET_LENGTH));
+    let message_key =
+        SharedSecret::from(*array_ref!(message_key, 0, AES256_SECRET_LENGTH));
+    Ok((chain_key, message_key))
 }
 
 #[cfg(test)]
