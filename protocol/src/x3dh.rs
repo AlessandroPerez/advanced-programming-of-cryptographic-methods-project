@@ -15,6 +15,23 @@ use arrayref::array_ref;
 use hkdf::Hkdf;
 use sha2::Sha256;
 
+/// Generates a new Curve25519 pre-key bundle along with its associated private keys.
+/// 
+/// This function does not generate one-time pre-keys.  
+/// For that functionality, see [`generate_prekey_bundle_with_otpk`].
+///
+/// # Returns
+///
+/// A tuple `(PreKeyBundle, PrivateKey, PrivateKey)` where:
+/// - `PreKeyBundle` contains the public information to be shared:
+///     - Verifying key
+///     - Public identity key
+///     - Public signature key
+///     - Pre-key signature
+///     - One-time pre-keys (empty in this case)
+/// - The first `PrivateKey` is the identity key.
+/// - The second `PrivateKey` is the signed pre-key.
+///
 pub fn generate_prekey_bundle()
     -> (PreKeyBundle, PrivateKey, PrivateKey) {
     // generate identity key
@@ -29,6 +46,28 @@ pub fn generate_prekey_bundle()
     )
 }
 
+/// Generates a new Curve25519 pre-key bundle along with its associated private keys,
+/// including one-time pre-keys.
+///
+/// For a version that excludes one-time pre-keys, see [`generate_prekey_bundle`].
+///
+/// # Arguments
+///
+/// - `n` – The number of one-time pre-keys to generate.
+///
+/// # Returns
+///
+/// A tuple `(PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>)` where:
+/// - `PreKeyBundle` – The public information to be shared:
+///     - Verifying key
+///     - Public identity key
+///     - Public signature key
+///     - Pre-key signature
+///     - One-time pre-keys
+/// - The first `PrivateKey` is the identity key.
+/// - The second `PrivateKey` is the signed pre-key.
+/// - `Vec<PrivateKey>` – The list of generated one-time pre-keys.
+///
 pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>) {
 
     let mut otpk_private = Vec::new();
@@ -50,9 +89,37 @@ pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, Pr
     (pb, ik, spk.private_key, otpk_private)
 }
 
-
+/// Processes a received pre-key bundle and performs the X3DH key agreement protocol.
+///
+/// This function is used by the initiator to establish a shared secret with a recipient
+/// by processing the recipient’s pre-key bundle. It performs a series of Diffie-Hellman
+/// operations to derive an encryption and a decryption key, and returns the initial message
+/// to be sent to the responder to complete the X3DH handshake.
+///
+/// # Arguments
+///
+/// - `ik` – The initiator’s private identity key.
+/// - `bundle` – The recipient’s `PreKeyBundle`, containing public identity and pre-keys.
+///
+/// # Returns
+///
+/// `Ok((InitialMessage, EncryptionKey, DecryptionKey))` where:
+/// - `InitialMessage` contains:
+///     - The initiator's public identity key
+///     - The ephemeral public key
+///     - The hash of the signed pre-key
+///     - The hash of the one-time pre-key used (if any)
+///     - A challenge encrypted with the derived encryption key
+///     - Associated identity keys (used for authentication)
+/// - `EncryptionKey` – A symmetric key derived from the X3DH key agreement, used to encrypt messages.
+/// - `DecryptionKey` – A symmetric key derived from the X3DH key agreement, used to decrypt messages.
+///
+/// # Errors
+///
+/// `X3DHError::InvalidSignature` – Returned if the recipient's signed pre-key signature verification fails.
+///
 pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
-                             -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
+                            -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
     // process the prekey bundle
 
     bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
@@ -115,7 +182,34 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
     )
 }
 
-// HMAC-based Key Derivation Function
+/// HMAC-based Key Derivation Function (HKDF) used in the X3DH protocol.
+///
+/// This function combines the results of multiple Diffie-Hellman operations to derive
+/// two symmetric shared secrets.
+///
+/// The function first concatenates a fixed domain separation constant (32 bytes of 0xFF for Curve25519),
+/// followed by the raw bytes of the DH results. If a one-time pre-key is used, its DH output is included as well.
+/// This input key material is passed through the HKDF using SHA-256 to produce two derived keys.
+///
+/// # Arguments
+///
+/// - `info` – An ASCII string that identifies the purpose or context of the derived keys (used as the HKDF `info` parameter).
+/// - `dh1` – The result of DH(SPKB, IKA), initiator's identity key with responder's signed pre-key.
+/// - `dh2` – The result of DH(IKB, EKA), responder's identity key with initiator's ephemeral key.
+/// - `dh3` – The result of DH(SPKB, EKA), responder's signed pre-key with initiator's ephemeral key.
+/// - `dh4` – The result of DH(OTPK, EKA), if a one-time pre-key was used.
+///
+/// # Returns
+///
+/// `Ok((SharedSecret, SharedSecret))` where:
+/// - The first `SharedSecret` is the encryption key used by the initiator.
+/// - The second `SharedSecret` is the decryption key used by the responder.
+///
+/// # Errors
+///
+/// `X3DHError::HkdfInvalidLengthError` – Returned if HKDF expansion fails due to an invalid output length.
+/// This can occur if the `okm` buffer is misconfigured or too small for the desired key material.
+///
 fn hkdf(
     info: String,
     dh1: SharedSecret,
@@ -133,7 +227,7 @@ fn hkdf(
     }
     // HKDF salt = A zero-filled byte sequence with length equal to the hash output length.
     let hk = Hkdf::<Sha256>::new(Some(&[0u8; 32]), dhs.as_ref());
-    let mut okm = [0u8; 2 * AES256_SECRET_LENGTH];
+    let mut okm: [u8; 64] = [0u8; 2 * AES256_SECRET_LENGTH];
     // HKDF info = The info parameter from Section 2.1.
     hk.expand(info.as_bytes(), &mut okm)?;
 
@@ -143,6 +237,35 @@ fn hkdf(
     Ok((shared_key1, shared_key2))
 }
 
+/// Processes the initial message sent by the initiator in the X3DH key exchange protocol.
+///
+/// This function is executed by the responder to derive a shared secret from the initiator's
+/// public keys included in the initial message. It performs the necessary Diffie-Hellman operations,
+/// uses HKDF to derive encryption and decryption keys, and verifies the authenticity of the initiator
+/// using an encrypted challenge.
+///
+/// The derived keys are used to establish a secure communication channel between the initiator
+/// and the responder.
+///
+/// # Arguments
+///
+/// - `identity_key` – The responder's identity private key.
+/// - `signed_prekey` – The responder's signed pre-key private key.
+/// - `one_time_prekey` – An optional one-time pre-key private key, used if included by the initiator.
+/// - `msg` – The initial message from the initiator containing public keys and an encrypted challenge.
+///
+/// # Returns
+///
+/// `Ok((EncryptionKey, DecryptionKey))` where:
+/// - The first `EncryptionKey` is used by the responder to encrypt messages to the initiator.
+/// - The second `EncryptionKey` is used to decrypt messages received from the initiator.
+///
+/// # Errors
+///
+/// - `X3DHError::HkdfInvalidLengthError` – Returned if HKDF fails due to incorrect output keying material length.
+/// - `X3DHError::AesGcmInvalidLength` – Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+/// - `X3DHError::InvalidKey` – Returned if the decrypted challenge does not match the initiator's identity key.
+///
 pub fn process_initial_message(
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
@@ -182,6 +305,34 @@ pub fn process_initial_message(
         dk,
     ))
 }
+
+/// Processes the initial message sent by the initiator in the X3DH key exchange protocol,
+/// with additional validation to ensure the initiator's identity key matches the expected server identity.
+///
+/// This function is used by the responder (e.g., a server) to verify that the received
+/// identity key corresponds to the known or expected identity of the initiator. After validating,
+/// it proceeds with the standard X3DH message processing to derive shared encryption and decryption keys.
+///
+/// # Arguments
+///
+/// - `identity_key` – The responder's identity private key.
+/// - `signed_prekey` – The responder's signed pre-key private key.
+/// - `one_time_prekey` – An optional one-time pre-key private key, used if included by the initiator.
+/// - `server_ik` – The expected public identity key of the initiator (e.g., registered on the server).
+/// - `msg` – The initial message from the initiator containing public keys and an encrypted challenge.
+///
+/// # Returns
+///
+/// `Ok((EncryptionKey, DecryptionKey))` where:
+/// - The first `EncryptionKey` is used by the responder to encrypt messages to the initiator.
+/// - The second `DecryptionKey` is used to decrypt messages received from the initiator.
+///
+/// # Errors
+///
+/// - `X3DHError::InvalidInitialMessage` – Returned if the initiator’s identity key in the message does not match the expected public key.
+/// - `X3DHError::HkdfInvalidLengthError` – Returned if HKDF fails due to incorrect output keying material length.
+/// - `X3DHError::AesGcmInvalidLength` – Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+/// - `X3DHError::InvalidKey` – Returned if the decrypted challenge does not match the initiator's identity key.
 
 pub fn process_server_initial_message(
     identity_key: PrivateKey,
