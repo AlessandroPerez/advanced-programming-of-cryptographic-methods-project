@@ -15,24 +15,62 @@ use rand::Rng;
 use x25519_dalek::StaticSecret;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-/* PREKEY BUNDLE */
+/// A [`PreKeyBundle`] contains the public keys and signature published by a recipient,
+/// used by an initiator to establish a shared secret using the X3DH key agreement protocol.
+/// 
 #[derive(Clone, Debug)]
 pub struct PreKeyBundle {
-    pub verifying_key: VerifyingKey, // verifying key -> derived from the private identity signing key
-    pub ik: PublicKey,               // identity key
-    pub spk: PublicKey,              // signed pre-key
-    pub sig: Signature,              // signature
-    pub otpk: Vec<PublicKey>,        // one-time pre-keys
+    /// The recipient's identity signing key (Ed25519), used to verify `sig`.
+    /// For more information, see [`VerifyingKey`].
+    pub verifying_key: VerifyingKey,
+
+    /// The recipient's identity public key.
+    /// For more information, see [`PublicKey`].
+    pub ik: PublicKey,
+
+    /// The recipient's signed public pre-key.
+    /// For more information, see [`PublicKey`].
+    pub spk: PublicKey,
+
+    /// A signature of the `spk`, signed by the identity signing key.
+    /// For more information, see [`Signature`].
+    pub sig: Signature,
+
+    /// One or more ephemeral one-time pre-keys, X25519 public keys.
+    /// If present, the initiator may use one to enhance forward secrecy.
+    /// For more information, see [`PublicKey`].
+    pub otpk: Vec<PublicKey>,
 }
 
 impl PreKeyBundle {
+
+    /// The total byte size of the pre-key bundle, which includes three Curve25519 public keys
+    /// and one signature.
+    /// This constant is used to verify the expected size of a `PreKeyBundle`.
     pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + SIGNATURE_LENGTH;
+
+    /// Generates a new pre-key bundle.
+    /// 
+    /// This method does not generate one-time pre-keys.  
+    /// For that functionality, see [`PreKeyBundle::new_with_otpk`].
+    /// 
+    /// # Arguments
+    ///
+    /// - `ik` - The recipient's identity key.
+    /// - `spk` - The recipient's signed pre-key.
+    ///
+    /// # Returns
+    ///
+    /// A [`PreKeyBundle`] struct.
+    ///
     pub fn new(ik: &PrivateKey, spk: PublicKey) -> Self {
+
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
+
         PreKeyBundle {
             verifying_key: VerifyingKey::from(&ik_signing),
             ik: PublicKey::from(ik),
@@ -42,6 +80,20 @@ impl PreKeyBundle {
         }
     }
 
+    /// Generates a new pre-key bundle,
+    /// including one-time pre-keys.
+    ///
+    /// For a version that excludes one-time pre-keys, see [`PreKeyBundle::new`].
+    /// 
+    /// # Arguments
+    ///
+    /// - `ik` - The recipient's identity key.
+    /// - `spk` - The recipient's signed pre-key.
+    ///
+    /// # Returns
+    ///
+    /// A [`PreKeyBundle`] struct.
+    ///
     pub fn new_with_otpk(ik: &PrivateKey, spk: PublicKey, otpk: Vec<PublicKey>) -> Self {
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
@@ -54,14 +106,32 @@ impl PreKeyBundle {
         }
     }
 
+    /// Adds a one-time pre-key
+    ///
+    /// # Arguments
+    ///
+    /// - `otpk` - The one-time pre-key to be added.
+    ///
     pub fn add_otpk(&mut self, otpk: PublicKey) {
         self.otpk.push(otpk);
     }
 
+    /// Calculates the size of the pre-key bundle.
+    ///
+    /// # Returns
+    ///
+    /// - `usize` - The number of elements in the pre-key bundle.
+    /// 
     pub fn size(&self) -> usize {
         CURVE25519_SECRET_LENGTH * 3 + SIGNATURE_LENGTH + self.otpk.len() * CURVE25519_PUBLIC_LENGTH
     }
 
+    /// Converts each element of the pre-key bundle into bytes.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - A vector containing the byte representation of each element in the pre-key bundle.
+    /// 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.verifying_key.0.as_ref());
@@ -76,6 +146,12 @@ impl PreKeyBundle {
         out
     }
 
+    /// Calculates the base64 of the pre-key bundle.
+    ///
+    /// # Returns
+    ///
+    /// - `String` - The base64-encoded string of the pre-key bundle.
+    /// 
     pub fn to_base64(self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
     }
@@ -83,6 +159,18 @@ impl PreKeyBundle {
 
 impl TryFrom<String> for PreKeyBundle {
     type Error = X3DHError;
+
+    /// Converts a base64-encoded string into a [`PreKeyBundle`].
+    ///
+    /// # Returns
+    ///
+    /// - [`PreKeyBundle`] - The decoded pre-key bundle.
+    ///
+    /// # Errors
+    ///
+    /// - [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
+    /// - [`X3DHError::InvalidPreKeyBundle`] - Returned if the decoded byte vector does not match the expected size of [`PreKeyBundle::BASE_SIZE`].
+    /// 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() < Self::BASE_SIZE {
@@ -132,19 +220,30 @@ impl TryFrom<String> for PreKeyBundle {
     }
 }
 
-
-
-
-/* SESSION KEYS */
+/// A [`SessionKeys`] stores all the information of a specific session.
 #[derive(Clone)]
 pub struct SessionKeys {
+
+    /// An optional [`EncryptionKey`] key used to encrypt messages in the session.
     ek: Option<EncryptionKey>,
+
+    /// An optional [`DecryptionKey`] key used to decrypt messages in the session.
     dk: Option<DecryptionKey>,
 
+    /// An optional [`AssociatedData`] that contains identity information for both parties.
     aad: Option<AssociatedData>,
 }
 
 impl SessionKeys {
+
+    /// Creates a new empty [`SessionKeys`] object
+    ///
+    /// This method does not init the session object.  
+    /// For that functionality, see [`SessionKeys::new_with_keys`].
+    /// 
+    /// # Returns
+    /// 
+    /// - [`SessionKeys`] - An empty session object
     pub fn new() -> Self {
         Self {
             ek: None,
@@ -153,6 +252,20 @@ impl SessionKeys {
         }
     }
 
+    /// Creates a [`SessionKeys`] object
+    /// 
+    /// For a version that does not init the session object, see [`SessionKeys::new`].
+    /// 
+    /// # Arguments
+    ///
+    /// - `ek` - The encryption key used in the session.
+    /// - `dk` - The decryption key used in the session.
+    /// - `aad` - Optional associated data containing identity information for both parties.
+    ///
+    /// # Returns
+    ///
+    /// - [`SessionKeys`] - A session object containing the provided keys and associated data.
+    /// 
     pub fn new_with_keys(
         ek: EncryptionKey,
         dk: DecryptionKey,
@@ -165,37 +278,91 @@ impl SessionKeys {
         }
     }
 
+    /// Returns the [`EncryptionKey`] for the current session, if available.
+    ///
+    /// # Returns
+    ///
+    /// - `Option<EncryptionKey>`  
+    ///   - `Some(EncryptionKey)` if the encryption key has been set.  
+    ///   - `None` if no encryption key is present.
+    /// 
     pub fn get_encryption_key(&self) -> Option<EncryptionKey> {
         self.ek.clone()
     }
 
+    /// Returns the [`DecryptionKey`] for the current session, if available.
+    ///
+    /// # Returns
+    ///
+    /// - `Option<DecryptionKey>`  
+    ///   - `Some(DecryptionKey)` if the decryption key has been set.  
+    ///   - `None` if no decryption key is present.
+    /// 
     pub fn get_decryption_key(&self) -> Option<DecryptionKey> {
         self.dk.clone()
     }
 
+    /// Returns the [`AssociatedData`] for the current session, if available.
+    ///
+    /// # Returns
+    ///
+    /// - `Option<AssociatedData>`  
+    ///   - `Some(AssociatedData)` if the associated data has been set.  
+    ///   - `None` if no associated data is present.
+    ///
     pub fn get_associated_data(&self) -> Option<AssociatedData> {
         self.aad.clone()
     }
 
+    /// Sets the [`EncryptionKey`] for the current session.
+    ///
+    /// # Arguments
+    ///
+    /// - `ek` - The encryption key to assign to the session.
+    /// 
     pub fn set_encryption_key(&mut self, ek: EncryptionKey) {
         self.ek = Some(ek);
     }
 
+    /// Sets the [`DecryptionKey`] for the current session.
+    ///
+    /// # Arguments
+    ///
+    /// - `dk` - The decryption key to assign to the session.
+    /// 
     pub fn set_decryption_key(&mut self, dk: DecryptionKey) {
         self.dk = Some(dk);
     }
 
+    /// Sets the [`AssociatedData`] for the current session.
+    ///
+    /// # Arguments
+    ///
+    /// - `aad` - The associated data to assign to the session.
+    /// 
     pub fn set_associated_data(&mut self, aad: AssociatedData) {
         self.aad = Some(aad);
     }
 
 }
 
-/* SHARED SECRET */
+///TODO add description
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
 pub struct SharedSecret([u8; AES256_SECRET_LENGTH]);
 
 impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
+
+    /// Derives a [`SharedSecret`] by concatenating an encryption key and a decryption key.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `ek` - The encryption key.
+    /// - `dk` - The decryption key.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`SharedSecret`] - The derived shared secret.
+    /// 
     fn from((ek, dk): (EncryptionKey, DecryptionKey)) -> SharedSecret {
         let mut vec = ek.as_ref().to_vec();
         vec.extend_from_slice(dk.as_ref());
@@ -204,6 +371,18 @@ impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
 }
 
 impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
+
+    /// Derives a [`SharedSecret`] by concatenating an encryption key and a decryption key.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `dk` - The decryption key.
+    /// - `ek` - The encryption key.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`SharedSecret`] - The derived shared secret.
+    /// 
     fn from((dk, ek): (DecryptionKey, EncryptionKey)) -> SharedSecret {
         let mut vec = dk.as_ref().to_vec();
         vec.extend_from_slice(ek.as_ref());
@@ -212,22 +391,51 @@ impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
 }
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
+
+    /// Returns a shared reference of this [`SharedSecret`].
+    /// 
+    /// # Returns
+    /// 
+    /// - [`&SharedSecret`] - The shared reference.
+    /// 
     fn as_ref(&self) -> &[u8; AES256_SECRET_LENGTH] {
         &self.0
     }
 }
 
 impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
+
+    /// Derives a [`SharedSecret`] from a `[u8; AES256_SECRET_LENGTH]`.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - The vector.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`SharedSecret`] - The derived shared secret.
+    ///  
     fn from(value: [u8; AES256_SECRET_LENGTH]) -> SharedSecret {
         SharedSecret(value)
     }
 }
 
-/* VERIFYING KEY */
+///TODO add description
 #[derive(Clone, Debug)]
 pub struct VerifyingKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<SigningKey> for VerifyingKey {
+
+    /// Derives a [`VerifyingKey`] from a [`SigningKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `private_key` - The private key from which the verifying key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`VerifyingKey`] - The derived verifying key.
+    /// 
     fn from(private_key: SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
@@ -236,6 +444,17 @@ impl From<SigningKey> for VerifyingKey {
 }
 
 impl From<&SigningKey> for VerifyingKey {
+
+    /// Derives a [`VerifyingKey`] from a shared reference of a [`SigningKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `private_key` - The shared reference of the private key from which the verifying key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`VerifyingKey`] - The derived verifying key.
+    ///
     fn from(private_key: &SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
@@ -244,24 +463,69 @@ impl From<&SigningKey> for VerifyingKey {
 }
 
 impl From<PublicKey> for VerifyingKey {
+
+    /// Derives a [`VerifyingKey`] from a [`PublicKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `public_key` - The public key from which the verifying key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`VerifyingKey`] - The derived verifying key.
+    ///
     fn from(public_key: PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
 }
 
 impl From<&PublicKey> for VerifyingKey {
+
+    /// Derives a [`VerifyingKey`] from a shared reference of a [`PublicKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `public_key` - The shared reference of the public key from which the verifying key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`VerifyingKey`] - The derived verifying key.
+    ///
     fn from(public_key: &PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
 }
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
+
+    /// Returns a shared reference of this [`VerifyingKey`].
+    /// 
+    /// # Returns
+    /// 
+    /// - [`&VerifyingKey`] - The shared reference.
+    /// 
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
 }
 
 impl VerifyingKey {
+
+    /// Verifies that a given signature is valid for a message using the current verifying key.
+    ///
+    /// # Arguments
+    ///
+    /// - `signature` - The signature to be verified.
+    /// - `message` - The original message that was supposedly signed.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` - If the signature is valid.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`ed25519_dalek::SignatureError`] - Returned if the signature is invalid or the key is malformed.
+    /// 
     pub(crate) fn verify(
         &self,
         signature: &Signature,
