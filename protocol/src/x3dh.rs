@@ -1,3 +1,11 @@
+//! This module implements the X3DH (Extended Triple Diffie-Hellman) key agreement protocol.
+//!
+//! X3DH is used to establish a shared secret between two parties for end-to-end encrypted communication.
+//! It combines identity keys, signed pre-keys, and one-time pre-keys to provide forward secrecy and
+//! authentication.
+//!
+//! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/x3dh/).
+
 use crate::constants::AES256_SECRET_LENGTH;
 use crate::errors::X3DHError;
 use crate::utils::{
