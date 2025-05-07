@@ -937,18 +937,16 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
 impl PartialEq for PublicKey {
 
-    /// Compares the current [`PublicKey`] with another instance.
-    /// 
-    /// # Arguments
-    /// 
-    /// - `other` - A public key to be compared with the current one.
-    /// 
-    /// # Returns
-    /// 
-    /// - `bool`:
-    ///     - `true` - If the two instances are equal.
-    ///     - `false` - Otherwise.
+    /// Compares two [`PublicKey`] instances for equality.
     ///
+    /// # Arguments
+    ///
+    /// - `other` - The other [`PublicKey`] to compare against.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the underlying byte representations of both keys are equal, otherwise `false`.
+    /// 
     fn eq(&self, other: &Self) -> bool {
         self.as_ref() == other.as_ref()
     }
@@ -1045,7 +1043,16 @@ pub struct AssociatedData {
 }
 
 impl AssociatedData {
+
+    /// Total size in bytes of the associated data, which is the sum of the two public key lengths
     pub const SIZE: usize = CURVE25519_PUBLIC_LENGTH + CURVE25519_PUBLIC_LENGTH;
+
+    /// Converts the current [`AssociatedData`] into bytes.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - A vector of bytes derived from the current [`AssociatedData`].
+    /// 
     pub fn to_bytes(self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.initiator_identity_key.0.as_ref());
@@ -1053,6 +1060,17 @@ impl AssociatedData {
         out
     }
 
+    /// Creates a new [`AssociatedData`] instance from two public keys.
+    ///
+    /// # Arguments
+    ///
+    /// - `ik` - The identity public key of the initiator.
+    /// - `spk` - The identity public key of the responder.
+    ///
+    /// # Returns
+    ///
+    /// - [`AssociatedData`] - A new instance containing both public keys.
+    ///  
     pub fn new(ik: PublicKey, spk: PublicKey) -> Self {
         Self {
             initiator_identity_key: ik,
@@ -1063,6 +1081,17 @@ impl AssociatedData {
 
 impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
     type Error = X3DHError;
+
+    /// Attempts to create an [`AssociatedData`] instance from a byte slice of length [`Self::SIZE`].
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A reference to a byte array of length [`Self::SIZE`] representing two concatenated public keys.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(AssociatedData)` - If the conversion is successful.
+    /// 
     fn try_from(value: &[u8; Self::SIZE]) -> Result<Self, Self::Error> {
         let initiator_identity_key = PublicKey(*array_ref![value, 0, CURVE25519_PUBLIC_LENGTH]);
         let responder_identity_key = PublicKey(*array_ref![
@@ -1077,22 +1106,52 @@ impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
     }
 }
 
-/* SHA HASH */
+///TODO add description
 #[derive(Clone, Eq, Debug)]
 pub struct Sha256Hash(pub [u8; SHA256_HASH_LENGTH]);
 
 impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
+
+    /// Derives a [`Sha256Hash`] from a shared reference of a `[u8; `[SHA256_HASH_LENGTH]`]`.
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - The shared reference.
+    ///
+    /// # Returns
+    ///
+    /// - [`Sha256Hash`] - The derived sha-256 hash.
+    /// 
     fn from(value: &[u8; SHA256_HASH_LENGTH]) -> Sha256Hash {
         Sha256Hash(*value)
     }
 }
 impl Hash for Sha256Hash {
+
+    /// Feeds the internal byte array into the given hasher.
+    /// This allows [`Sha256Hash`] to be used in hash maps or sets.
+    ///
+    /// # Arguments
+    ///
+    /// - `state` - The hasher state to update.
+    /// 
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
 
 impl PartialEq for Sha256Hash {
+
+    /// Compares two [`Sha256Hash`] values for equality based on their byte content.
+    ///
+    /// # Arguments
+    ///
+    /// - `other` - The other [`Sha256Hash`] to compare with.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the internal byte arrays are equal, otherwise `false`.
+    /// 
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
