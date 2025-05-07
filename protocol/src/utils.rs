@@ -352,7 +352,7 @@ pub struct SharedSecret([u8; AES256_SECRET_LENGTH]);
 
 impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
 
-    /// Derives a [`SharedSecret`] by concatenating an encryption key and a decryption key.
+    /// Derives a [`SharedSecret`] from an [`EncryptionKey`] and a [`DecryptionKey`].
     /// 
     /// # Arguments
     /// 
@@ -372,7 +372,7 @@ impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
 
 impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
 
-    /// Derives a [`SharedSecret`] by concatenating an encryption key and a decryption key.
+    /// Derives a [`SharedSecret`] from a [`DecryptionKey`] and an [`EncryptionKey`].
     /// 
     /// # Arguments
     /// 
@@ -392,7 +392,7 @@ impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
-    /// Returns a shared reference of this [`SharedSecret`].
+    /// Returns a shared reference of the current [`SharedSecret`].
     /// 
     /// # Returns
     /// 
@@ -405,7 +405,7 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
 impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
-    /// Derives a [`SharedSecret`] from a `[u8; AES256_SECRET_LENGTH]`.
+    /// Derives a [`SharedSecret`] from a `[u8; `[AES256_SECRET_LENGTH]`]`.
     /// 
     /// # Arguments
     /// 
@@ -511,7 +511,7 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
 
 impl VerifyingKey {
 
-    /// Verifies that a given signature is valid for a message using the current verifying key.
+    /// Verifies that a given [`Signature`] is valid for a message using the current [`VerifyingKey`].
     ///
     /// # Arguments
     ///
@@ -577,7 +577,7 @@ impl SigningKey {
     /// 
     /// # Arguments
     ///
-    /// - `public_key` - A reference to the [`PublicKey`] of the other party.
+    /// - `public_key` - A reference to the public key of the other party.
     ///
     /// # Returns
     ///
@@ -711,7 +711,7 @@ impl PrivateKey {
     ///
     /// # Returns
     ///
-    /// - `Vec<u8>` - The base64-encoded string of the current [`PrivateKey`].
+    /// - `String` - The base64-encoded string of the current [`PrivateKey`].
     ///
     pub fn to_base64(&self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
@@ -719,6 +719,10 @@ impl PrivateKey {
 
     /// Converts a base64-encoded string into a [`PrivateKey`].
     ///
+    /// # Arguments
+    /// 
+    /// - `value` - The base64-encoded string to be converted.
+    /// 
     /// # Returns
     ///
     /// - [`PrivateKey`] - The decoded private key.
@@ -741,7 +745,7 @@ impl PrivateKey {
 
 impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
 
-    /// Returns a shared reference of this [`PrivateKey`].
+    /// Returns a shared reference of the current [`PrivateKey`].
     /// 
     /// # Returns
     /// 
@@ -902,7 +906,7 @@ impl From<&SigningKey> for PublicKey {
 
 impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
-    /// Derives a [`PublicKey`] from a shared reference of a `[u8; CURVE25519_PUBLIC_LENGTH]`.
+    /// Derives a [`PublicKey`] from a shared reference of a `[u8; `[CURVE25519_PUBLIC_LENGTH]`]`.
     /// 
     /// # Arguments
     /// 
@@ -920,7 +924,7 @@ impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
-    /// Returns a shared reference of this [`PublicKey`].
+    /// Returns a shared reference of the current [`PublicKey`].
     /// 
     /// # Returns
     /// 
@@ -935,6 +939,10 @@ impl PartialEq for PublicKey {
 
     /// Compares the current [`PublicKey`] with another instance.
     /// 
+    /// # Arguments
+    /// 
+    /// - `other` - A public key to be compared with the current one.
+    /// 
     /// # Returns
     /// 
     /// - `bool`:
@@ -945,16 +953,45 @@ impl PartialEq for PublicKey {
         self.as_ref() == other.as_ref()
     }
 }
+
 impl PublicKey {
+
+    /// Returns the SHA-256 hash of the current [`PublicKey`].
+    ///
+    /// # Returns
+    ///
+    /// - [`Sha256Hash`] - The SHA-256 digest of the public key.
+    ///
     pub fn hash(&self) -> Sha256Hash {
         let digest = Sha256::digest(self.0.as_ref());
         Sha256Hash(*array_ref![digest, 0, SHA256_HASH_LENGTH])
     }
 
+    /// Converts the current [`PublicKey`] into a base64-encoded string.
+    ///
+    /// # Returns
+    ///
+    /// - `String` - The base64-encoded string of the current [`PublicKey`].
+    ///
     pub fn to_base64(&self) -> String {
         general_purpose::STANDARD.encode(self.0.to_vec())
     }
 
+    /// Converts a base64-encoded string into a [`PublicKey`].
+    ///
+    /// # Arguments
+    /// 
+    /// - `value` - The base64-encoded string to be converted.
+    /// 
+    /// # Returns
+    ///
+    /// - `PublicKey` - The decoded public key.
+    ///
+    /// # Errors
+    ///
+    /// - [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
+    /// - [`X3DHError::InvalidPublicKey`] - Returned if the decoded byte vector does not match the expected size of [`CURVE25519_PUBLIC_LENGTH`].
+    ///
     pub fn from_base64(value: String) -> Result<PublicKey, X3DHError> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() != CURVE25519_PUBLIC_LENGTH {
@@ -966,23 +1003,41 @@ impl PublicKey {
     }
 }
 
-/* SIGNATURE */
+///TODO add description
 #[derive(Clone, Debug)]
 pub struct Signature( pub [u8; SIGNATURE_LENGTH]);
 
 impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
+
+    /// Returns a shared reference of the current [`Signature`].
+    /// 
+    /// # Returns
+    /// 
+    /// - `&[u8; SIGNATURE_LENGTH]` - The shared reference.
+    ///
     fn as_ref(&self) -> &[u8; SIGNATURE_LENGTH] {
         &self.0
     }
 }
 
 impl From<[u8; SIGNATURE_LENGTH]> for Signature {
+
+    /// Derives a [`Signature`] from a `[u8; `[SIGNATURE_LENGTH]`]`.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - A byte array representing the raw signature data.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`Signature`] - The derived signature.
+    ///
     fn from(value: [u8; SIGNATURE_LENGTH]) -> Signature {
         Signature(value)
     }
 }
 
-/* ASSOCIATED DATA */
+///TODO add description
 #[derive(Clone, Debug)]
 pub struct AssociatedData {
     pub(crate) initiator_identity_key: PublicKey,
