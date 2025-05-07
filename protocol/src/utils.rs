@@ -220,7 +220,7 @@ impl TryFrom<String> for PreKeyBundle {
     }
 }
 
-/// A [`SessionKeys`] stores all the information of a specific session.
+///TODO add description
 #[derive(Clone)]
 pub struct SessionKeys {
 
@@ -537,22 +537,52 @@ impl VerifyingKey {
     }
 }
 
-/* SIGNING KEY */
+///TODO add description
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct SigningKey([u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl SigningKey {
+
+    /// Generates a new random [`SigningKey`] using a secure random number generator.
+    /// This function uses a cryptographically secure RNG via [`OsRng`] to ensure key unpredictability.
+    /// 
+    /// # Returns
+    ///
+    /// - [`SigningKey`] - A newly generated signing key based on the Ed25519 curve.
+    ///
     pub(crate) fn new() -> SigningKey {
         let key = ed25519_dalek::SigningKey::generate(&mut OsRng);
         SigningKey(key.to_bytes())
     }
 
+    /// Signs a message using the current [`SigningKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `message` - A byte slice representing the message to be signed.
+    ///
+    /// # Returns
+    ///
+    /// - [`Signature`] - The Ed25519 signature of the message.
+    /// 
     pub(crate) fn sign(&self, message: &[u8]) -> Signature {
         let mut dalek_private_key = ed25519_dalek::SigningKey::from(self.0);
         let signature = dalek_private_key.sign(message);
         Signature(signature.to_bytes())
     }
 
+    /// Computes a Diffie-Hellman shared secret using the current private key and a public key.
+    /// This function uses the X25519 elliptic curve Diffie-Hellman key exchange algorithm
+    /// via the [`x25519_dalek`] crate to securely derive a shared secret.
+    /// 
+    /// # Arguments
+    ///
+    /// - `public_key` - A reference to the [`PublicKey`] of the other party.
+    ///
+    /// # Returns
+    ///
+    /// - [`SharedSecret`] - The resulting shared secret derived from the key exchange.
+    /// 
     pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
         let dalek_private_key = StaticSecret::from(self.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
@@ -562,24 +592,63 @@ impl SigningKey {
 }
 
 impl From<PrivateKey> for SigningKey {
+
+    /// Derives a [`SigningKey`] from a [`PrivateKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `private_key` - The private key from which the signing key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`SigningKey`] - The derived verifying key.
+    ///
     fn from(private_key: PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
 }
+
 impl From<&PrivateKey> for SigningKey {
+
+    /// Derives a [`SigningKey`] from a shared reference of a [`PrivateKey`].
+    ///
+    /// # Arguments
+    ///
+    /// - `private_key` - The shared reference of the private key from which the signing key is derived.
+    ///
+    /// # Returns
+    ///
+    /// - [`SigningKey`] - The derived verifying key.
+    ///
     fn from(private_key: &PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
 }
 
-/* SIGNED PREKEY */
+/// A key pair used as a signed pre-key in the X3DH protocol.
+/// A signed pre-key consists of a long-term key pair (private and public) that is signed by the identity key.
+/// It is used in the initial key agreement phase to provide forward secrecy and authentication.
+///
 #[derive(Clone)]
 pub(crate) struct SignedPreKey {
+
+    /// The private component of the signed pre-key, used for key agreement.
     pub(crate) private_key: PrivateKey,
+
+    /// The public component of the signed pre-key, shared with other parties.
     pub(crate) public_key: PublicKey,
 }
 
 impl SignedPreKey {
+
+    /// Generates a new [`SignedPreKey`] key pair.
+    /// This function creates a new Curve25519 private key and derives the corresponding public key,
+    /// forming a complete signed pre-key pair used in the X3DH protocol.
+    ///
+    /// # Returns
+    ///
+    /// - [`SignedPreKey`] - A newly generated key pair containing both private and public keys.
+    /// 
     pub(crate) fn new() -> SignedPreKey {
         let private_key = PrivateKey::new();
         let public_key = PublicKey::from(&private_key);
@@ -590,15 +659,37 @@ impl SignedPreKey {
     }
 }
 
-/* EPHEMERAL PRIVATE KEY */
+///TODO add description
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
 
 impl PrivateKey {
+
+    /// Generates a new Curve25519 private key.
+    /// This function uses a cryptographically secure random number generator to produce
+    /// a new X25519 `StaticSecret`, returning it as a [`PrivateKey`] for use in key exchanges.
+    ///
+    /// # Returns
+    ///
+    /// - [`PrivateKey`] - A randomly generated Curve25519 private key.
+    ///  
     pub fn new() -> PrivateKey {
         let key = StaticSecret::random_from_rng(&mut OsRng);
         PrivateKey(key.to_bytes())
     }
+
+    /// Performs a Diffie-Hellman key exchange with a given public key.
+    /// This function computes the shared secret between this private key and a peer’s [`PublicKey`],
+    /// returning the resulting [`SharedSecret`] as a byte array.
+    ///
+    /// # Arguments
+    ///
+    /// - `public_key` - The public key of the other party involved in the key exchange.
+    ///
+    /// # Returns
+    ///
+    /// - [`SharedSecret`] - The derived shared secret.
+    /// 
     pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
         let dalek_private_key = StaticSecret::from(self.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
@@ -606,14 +697,37 @@ impl PrivateKey {
         SharedSecret(shared_secret.to_bytes())
     }
 
+    /// Converts the current [`PrivateKey`] into bytes.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - A vector of bytes derived from the current [`PrivateKey`].
+    ///  
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 
+    /// Converts the current [`PrivateKey`] into a base64-encoded string.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - The base64-encoded string of the current [`PrivateKey`].
+    ///
     pub fn to_base64(&self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
     }
 
+    /// Converts a base64-encoded string into a [`PrivateKey`].
+    ///
+    /// # Returns
+    ///
+    /// - [`PrivateKey`] - The decoded private key.
+    ///
+    /// # Errors
+    ///
+    /// - [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
+    /// - [`X3DHError::InvalidPrivateKey`] - Returned if the decoded byte vector does not match the expected size of [`CURVE25519_SECRET_LENGTH`].
+    ///
     pub fn from_base64(value: String) -> Result<PrivateKey, X3DHError> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() != CURVE25519_SECRET_LENGTH {
@@ -626,12 +740,30 @@ impl PrivateKey {
 }
 
 impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
+
+    /// Returns a shared reference of this [`PrivateKey`].
+    /// 
+    /// # Returns
+    /// 
+    /// - `&[u8; CURVE25519_SECRET_LENGTH]` - The shared reference.
+    ///
     fn as_ref(&self) -> &[u8; CURVE25519_SECRET_LENGTH] {
         &self.0
     }
 }
 
 impl From<SigningKey> for PrivateKey {
+
+    /// Derives a [`PrivateKey`] from a [`SigningKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `private_key` - The signing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PrivateKey`] - The derived private key.
+    ///
     fn from(private_key: SigningKey) -> PrivateKey {
         let dalek_private_key = StaticSecret::from(private_key.0);
         PrivateKey(dalek_private_key.to_bytes())
@@ -639,17 +771,39 @@ impl From<SigningKey> for PrivateKey {
 }
 
 impl From<&SigningKey> for PrivateKey {
+
+    /// Derives a [`PrivateKey`] from a shared reference of a [`SigningKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `private_key` - The reference of the signing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PrivateKey`] - The derived private key.
+    ///
     fn from(private_key: &SigningKey) -> PrivateKey {
         let dalek_private_key = StaticSecret::from(private_key.0);
         PrivateKey(dalek_private_key.to_bytes())
     }
 }
 
-/* PUBLIC KEY */
+///TODO add description
 #[derive(Clone, Debug, Eq, Hash)]
 pub struct PublicKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a [`PrivateKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `private_key` - The private key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(private_key: PrivateKey) -> PublicKey {
         let dalek_private_key = x25519_dalek::StaticSecret::from(private_key.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(&dalek_private_key);
@@ -658,6 +812,17 @@ impl From<PrivateKey> for PublicKey {
 }
 
 impl From<&PrivateKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a shared reference of a [`PrivateKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `private_key` - The shared reference of the private key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(private_key: &PrivateKey) -> PublicKey {
         let dalek_private_key = x25519_dalek::StaticSecret::from(private_key.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(&dalek_private_key);
@@ -666,18 +831,51 @@ impl From<&PrivateKey> for PublicKey {
 }
 
 impl From<VerifyingKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a [`VerifyingKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `public_key` - The veryfing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(public_key: VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
 }
 
 impl From<&VerifyingKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a shared reference of a [`VerifyingKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `public_key` - The shared reference of the veryfing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(public_key: &VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
 }
 
 impl From<SigningKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a [`SigningKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - The signing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(value: SigningKey) -> Self {
         let key = VerifyingKey::from(&value);
         PublicKey::from(key)
@@ -685,6 +883,17 @@ impl From<SigningKey> for PublicKey {
 }
 
 impl From<&SigningKey> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a shared reference of a [`SigningKey`].
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - The shared reference of the signing key to be converted.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(value: &SigningKey) -> Self {
         let key = VerifyingKey::from(value);
         PublicKey::from(key)
@@ -692,6 +901,17 @@ impl From<&SigningKey> for PublicKey {
 }
 
 impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
+
+    /// Derives a [`PublicKey`] from a shared reference of a `[u8; CURVE25519_PUBLIC_LENGTH]`.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - The shared reference.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`PublicKey`] - The derived public key.
+    ///
     fn from(value: &[u8; CURVE25519_PUBLIC_LENGTH]) -> PublicKey {
         PublicKey(value.clone())
     }
@@ -699,12 +919,28 @@ impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 }
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
+
+    /// Returns a shared reference of this [`PublicKey`].
+    /// 
+    /// # Returns
+    /// 
+    /// - `&[u8; CURVE25519_PUBLIC_LENGTH]` - The shared reference.
+    ///
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
 }
 
 impl PartialEq for PublicKey {
+
+    /// Compares the current [`PublicKey`] with another instance.
+    /// 
+    /// # Returns
+    /// 
+    /// - `bool`:
+    ///     - `true` - If the two instances are equal.
+    ///     - `false` - Otherwise.
+    ///
     fn eq(&self, other: &Self) -> bool {
         self.as_ref() == other.as_ref()
     }
