@@ -220,17 +220,19 @@ impl TryFrom<String> for PreKeyBundle {
     }
 }
 
-///TODO add description
+/// Represents a set of cryptographic keys and associated metadata used during an active session.
+///
+/// A `SessionKeys` object can store the encryption key, decryption key, and optional associated data.
+/// This structure is central to managing secure communication state after a successful X3DH handshake.
 #[derive(Clone)]
 pub struct SessionKeys {
-
-    /// An optional [`EncryptionKey`] key used to encrypt messages in the session.
+    /// The encryption key used for outgoing messages.
     ek: Option<EncryptionKey>,
 
-    /// An optional [`DecryptionKey`] key used to decrypt messages in the session.
+    /// The decryption key used for incoming messages.
     dk: Option<DecryptionKey>,
 
-    /// An optional [`AssociatedData`] that contains identity information for both parties.
+    /// Optional associated data used for authentication and context binding.
     aad: Option<AssociatedData>,
 }
 
@@ -346,7 +348,10 @@ impl SessionKeys {
 
 }
 
-///TODO add description
+/// A 256-bit secret shared between two parties after performing a key agreement (in this case, Diffie-Hellman).
+///
+/// `SharedSecret` is the foundation for deriving encryption and decryption keys in the X3DH protocol,
+/// and is securely zeroized from memory when dropped.
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
 pub struct SharedSecret([u8; AES256_SECRET_LENGTH]);
 
@@ -392,7 +397,7 @@ impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
 
-    /// Returns a shared reference of the current [`SharedSecret`].
+    /// Returns a shared reference to the current [`SharedSecret`].
     /// 
     /// # Returns
     /// 
@@ -420,9 +425,12 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
     }
 }
 
-///TODO add description
+/// A public key used to verify signatures in the X3DH protocol.
+///
+/// This is an Ed25519 public key derived from a corresponding [`SigningKey`], and is used
+/// to authenticate identity keys and signed pre-keys.
 #[derive(Clone, Debug)]
-pub struct VerifyingKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct VerifyingKey(pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<SigningKey> for VerifyingKey {
 
@@ -445,11 +453,11 @@ impl From<SigningKey> for VerifyingKey {
 
 impl From<&SigningKey> for VerifyingKey {
 
-    /// Derives a [`VerifyingKey`] from a shared reference of a [`SigningKey`].
+    /// Derives a [`VerifyingKey`] from a shared reference to a [`SigningKey`].
     ///
     /// # Arguments
     ///
-    /// - `private_key` - The shared reference of the private key from which the verifying key is derived.
+    /// - `private_key` - The shared reference to the private key from which the verifying key is derived.
     ///
     /// # Returns
     ///
@@ -481,11 +489,11 @@ impl From<PublicKey> for VerifyingKey {
 
 impl From<&PublicKey> for VerifyingKey {
 
-    /// Derives a [`VerifyingKey`] from a shared reference of a [`PublicKey`].
+    /// Derives a [`VerifyingKey`] from a shared reference to a [`PublicKey`].
     ///
     /// # Arguments
     ///
-    /// - `public_key` - The shared reference of the public key from which the verifying key is derived.
+    /// - `public_key` - The shared reference to the public key from which the verifying key is derived.
     ///
     /// # Returns
     ///
@@ -498,7 +506,7 @@ impl From<&PublicKey> for VerifyingKey {
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
 
-    /// Returns a shared reference of this [`VerifyingKey`].
+    /// Returns a shared reference to this [`VerifyingKey`].
     /// 
     /// # Returns
     /// 
@@ -537,7 +545,10 @@ impl VerifyingKey {
     }
 }
 
-///TODO add description
+/// An Ed25519 signing key used to create digital signatures in the X3DH protocol.
+///
+/// This key is responsible for signing pre-keys and authenticating identity in the key exchange.
+/// It is zeroized from memory when dropped for security.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct SigningKey([u8; CURVE25519_PUBLIC_LENGTH]);
 
@@ -610,11 +621,11 @@ impl From<PrivateKey> for SigningKey {
 
 impl From<&PrivateKey> for SigningKey {
 
-    /// Derives a [`SigningKey`] from a shared reference of a [`PrivateKey`].
+    /// Derives a [`SigningKey`] from a shared reference to a [`PrivateKey`].
     ///
     /// # Arguments
     ///
-    /// - `private_key` - The shared reference of the private key from which the signing key is derived.
+    /// - `private_key` - The shared reference to the private key from which the signing key is derived.
     ///
     /// # Returns
     ///
@@ -659,7 +670,10 @@ impl SignedPreKey {
     }
 }
 
-///TODO add description
+/// A Curve25519 private key used in the X3DH key exchange for computing shared secrets.
+///
+/// This key supports Diffie-Hellman operations and can be derived from or converted into
+/// signing keys when needed. Securely zeroized on drop.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
 
@@ -745,7 +759,7 @@ impl PrivateKey {
 
 impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
 
-    /// Returns a shared reference of the current [`PrivateKey`].
+    /// Returns a shared reference to the current [`PrivateKey`].
     /// 
     /// # Returns
     /// 
@@ -776,7 +790,7 @@ impl From<SigningKey> for PrivateKey {
 
 impl From<&SigningKey> for PrivateKey {
 
-    /// Derives a [`PrivateKey`] from a shared reference of a [`SigningKey`].
+    /// Derives a [`PrivateKey`] from a shared reference to a [`SigningKey`].
     /// 
     /// # Arguments
     /// 
@@ -792,9 +806,11 @@ impl From<&SigningKey> for PrivateKey {
     }
 }
 
-///TODO add description
+/// A Curve25519 public key used in the X3DH protocol to represent identity, ephemeral, and pre-keys.
+///
+/// This type can be derived from private or signing keys and is hashable and comparable.
 #[derive(Clone, Debug, Eq, Hash)]
-pub struct PublicKey( pub [u8; CURVE25519_PUBLIC_LENGTH]);
+pub struct PublicKey(pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
 impl From<PrivateKey> for PublicKey {
 
@@ -817,11 +833,11 @@ impl From<PrivateKey> for PublicKey {
 
 impl From<&PrivateKey> for PublicKey {
 
-    /// Derives a [`PublicKey`] from a shared reference of a [`PrivateKey`].
+    /// Derives a [`PublicKey`] from a shared reference to a [`PrivateKey`].
     /// 
     /// # Arguments
     /// 
-    /// - `private_key` - The shared reference of the private key to be converted.
+    /// - `private_key` - The shared reference to the private key to be converted.
     /// 
     /// # Returns
     /// 
@@ -853,11 +869,11 @@ impl From<VerifyingKey> for PublicKey {
 
 impl From<&VerifyingKey> for PublicKey {
 
-    /// Derives a [`PublicKey`] from a shared reference of a [`VerifyingKey`].
+    /// Derives a [`PublicKey`] from a shared reference to a [`VerifyingKey`].
     /// 
     /// # Arguments
     /// 
-    /// - `public_key` - The shared reference of the veryfing key to be converted.
+    /// - `public_key` - The shared reference to the veryfing key to be converted.
     /// 
     /// # Returns
     /// 
@@ -888,11 +904,11 @@ impl From<SigningKey> for PublicKey {
 
 impl From<&SigningKey> for PublicKey {
 
-    /// Derives a [`PublicKey`] from a shared reference of a [`SigningKey`].
+    /// Derives a [`PublicKey`] from a shared reference to a [`SigningKey`].
     /// 
     /// # Arguments
     /// 
-    /// - `value` - The shared reference of the signing key to be converted.
+    /// - `value` - The shared reference to the signing key to be converted.
     /// 
     /// # Returns
     /// 
@@ -906,7 +922,7 @@ impl From<&SigningKey> for PublicKey {
 
 impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
-    /// Derives a [`PublicKey`] from a shared reference of a `[u8; `[CURVE25519_PUBLIC_LENGTH]`]`.
+    /// Derives a [`PublicKey`] from a shared reference to a `[u8; `[CURVE25519_PUBLIC_LENGTH]`]`.
     /// 
     /// # Arguments
     /// 
@@ -924,7 +940,7 @@ impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
 impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
 
-    /// Returns a shared reference of the current [`PublicKey`].
+    /// Returns a shared reference to the current [`PublicKey`].
     /// 
     /// # Returns
     /// 
@@ -1001,13 +1017,15 @@ impl PublicKey {
     }
 }
 
-///TODO add description
+/// A digital signature used to authenticate public keys within the X3DH protocol.
+///
+/// This is typically generated using a [`SigningKey`] and verified using a [`VerifyingKey`].
 #[derive(Clone, Debug)]
-pub struct Signature( pub [u8; SIGNATURE_LENGTH]);
+pub struct Signature(pub [u8; SIGNATURE_LENGTH]);
 
 impl AsRef<[u8; SIGNATURE_LENGTH]> for Signature {
 
-    /// Returns a shared reference of the current [`Signature`].
+    /// Returns a shared reference to the current [`Signature`].
     /// 
     /// # Returns
     /// 
@@ -1035,12 +1053,18 @@ impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     }
 }
 
-///TODO add description
+/// Additional data exchanged during the X3DH handshake, containing both parties' identity keys.
+///
+/// This ensures authenticity and context binding for encryption and decryption during the session.
 #[derive(Clone, Debug)]
 pub struct AssociatedData {
+    /// The identity public key of the initiator.
     pub(crate) initiator_identity_key: PublicKey,
+
+    /// The identity public key of the responder.
     pub(crate) responder_identity_key: PublicKey,
 }
+
 
 impl AssociatedData {
 
@@ -1106,13 +1130,15 @@ impl TryFrom<&[u8; Self::SIZE]> for AssociatedData {
     }
 }
 
-///TODO add description
+/// A SHA-256 hash used for identifying and verifying keys or values in the X3DH protocol.
+///
+/// Implements equality and hashing for use in collections like maps and sets.
 #[derive(Clone, Eq, Debug)]
 pub struct Sha256Hash(pub [u8; SHA256_HASH_LENGTH]);
 
 impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
 
-    /// Derives a [`Sha256Hash`] from a shared reference of a `[u8; `[SHA256_HASH_LENGTH]`]`.
+    /// Derives a [`Sha256Hash`] from a shared reference to a `[u8; `[SHA256_HASH_LENGTH]`]`.
     ///
     /// # Arguments
     ///
@@ -1157,11 +1183,25 @@ impl PartialEq for Sha256Hash {
     }
 }
 
-/* CHALLENGE */
+/// A fixed-length random challenge used for proving possession of a key during authentication.
+///
+/// This is typically encrypted and decrypted using AES-GCM as part of the X3DH protocol's
+/// verification or commitment phase.
 #[derive(Clone, Debug)]
 pub struct Challenge(pub(crate) [u8; CHALLENGE_LENGTH]);
 
 impl From<&[u8; CHALLENGE_LENGTH]> for Challenge {
+
+    /// Derives a [`Challenge`] from a shared reference to a `[u8; CHALLENGE_LENGTH]` array.
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A reference to a byte array of length [`CHALLENGE_LENGTH`].
+    ///
+    /// # Returns
+    ///
+    /// - [`Challenge`] - The derived challenge.
+    /// 
     fn from(value: &[u8; CHALLENGE_LENGTH]) -> Challenge {
         Challenge(*value)
     }
@@ -1170,6 +1210,20 @@ impl From<&[u8; CHALLENGE_LENGTH]> for Challenge {
 impl TryFrom<&[u8]> for Challenge {
     type Error = X3DHError;
 
+    /// Derives a [`Challenge`] from a shared reference to a `[u8; CHALLENGE_LENGTH]` array.
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A reference to a byte array of length [`CHALLENGE_LENGTH`].
+    ///
+    /// # Returns
+    ///
+    /// - [`Challenge`] - The derived challenge.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::InvalidChallenge`] - Returned if `value` does not match the expected size of [`CHALLENGE_LENGTH`].
+    /// 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         if value.len() != CHALLENGE_LENGTH {
             return Err(X3DHError::InvalidChallenge)
@@ -1179,19 +1233,34 @@ impl TryFrom<&[u8]> for Challenge {
     }
 }
 
-/* INITIAL MESSAGE */
+/// A message sent by the initiator in the X3DH key exchange protocol.
+///
+/// It contains the initiator’s identity and ephemeral public keys, a challenge,
+/// optional one-time key hash, and associated metadata necessary for validation.
 #[derive(Clone)]
 pub struct InitialMessage {
+    /// The initiator’s identity public key.
     pub identity_key: PublicKey,
+
+    /// The initiator’s ephemeral public key.
     pub ephemeral_key: PublicKey,
+
+    /// The SHA-256 hash of the responder’s signed pre-key.
     pub prekey_hash: Sha256Hash,
+
+    /// Optional SHA-256 hash of the responder’s one-time pre-key.
     pub one_time_key_hash: Option<Sha256Hash>,
+
+    /// A challenge generated by the initiator for authentication.
     pub challenge: Challenge,
+
+    /// Associated identity key data for both parties.
     pub associated_data: AssociatedData,
 }
 
 impl InitialMessage {
-    // the byte size of a prekey bundle
+    
+    /// The base byte size without an optional one-time prekey hash.
     pub(crate) const BASE_SIZE: usize = CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH
         + SHA256_HASH_LENGTH
@@ -1199,12 +1268,25 @@ impl InitialMessage {
         + CURVE25519_PUBLIC_LENGTH
         + CURVE25519_PUBLIC_LENGTH;
 
+    /// The total byte size of the message when the one-time prekey hash is included.
     pub(crate) const SIZE_WITH_OTPK: usize = Self::BASE_SIZE + SHA256_HASH_LENGTH;
 
+    /// Returns a clone of the [`AssociatedData`] from the current message.
+    ///
+    /// # Returns
+    ///
+    /// - [`AssociatedData`] - The associated data contained in the message.
+    /// 
     pub fn get_associated_data(&self) -> AssociatedData {
         self.associated_data.clone()
     }
 
+    /// Converts the current [`InitialMessage`] into bytes.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - A vector of bytes derived from the current [`InitialMessage`].
+    ///
     pub fn to_bytes(self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.identity_key.0.as_ref());
@@ -1219,10 +1301,24 @@ impl InitialMessage {
         out
     }
 
+    /// Converts the current [`InitialMessage`] into a base64-encoded string.
+    ///
+    /// # Returns
+    ///
+    /// - `String` - The base64-encoded string of the current [`InitialMessage`].
+    ///
     pub fn to_base64(self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
     }
 
+    /// Calculates the size of the current [`InitialMessage`].
+    ///
+    /// # Returns
+    ///
+    /// - `usize` - The size of the current [`InitialMessage`]:
+    ///     - [`Self::BASE_SIZE`] if there is no one-time prekey hash.
+    ///     - [`Self::SIZE_WITH_OTPK`] if there is a one-time prekey hash.
+    /// 
     pub fn size(&self) -> usize {
         if self.one_time_key_hash.is_some() {
             Self::SIZE_WITH_OTPK
@@ -1234,6 +1330,22 @@ impl InitialMessage {
 
 impl TryFrom<String> for InitialMessage {
     type Error = X3DHError;
+
+    /// Derives a [`InitialMessage`] from base64-encoded string.
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A base64-encoded string.
+    ///
+    /// # Returns
+    ///
+    /// - [`InitialMessage`] - The derived initial message.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
+    /// - [`X3DHError::InvalidInitialMessage`] - Returned if the decoded byte vector does not match the expected size of [`Self::BASE_SIZE`] or [`Self::SIZE_WITH_OTPK`].
+    ///
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() != Self::BASE_SIZE && bytes.len() != Self::SIZE_WITH_OTPK {
@@ -1302,11 +1414,30 @@ impl TryFrom<String> for InitialMessage {
 
 
 
-/* Encryption Key */
+/// A 256-bit AES key used for encrypting messages in the X3DH session.
+///
+/// This key is derived from a [`SharedSecret`] and is securely zeroized when dropped.
 #[derive(Zeroize, ZeroizeOnDrop, Clone)]
 pub struct EncryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl EncryptionKey {
+
+    /// Encrypts the given `data` using AES-256-GCM with the given additional authenticated data (AAD).
+    /// The output format is: `[nonce | aad | ciphertext]`, all base64-encoded.
+    /// 
+    /// # Arguments
+    ///
+    /// - `data`: The plaintext data to be encrypted.
+    /// - `aad`: Additional data to authenticate but not encrypt.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(String)` - The base64-encoded ciphertext, nonce, and AAD.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+    ///
     pub fn encrypt(&self, data: &[u8], aad: &[u8]) -> Result<String, X3DHError> {
         let nonce = &Aes256Gcm::generate_nonce(&mut OsRng);
         let cipher = Aes256Gcm::new_from_slice(&self.0);
@@ -1324,6 +1455,21 @@ impl EncryptionKey {
         Ok(b64)
     }
 
+    /// Encrypts a short `data` slice deterministically to form a `Challenge`.
+    /// This uses a fixed nonce (`"hello world!"`).
+    ///
+    /// # Arguments
+    ///
+    /// - `data` - The plaintext data to encrypt into a challenge.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Challenge)` - The encrypted data as a fixed-size challenge.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+    /// 
     pub(crate) fn encrypt_challenge(&self, data: &[u8]) -> Result<Challenge, X3DHError> {
         let nonce = b"hello world!";
         let nonce = Nonce::from_slice(nonce);
@@ -1336,22 +1482,59 @@ impl EncryptionKey {
 }
 
 impl From<SharedSecret> for EncryptionKey {
+
+    /// Derives an [`EncryptionKey`] from a [`SharedSecret`].
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A shared secret.
+    ///
+    /// # Returns
+    ///
+    /// - [`EncryptionKey`] - The derived encryption key.
+    /// 
     fn from(value: SharedSecret) -> EncryptionKey {
         EncryptionKey(value.0)
     }
 }
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for EncryptionKey {
+
+    /// Returns a shared reference to the current [`EncryptionKey`].
+    /// 
+    /// # Returns
+    /// 
+    /// - `&[u8; AES256_SECRET_LENGTH]` - The shared reference.
+    ///
     fn as_ref(&self) -> &[u8; AES256_SECRET_LENGTH] {
         &self.0
     }
 }
 
-/* Decryption Key */
+/// A 256-bit AES key used for decrypting messages in the X3DH session.
+///
+/// Like [`EncryptionKey`], it is derived from a [`SharedSecret`] and securely zeroized.
 #[derive(Zeroize, ZeroizeOnDrop, Clone)]
 pub struct DecryptionKey([u8; AES256_SECRET_LENGTH]);
 
 impl DecryptionKey {
+
+    /// Decrypts AES-GCM encrypted `data` using the provided `nonce` and additional authenticated data (AAD).
+    ///
+    /// # Arguments
+    ///
+    /// - `data` - The encrypted ciphertext.
+    /// - `nonce` - The nonce used during encryption (must be the same as used to encrypt).
+    /// - `aad` - The additional authenticated data that was passed to the encrypting function.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Vec<u8>)` - The decrypted plaintext if decryption is successful.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+    /// 
     pub fn decrypt(
         &self,
         data: &[u8],
@@ -1368,6 +1551,22 @@ impl DecryptionKey {
         Ok(output)
     }
 
+    /// Decrypts a [`Challenge`] value using a fixed nonce.
+    /// This is the inverse of `EncryptionKey::encrypt_challenge` and is only valid if
+    /// the challenge was encrypted with the same key and the static nonce `"hello world!"`.
+    ///
+    /// # Arguments
+    ///
+    /// - `data` - A challenge containing the encrypted data.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Vec<u8>)` - The decrypted bytes if successful.
+    /// 
+    /// # Errors
+    /// 
+    /// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+    /// 
     pub(crate) fn decrypt_challenge(&self, data: &Challenge) -> Result<Vec<u8>, X3DHError> {
         let nonce = b"hello world!";
         let nonce = Nonce::from_slice(nonce);
@@ -1378,17 +1577,34 @@ impl DecryptionKey {
 }
 
 impl From<SharedSecret> for DecryptionKey {
+
+    /// Derives an [`DecryptionKey`] from a [`SharedSecret`].
+    ///
+    /// # Arguments
+    ///
+    /// - `value` - A shared secret.
+    ///
+    /// # Returns
+    ///
+    /// - [`DecryptionKey`] - The derived decryption key.
+    ///
     fn from(value: SharedSecret) -> DecryptionKey {
         DecryptionKey(value.0)
     }
 }
 
 impl AsRef<[u8; AES256_SECRET_LENGTH]> for DecryptionKey {
+
+    /// Returns a shared reference to the current [`DecryptionKey`].
+    /// 
+    /// # Returns
+    /// 
+    /// - `&[u8; AES256_SECRET_LENGTH]` - The shared reference.
+    ///
     fn as_ref(&self) -> &[u8; AES256_SECRET_LENGTH] {
         &self.0
     }
 }
-
 
 #[cfg(test)]
 mod tests {
