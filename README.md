@@ -115,11 +115,11 @@ Here's an overview of the server and clients in action (with two clients for dem
 
 # Contacts
 
-Matteo Bordignon - [matteo.bordignon@studenti.unitn.it](mailto:matteo.bordignon@studenti.unitn.it)
+Matteo Bordignon -- [matteo.bordignon@studenti.unitn.it](mailto:matteo.bordignon@studenti.unitn.it)
 
-Alessandro Perez - [alessandro.perez@studenti.unitn.it](mailto:alessandro.perez@studenti.unitn.it)
+Alessandro Perez -- [alessandro.perez@studenti.unitn.it](mailto:alessandro.perez@studenti.unitn.it)
 
-Christian Sassi - [christian.sassi@studenti.unitn.it](mailto:christian.sassi@studenti.unitn.it)
+Christian Sassi -- [christian.sassi@studenti.unitn.it](mailto:christian.sassi@studenti.unitn.it)
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/extras/dark.png">
