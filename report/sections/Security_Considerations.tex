@@ -1,4 +1,137 @@
 \chapter{Security Considerations}
 \label{cha:Security}
-aaaaaaaaaaaaaaaaa
 
+In this chapter we are going to discuss in more details the criptographich principles that ensure security. Firstly we are going to analyze X3DH and later the double ratchet mechanism. But before starting we need to define some preliminaries used in each of the two algorithms.
+
+\section{Preliminaries}
+\label{sec:Preliminaries}
+
+As explained above an application using X3DH must decide on several parameters:
+
+\vspace{0.5cm}
+\begin{center}
+\begin{tabular}{>{\itshape}l p{10cm}}
+\toprule
+Name & Definition \\
+\midrule
+curve & X25519 or X448 \\
+hash & A 256 or 512-bit hash function (e.g. SHA-256 or SHA-512) \\
+info & An ASCII string identifying the application \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+In our protocol we used \textbf{X25519}, as hash \textbf{SHA}. An application must additionally define an encoding function Encode(PK) to encode an X25519 or X448 public key PK into a byte sequence. Since we decided to implement only one of the two curves there was no need to differentiate between them.
+
+\section{Cryptographic Notation}
+\label{sec:Crytpographic Notation}
+
+The used notation in this chapter is:
+
+\begin{itemize}
+  \item The concatenation of byte sequences \textbf{X} and \textbf{Y} is $\textbf{X} \| \textbf{Y}$
+  \item $\textbf{DH(PK1,PK2)}$ represents a byte sequence which is the shared secret output from an Elliptic Curve Diffie-Hellman function involving the key pairs represented by public keys $PK1$ and $PK2$. The Elliptic Curve Diffie-Hellman function will be the $X25519$.
+  \item $\textbf{Sig(PK,M)}$ represents a byte sequence that is an \textbf{XEdDSA} signature on the byte sequence $M$ and verifies with public key $PK$, and which was created by signing $M$ with $PK$'s corresponding private key.
+  \item \textbf{KDF(KM)} represents 32 bytes of output from the $HKDF$ algorithm with inputs:
+  \begin{itemize}
+    \item $HKDF$ $input$ $key$ $material = F \| KM$, where $KM$ is an input byte sequence containing secret key material, and $F$ is a byte sequence containing $32$ $0xFF$. $F$ is used for cryptographic domain separation with $XEdDSA$.
+    \item $HKDF$ $salt =$ a zero-filled byte sequence with length equal to the $hash$ output length.
+    \item $HKDF$ $info =$ the $info$ parameter.
+  \end{itemize}
+\end{itemize}
+
+\section{Roles}
+\label{sec:Roles}
+
+The X3DH protocol involves theree parties: \textbf{Alice, Bob} and a \textbf{server}.
+
+\begin{itemize}
+  \item \textbf{Alice} wants to send to Bob some initial data using encryption, and also establish a shared secret key.
+  \item \textbf{Bob} wants to allow parties like Alice to establish a shared key with him and send encrypted data. However, Bob might be offline when Alice attempts to do this. To enable this, Bob has a relationship with some server.
+  \item \textbf{The server} can store messages from Alice to Bob which Bob can later retrieve. The server also lets Bob publish some data which the server will provide to parties like Alice.
+\end{itemize}
+
+\section{Keys}
+\label{sec:Keys}
+
+X3DH used the following elliptic curve keys:
+
+\begin{center}
+\begin{tabular}{>{\itshape}l l}
+\toprule
+Name & Definition \\
+\midrule
+$IK_A$ & Alice’s identity key \\
+$EK_A$ & Alice’s ephemeral key \\
+$IK_B$ & Bob’s identity key \\
+$SPK_B$ & Bob’s signed prekey \\
+$OPK_B$ & Bob’s one-time prekey \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All public keys have a corresponding private key, but to simplify description we will focus on the public keys. Each party has a long-term identity public key ($IK_A$ for Alice, $IK_B$ for Bob). Bob also has a signed prekey $SPK_B$, which he will change periodically, and a set of one-time prekeys $OPK_B$, which are each used in a single X3DH protocol run. During each protocol run, Alice generates a new ephemeral key pair with pubic key $EK_A$. After a successful protocol run Alice and Bob will share a 32-byte secret key $SK$ that later will be used a root key for the double ratchet.
+
+\section{The X3DH protocol}
+\label{sec:TheX3DHProtocol}
+
+X3DH has three pahses:
+
+\begin{enumerate}
+  \item Bob publishes his identity key and prekeys to a server.
+  \item Alice fetches a prekey bundle from the server, and uses it to send an initial message to Bob.
+  \item Bob receives and processes Alice's initial message.
+\end{enumerate}
+
+\section{Publishing Keys}
+\label{sec:PublishingKeys}
+
+Bob publishes a set of elliptic curve public keys to the server, containing:
+
+\begin{itemize}
+  \item Bob's identity key $IK_B$
+  \item Bob's signed prekey $SPK_B$
+  \item Bob's prekey signature $Sig(IK_B, Encode(SPK_B))$
+  \item A set of Bob's one-time prekeys $(OPK_B^1, OPK_B^2, OPK_B^3, ...)$
+\end{itemize}
+
+Bob only needs to upload his identity key to the server once. However, Bob may upload new one-time prekeys at other times. Bob will also upload a new signed prekey and prekey signature at some interval. The new signed prekey and prekey signature will replace the previous values.
+
+\section{Sending the Initial Message}
+\label{sec:SendingTheInitialMessage}
+
+To perform an X3DH key agreement with Bob, Alice contacts the server and fetches a prekey bundle containing the following values:
+  
+\begin{itemize}
+  \item Bob's identity key $IK_B$
+  \item Bob's signed prekey $SPK_B$
+  \item Bob's prekey signature $Sig(IK_B, Encode(SPK_B))$
+  \item Bob's one-time prekey $OPK_B$
+\end{itemize}
+
+The serve provides one of Bob's one-time prekeys, and then delete it. Alice verifies the prekey signature and aborts the protocol if verification fails. Alice then generates an ephemeral key pair with public key $EK_A$.
+
+Alice calculates:
+
+\begin{itemize}
+  \item $DH1 = DH(IK_A, SPK_B)$
+  \item $DH2 = DH(EK_A, IK_B)$
+  \item $DH3 = DH(EK_A, SPK_B)$
+  \item $DH4 = DH(EK_A, OPK_B)$
+  \item $SK = KDF(DH1 \| DH2 \| DH3 \| DH4)$
+\end{itemize}
+
+Note that $DH1$ and $DH2$ provide mutual authentication, while $DH3$ and $DH4$ provide forward secrecy. After calculating $SK$, Alice deletes her ephemeral private key and the $DH$ outputs. Alice then calculates an AD byte sequence that contains identity information for both parties: $AD = Encode(IK_A) \| Encode(IK_B)$.
+
+Alice then sends Bob an initial message containing:
+
+\begin{itemize}
+  \item Alice's identity key $IK_A$
+  \item Alice's ephemeral key $EK_A$
+  \item Identifiers starting which of Bob's prekeys Alice used
+  \item An initial ciphertext encrypted with AES-GCM using AD as associated data.
+\end{itemize}
+
+This first ciphertext is used both as the first message within the double ratchet, and as part of Alice's X3DH initial message.

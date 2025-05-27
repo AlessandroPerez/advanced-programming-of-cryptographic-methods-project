@@ -32,5 +32,12 @@
 \contentsline {subsection}{\numberline {3.4.4}Terminal User Interface (TUI)}{16}{subsection.3.4.4}%
 \contentsline {subsection}{\numberline {3.4.5}Utilities}{16}{subsection.3.4.5}%
 \contentsline {chapter}{\numberline {4}Security Considerations}{17}{chapter.4}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{18}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{19}{chapter.6}%
+\contentsline {section}{\numberline {4.1}Preliminaries}{17}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Cryptographic Notation}{17}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Roles}{18}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Keys}{18}{section.4.4}%
+\contentsline {section}{\numberline {4.5}The X3DH protocol}{19}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Publishing Keys}{19}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Sending the Initial Message}{20}{section.4.7}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{22}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{23}{chapter.6}%
