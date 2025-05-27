@@ -114,16 +114,16 @@ To prevent \textbf{replay attacks}, \textbf{One-Time Pre-Keys (OTPKs)} are incor
     \item A vector of \textbf{private One-Time Pre-Keys}.
 \end{itemize}
 
-\noindent This approach ensures that each session can maintain \textbf{forward secrecy} while mitigating potential security risks such as \textbf{key reuse and replay attacks}.
+This approach ensures that each session can maintain \textbf{forward secrecy} while mitigating potential security risks such as \textbf{key reuse and replay attacks}.
 
 \subsection{Pre-Key Bundle Processing}
 \label{subsec:Pre-KeyBundleProcessing}
 
 The function responsible for processing \textbf{Pre-Key Bundles} is \texttt{process\_prekey\_bundle()}, which takes as input the received bundle and the receiver's \textbf{Private Identity Key}.
 
-\noindent The function first verifies the signature contained in the bundle to ensure its authenticity. After validation, it performs the \textbf{X3DH (Extended Triple Diffie-Hellman) key agreement protocol} to derive the shared secret. This is done by passing the secret obtained from the three Diffie-Hellman exchanges through a \textbf{Key Derivation Function (KDF)} to generate the final 32-byte shared key.  
+The function first verifies the signature contained in the bundle to ensure its authenticity. After validation, it performs the \textbf{X3DH (Extended Triple Diffie-Hellman) key agreement protocol} to derive the shared secret. This is done by passing the secret obtained from the three Diffie-Hellman exchanges through a \textbf{Key Derivation Function (KDF)} to generate the final 32-byte shared key.  
 
-\noindent Once the shared key is established, an \textbf{Initial Message (IM)} is generated, containing the following components:  
+Once the shared key is established, an \textbf{Initial Message (IM)} is generated, containing the following components:  
 
 \begin{itemize}  
     \item The receiver's \textbf{Public Identity Key};  
@@ -133,74 +133,83 @@ The function responsible for processing \textbf{Pre-Key Bundles} is \texttt{proc
     \item \textbf{Associated Data}, which includes the Public Identity Keys of both the sender and receiver.  
 \end{itemize}  
 
-\noindent The function then returns the shared key and the initial message.
+The function then returns the shared key and the initial message.
 
-\paragraph{Initial Message Processing}  
-\sloppy  
-The functions responsible for processing the \textbf{Initial Message} are \texttt{process\_server\_initial\_message()} and \texttt{process\_initial\_message()}. These two functions are equivalent, except that the former additionally verifies whether the \textbf{Server's Public Identity Key} provided as input matches the one included in the Initial Message.  
+\subsection{Initial Message Processing}
+\label{subsec:InitialMessageProcessing}
 
-\noindent Both functions take as input the received Initial Message, the receiver's \textbf{Private Identity Key}, \textbf{Private Signed Key}, and \textbf{Private One-Time Pre-Key (OTPK)}. They compute the three Diffie-Hellman (3DH) secrets and pass the resulting value through a \textbf{Key Derivation Function (KDF)} to derive the 32-byte shared key. Finally, they return the computed shared key.  
+The functions responsible for processing the \textbf{Initial Message} are respectively \\ \texttt{process\_server\_initial\_message()} and \texttt{process\_initial\_message()}. These two functions are equivalent, except that the former additionally verifies whether the \textbf{Server's Public Identity Key} provided as input matches the one included in the Initial Message.  
 
-\paragraph{AES Encryption}  
-\sloppy  
-The function responsible for AES encryption is \texttt{encrypt()}. This function takes as input the encryption key, the data to be encrypted, and the \textbf{Associated Data (AD)}.  
+Both functions take as input the received Initial Message, the receiver's \textbf{Private Identity Key}, \textbf{Private Signed Key}, and \textbf{Private One-Time Pre-Key (OTPK)}. They compute the three Diffie-Hellman (3DH) secrets and pass the resulting value through a \textbf{Key Derivation Function (KDF)} to derive the 32-byte shared key. Finally, they return the computed shared key.  
 
-\noindent First, it generates a nonce using the Cryptographically Secure Pseudo Random Number Generator (CSPRNG) provided by the \texttt{rand} crate in Rust (OsRng). Then, it constructs the payload and performs AES-GCM encryption. Finally, it concatenates the nonce, the associated data, and the ciphertext before returning the result as a \textbf{Base64-encoded string}.  
+\subsection{AES Encryption}
+\label{subsec:AESEncryption}
 
+The function responsible for AES encryption is \texttt{encrypt()}. This function takes as input the encryption key, the data to be encrypted, and the \textbf{Associated Data (AD)}.
 
-\paragraph{AES Decryption}  
-\sloppy  
-The function responsible for AES decryption is \texttt{decrypt()}. It takes as input the decryption key, the cipher text to be decrypted, and the \textbf{Associated Data (AD)} and the \textbf{Nonce}.  
+First, it generates a nonce using the Cryptographically Secure Pseudo Random Number Generator (CSPRNG) provided by the \texttt{rand} crate in Rust (OsRng). Then, it constructs the payload and performs AES-GCM encryption. Finally, it concatenates the nonce, the associated data, and the ciphertext before returning the result as a \textbf{Base64-encoded string}.
 
-\noindent This function checks for integrity and then performs the inverse operation of the encryption process if the message has not been tampered with. Finally, it returns the decrypted data as a \textbf{byte vector}.  
+\subsection{AES Decryption}
+\label{subsec:AESDecryption}
 
-\subsubsection{Server}  
-\sloppy  
+The function responsible for AES decryption is \texttt{decrypt()}. It takes as input the decryption key, the cipher text to be decrypted, and the \textbf{Associated Data (AD)} and the \textbf{Nonce}.
+
+This function checks for integrity and then performs the inverse operation of the encryption process if the message has not been tampered with. Finally, it returns the decrypted data as a \textbf{byte vector}.
+
+\subsubsection{Server}
+\label{subsec:Server}
+
 The server implementation is built on an asynchronous runtime provided by the \texttt{tokio} library in Rust. This library enables the server to perform non-blocking asynchronous operations, improving both flexibility and performance.  
 
-\noindent Each new connection is handled by a separate Tokio task, allowing the server to efficiently manage multiple concurrent connections. For each \textbf{Connection task}, two additional Tokio tasks are generated:
+Each new connection is handled by a separate Tokio task, allowing the server to efficiently manage multiple concurrent connections. For each \textbf{Connection task}, two additional Tokio tasks are generated:
+
 \begin{itemize}
     \item the first task (\texttt{task\_receiver}) continuously listen for incoming requests;
     \item the second task (\texttt{task\_sender}) forwards messages to the client;
 \end{itemize}
 
-\paragraph{Task Receiver}  
-\sloppy  
-This task continuously listens for incoming requests on the WebSocket connection from the client. It exposes four API endpoints:  
+\subsection{Task Receiver}
+\label{subsec:TaskReceiver}
 
-\begin{itemize}  
-    
-  \item \texttt{establish\_connection}: Used to establish a secure connection between the client and the server. This API endpoint is handled by the function \\ \texttt{handle\_establish\_connection()}, which first verifies whether the Pre-Key bundle is correctly formatted. If the verification is successful, the function calls \texttt{process\_key\_bundle()} to generate the shared secret; otherwise, it returns an error. Once the shared secret is derived, it is stored in a shared variable called \texttt{session}, allowing both tasks to access it.  
-    This endpoint is only accessible if no shared secret exists, meaning that a secure connection has not yet been established.  
+This task continuously listens for incoming requests on the WebSocket connection from the client. It exposes four API endpoints:
 
-    \item \texttt{register}:  
-    Accessible once the secure connection is established, allowing the client to register within the application. This API endpoint is handled by the function \texttt{handle\_registration\_request()}, which first performs the necessary username validation (ensuring it is alphanumeric and not already in use). It then verifies whether the Pre-Key bundle is well-formed. If all checks pass, the user is registered in the system and it sends back a confirmation response.  
+\begin{itemize}
+    \item \texttt{establish\_connection}: Used to establish a secure connection between the client and the server. This API endpoint is handled by the function \\
+    \texttt{handle\_establish\_connection()}, which first verifies whether the Pre-Key bundle is correctly formatted. If the verification is successful, the function calls  \\
+    \texttt{process\_key\_bundle()} to generate the shared secret; otherwise, it returns an error. Once the shared secret is derived, it is stored in a shared variable called \texttt{session}, allowing both tasks to access it. This endpoint is only accessible if no shared secret exists, meaning that a secure connection has not yet been established.
 
-    \item \texttt{get\_user\_bundle}:  
-    Accessible after the secure connection is established, enabling the client to retrieve a user's key bundle. This API endpoint is handled by the function \texttt{handle\_get\_bundle\_request()}, which verifies whether the requested user is registered in the system. If the user exists, the function generates a response containing the corresponding key bundle; otherwise, it returns a \texttt{User Not Found} error.  
+    \item \texttt{register}: Accessible once the secure connection is established, allowing the client to register within the application. This API endpoint is handled by the function \texttt{handle\_registration\_request()}, which first performs the necessary username validation (ensuring it is alphanumeric and not already in use). It then verifies whether the Pre-Key bundle is well-formed. If all checks pass, the user is registered in the system and it sends back a confirmation response.
 
-    \item \texttt{send\_message}:  
-    Available once the secure connection is established, allowing the client to exchange messages with other users. This API endpoint is handled directly by the task. It first checks whether the recipient is registered (and thus connected) to the system. If the recipient is online, the task forwards the message to the recipient's sender task, which then delivers it to the recipient's client.  
-\end{itemize}  
+    \item \texttt{get\_user\_bundle}: Accessible after the secure connection is established, enabling the client to retrieve a user's key bundle. This API endpoint is handled by the function \texttt{handle\_get\_bundle\_request()}, which verifies whether the requested user is registered in the system. If the user exists, the function generates a response containing the corresponding key bundle; otherwise, it returns a \texttt{User Not Found} error.
 
-\noindent All API requests received after the secure connection is established are decrypted upon arrival, and all responses are encrypted before being sent to the client. 
+    \item \texttt{send\_message}: Available once the secure connection is established, allowing the client to exchange messages with other users. This API endpoint is handled directly by the task. It first checks whether the recipient is registered (and thus connected) to the system. If the recipient is online, the task forwards the message to the recipient's sender task, which then delivers it to the recipient's client.
+\end{itemize}
 
-\paragraph{Task Sender}  
-\sloppy  
-The Task Sender is responsible for message forwarding. It continuously listens on an \texttt{mpsc channel} for incoming messages. Upon receiving a message, it encrypts the content using the session key shared between the recipient client and the server, ensuring secure communication. Once the message is encrypted, it forwards the encrypted message to the recipient.  
+All API requests received after the secure connection is established are decrypted upon arrival, and all responses are encrypted before being sent to the client. 
 
-\noindent  
+\subsection{Task Sender}
+\label{subsec:TaskSender}
+
+The Task Sender is responsible for message forwarding. It continuously listens on a \texttt{mpsc channel} for incoming messages. Upon receiving a message, it encrypts the content using the session key shared between the recipient client and the server, ensuring secure communication. Once the message is encrypted, it forwards the encrypted message to the recipient.
+
 The content of messages is encrypted using the shared key between the two clients. The \texttt{send\_message} request undergoes two layers of encryption: first, the message text is encrypted with the shared key between the clients, and then the entire request is encrypted using the shared key between the client and the server, ensuring end-to-end security.
 
-\subsubsection{Client \& TUI}  
+\subsection{Client \& TUI}
+\label{subsec:ClientTUI}
+
 The client backend also utilizes \texttt{tokio} for asynchronous runtime. When a new client is created (i.e., when the TUI program is started), it attempts to establish a secure connection with the server. If successful, it spawns a Tokio listener task, which continuously listens for incoming responses or new messages.  
 
-\noindent To manage the correlation between requests and responses, we introduced a struct called \texttt{RequestWrapper}. This struct contains two fields: \texttt{request\_uuid}, which uniquely identifies the request, and \texttt{body}, which holds the actual request to be sent to the server. When the server responds, it includes the same \texttt{request\_uuid} in the \texttt{ResponseWrapper}, allowing the client to match each response to its corresponding request.  
+To manage the correlation between requests and responses, we introduced a struct called \texttt{RequestWrapper}. This struct contains two fields: \texttt{request\_uuid}, which uniquely identifies the request, and \texttt{body}, which holds the actual request to be sent to the server. When the server responds, it includes the same \texttt{request\_uuid} in the \texttt{ResponseWrapper}, allowing the client to match each response to its corresponding request.  
 
-\noindent Chat messages, on the other hand, are handled as regular \texttt{send\_message} requests. When the client receives a message, it forwards it to a task running in the TUI binary, which listens for incoming messages on an \texttt{mpsc channel}. This task then invokes the appropriate handler to process the message and render it in the user interface.
+Chat messages, on the other hand, are handled as regular \texttt{send\_message} requests. When the client receives a message, it forwards it to a task running in the TUI binary, which listens for incoming messages on a \texttt{mpsc channel}. This task then invokes the appropriate handler to process the message and render it in the user interface.
 
-\subsection{Code Structure}
+\section{Code Structure}
+\label{sec:CodeStructure}
+
+%TODO la struttura e' cambiata aggiungendo la perte di dr
+
 The codebase is organized into five separate Cargo projects, each serving a distinct purpose:
+
 \begin{itemize}
     \item \textbf{Protocol}: A library that implements the cryptographic protocols used in the system, including X3DH and AES-GCM.
     \item \textbf{Common}: A shared library providing utility functions used by both the client and server.
@@ -208,37 +217,70 @@ The codebase is organized into five separate Cargo projects, each serving a dist
     \item \textbf{Client}: A library that facilitates client interactions with the server.
     \item \textbf{Tui}: Includes the TUI application binary, along with all files required for the user interface and front-end logic.
 \end{itemize}
-\subsection{Dependencies}
+
+\section{Dependencies}
 \label{sec:Dependecies}
+
+% TODO non sono sicuro se dr abbia aggiunto altre dependencies ma se si bisogna aggiungerle
+
 The implementation of \textbf{TRUST} application relies on several external Rust crates that provide critical functionalities such as asynchronous networking, cryptographic operations, and terminal user interface (TUI) rendering. All dependencies used in this project are well-known, actively maintained, and considered de facto standards in their respective domains, ensuring reliability, security, and long-term support. Below is an overview of the main dependencies.   
 
-\paragraph{Networking and Asynchronous Execution}  
-- \textbf{\texttt{tokio} (1.42.0)}: Provides the asynchronous runtime used throughout the application to handle concurrent tasks efficiently, enabling non-blocking communication between clients and the server.  
-- \textbf{\texttt{tokio-tungstenite} (0.26.1)}: A WebSocket library that integrates with Tokio, allowing real-time, bidirectional communication over WebSockets.  
-- \textbf{\texttt{futures} (0.3.31) \& \texttt{futures-util} (0.3.31)}: Provide abstractions for asynchronous programming, including streams and futures for handling asynchronous events.  
-- \textbf{\texttt{tokio-stream} (0.1.17)}: Enhances stream handling within Tokio-based applications, making it easier to process asynchronous data flows.  
+\subsection{Networking and Asynchronous Execution}
+\label{subsec:NetworkingAndAsynchronousExecution}
 
-\paragraph{Cryptography and Secure Communication}  
-- \textbf{\texttt{aes} (0.8.4) \& \texttt{aes-gcm} (0.10.3)}: Provide authenticated encryption for securing messages using the AES-GCM encryption scheme.  
-- \textbf{\texttt{rand} (0.8.5)}: A cryptographically secure random number generator, essential for generating nonces securely.  
-- \textbf{\texttt{ed25519-dalek} (2.1.1)}: Implements the Ed25519 signature scheme, ensuring authentication and integrity of messages.  
-- \textbf{\texttt{x25519-dalek} (2.0.1)}: Used for implementing the X3DH key exchange protocol, allowing secure key agreement between clients.  
-- \textbf{\texttt{curve25519-dalek} (4.1.3)}: Provides elliptic curve operations, specifically for Diffie-Hellman key exchange and digital signatures.  
-- \textbf{\texttt{sha2} (0.10.8)}: Implements the SHA-2 family of cryptographic hash functions, ensuring data integrity and secure hashing of credentials.  
-- \textbf{\texttt{hkdf} (0.12.4)}: Implements the HMAC-based Key Derivation Function (HKDF) used to derive cryptographic keys securely.  
-- \textbf{\texttt{zeroize} (1.8.1)}: Ensures that sensitive cryptographic data is securely erased from memory when no longer needed.  
+The list of dependencies used for the asynchronous execution is:
 
-\paragraph{Data Serialization and Parsing}  
-- \textbf{\texttt{serde} (1.0.216) \& \texttt{serde\_json} (1.0.137)}: Used for serializing and deserializing data exchanged between the client and server.  
-- \textbf{\texttt{base64} (0.22.1)}: Handles encoding and decoding of binary data, particularly for securely transmitting encrypted messages.  
+\begin{itemize}
+  \item \textbf{\texttt{tokio} (1.42.0)}: Provides the asynchronous runtime used throughout the application to handle concurrent tasks efficiently, enabling non-blocking communication between clients and the server.
+  \item \textbf{\texttt{tokio-tungstenite} (0.26.1)}: A WebSocket library that integrates with Tokio, allowing real-time, bidirectional communication over WebSockets.
+  \item \textbf{\texttt{futures} (0.3.31) \& \texttt{futures-util} (0.3.31)}: Provide abstractions for asynchronous programming, including streams and futures for handling asynchronous events.
+  \item \textbf{\texttt{tokio-stream} (0.1.17)}: Enhances stream handling within Tokio-based applications, making it easier to process asynchronous data flows.
+\end{itemize}
 
-\paragraph{Terminal User Interface (TUI)}  
-- \textbf{\texttt{ratatui} (0.29.0)}: A Rust TUI library used to create the command-line interface for the chat application.  
-- \textbf{\texttt{crossterm} (0.28.1)}: Provides cross-platform support for handling terminal input and output, including event handling and text rendering.  
+\subsection{Cryptography and Secure Communication}
+\label{subsec:CryptographyAndSecureCommunication}
 
-\paragraph{Utilities}  
-- \textbf{\texttt{uuid} (1.11.0)}: Used for generating unique request identifiers, allowing the system to match server responses with client requests.  
-- \textbf{\texttt{arrayref} (0.3.9)}: Provides utilities for working with fixed-size arrays, useful in cryptographic operations.  
+The list of dependencies used for cryptographic purposes on the other hand is:
 
-\noindent These dependencies collectively enable our application to provide secure, efficient, and user-friendly encrypted messaging.  
+\begin{itemize}
+  \item \textbf{\texttt{aes} (0.8.4) \& \texttt{aes-gcm} (0.10.3)}: Provide authenticated encryption for securing messages using the AES-GCM encryption scheme.
+  \item \textbf{\texttt{rand} (0.8.5)}: A cryptographically secure random number generator, essential for generating nonces securely.
+  \item \textbf{\texttt{ed25519-dalek} (2.1.1)}: Implements the Ed25519 signature scheme, ensuring authentication and integrity of messages.
+  \item \textbf{\texttt{x25519-dalek} (2.0.1)}: Used for implementing the X3DH key exchange protocol, allowing secure key agreement between clients.
+  \item \textbf{\texttt{curve25519-dalek} (4.1.3)}: Provides elliptic curve operations, specifically for Diffie-Hellman key exchange and digital signatures.
+  \item \textbf{\texttt{sha2} (0.10.8)}: Implements the SHA-2 family of cryptographic hash functions, ensuring data integrity and secure hashing of credentials.
+  \item \textbf{\texttt{hkdf} (0.12.4)}: Implements the HMAC-based Key Derivation Function (HKDF) used to derive cryptographic keys securely.
+  \item \textbf{\texttt{zeroize} (1.8.1)}: Ensures that sensitive cryptographic data is securely erased from memory when no longer needed.
+\end{itemize}
 
+\subsection{Data Serialization and Parsing}  
+\label{subsec:DataSerializatinAndParsin}
+
+The dependencies used for data serialization is:
+
+\begin{itemize}
+  \item \textbf{\texttt{serde} (1.0.216) \& \texttt{serde\_json} (1.0.137)}: Used for serializing and deserializing data exchanged between the client and server.
+  \item \textbf{\texttt{base64} (0.22.1)}: Handles encoding and decoding of binary data, particularly for securely transmitting encrypted messages.
+\end{itemize}
+
+\subsection{Terminal User Interface (TUI)}  
+\label{subsed:TerminalUserInterfaceTUI}
+
+For the TUI we chose the following dependencies:
+
+\begin{itemize}
+  \item \textbf{\texttt{ratatui} (0.29.0)}: A Rust TUI library used to create the command-line interface for the chat application.
+  \item \textbf{\texttt{crossterm} (0.28.1)}: Provides cross-platform support for handling terminal input and output, including event handling and text rendering.
+\end{itemize}
+
+\subsection{Utilities}
+\label{subsec:Utilities}
+
+Finally some extra packeges chosen for extra utilities are:
+
+\begin{itemize}
+  \item \textbf{\texttt{uuid} (1.11.0)}: Used for generating unique request identifiers, allowing the system to match server responses with client requests.
+  \item \textbf{\texttt{arrayref} (0.3.9)}: Provides utilities for working with fixed-size arrays, useful in cryptographic operations.
+\end{itemize}
+
+These dependencies collectively enable our application to provide secure, efficient, and user-friendly encrypted messaging.  

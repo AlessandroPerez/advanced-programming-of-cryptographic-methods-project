@@ -1,36 +1,36 @@
-\contentsline {chapter}{\numberline {1}Introduction}{2}{chapter.1}%
-\contentsline {section}{\numberline {1.1}Organization of the Report}{2}{section.1.1}%
-\contentsline {section}{\numberline {1.2}Overview of the Protocol}{3}{section.1.2}%
-\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman}{3}{subsection.1.2.1}%
-\contentsline {subsection}{\numberline {1.2.2}Double Ratchet}{3}{subsection.1.2.2}%
-\contentsline {chapter}{\numberline {2}Requirements}{4}{chapter.2}%
-\contentsline {section}{\numberline {2.1}Functional Requirements}{4}{section.2.1}%
-\contentsline {subsection}{\numberline {2.1.1}Server Functional Requirements}{4}{subsection.2.1.1}%
-\contentsline {subsubsection}{Client Functional Requirements}{4}{section*.2}%
-\contentsline {section}{\numberline {2.2}Security Requirements}{5}{section.2.2}%
-\contentsline {chapter}{\numberline {3}Technical Details}{6}{chapter.3}%
-\contentsline {section}{\numberline {3.1}Architecture}{6}{section.3.1}%
-\contentsline {subsection}{\numberline {3.1.1}Establishment of a Secure Connection}{7}{subsection.3.1.1}%
-\contentsline {subsection}{\numberline {3.1.2}User Registration}{7}{subsection.3.1.2}%
-\contentsline {subsection}{\numberline {3.1.3}Adding a Friend}{8}{subsection.3.1.3}%
-\contentsline {subsection}{\numberline {3.1.4}Sending Messages}{8}{subsection.3.1.4}%
-\contentsline {section}{\numberline {3.2}Implementation}{9}{section.3.2}%
-\contentsline {subsection}{\numberline {3.2.1}Key Generation for X3DH}{9}{subsection.3.2.1}%
-\contentsline {subsection}{\numberline {3.2.2}Pre-Key Bundle Processing}{10}{subsection.3.2.2}%
-\contentsline {paragraph}{Initial Message Processing}{10}{section*.5}%
-\contentsline {paragraph}{AES Encryption}{11}{section*.6}%
-\contentsline {paragraph}{AES Decryption}{11}{section*.7}%
-\contentsline {subsubsection}{Server}{11}{section*.8}%
-\contentsline {paragraph}{Task Receiver}{11}{section*.9}%
-\contentsline {paragraph}{Task Sender}{12}{section*.10}%
-\contentsline {subsubsection}{Client \& TUI}{12}{section*.11}%
-\contentsline {subsection}{\numberline {3.2.3}Code Structure}{13}{subsection.3.2.3}%
-\contentsline {subsection}{\numberline {3.2.4}Dependencies}{13}{subsection.3.2.4}%
-\contentsline {paragraph}{Networking and Asynchronous Execution}{13}{section*.12}%
-\contentsline {paragraph}{Cryptography and Secure Communication}{14}{section*.13}%
-\contentsline {paragraph}{Data Serialization and Parsing}{14}{section*.14}%
-\contentsline {paragraph}{Terminal User Interface (TUI)}{14}{section*.15}%
-\contentsline {paragraph}{Utilities}{14}{section*.16}%
-\contentsline {chapter}{\numberline {4}Security Considerations}{15}{chapter.4}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{16}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{17}{chapter.6}%
+\contentsline {chapter}{\numberline {1}Introduction}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Organization of the Report}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Overview of the Protocol}{4}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Double Ratchet}{4}{subsection.1.2.2}%
+\contentsline {chapter}{\numberline {2}Requirements}{5}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Functional Requirements}{5}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Server Functional Requirements}{5}{subsection.2.1.1}%
+\contentsline {subsubsection}{Client Functional Requirements}{5}{section*.2}%
+\contentsline {section}{\numberline {2.2}Security Requirements}{6}{section.2.2}%
+\contentsline {chapter}{\numberline {3}Technical Details}{7}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Architecture}{7}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}Establishment of a Secure Connection}{8}{subsection.3.1.1}%
+\contentsline {subsection}{\numberline {3.1.2}User Registration}{8}{subsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.1.3}Adding a Friend}{9}{subsection.3.1.3}%
+\contentsline {subsection}{\numberline {3.1.4}Sending Messages}{9}{subsection.3.1.4}%
+\contentsline {section}{\numberline {3.2}Implementation}{10}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Key Generation for X3DH}{10}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Pre-Key Bundle Processing}{11}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Initial Message Processing}{11}{subsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.2.4}AES Encryption}{12}{subsection.3.2.4}%
+\contentsline {subsection}{\numberline {3.2.5}AES Decryption}{12}{subsection.3.2.5}%
+\contentsline {subsubsection}{Server}{12}{section*.5}%
+\contentsline {subsection}{\numberline {3.2.6}Task Receiver}{12}{subsection.3.2.6}%
+\contentsline {subsection}{\numberline {3.2.7}Task Sender}{13}{subsection.3.2.7}%
+\contentsline {subsection}{\numberline {3.2.8}Client \& TUI}{14}{subsection.3.2.8}%
+\contentsline {section}{\numberline {3.3}Code Structure}{14}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Dependencies}{14}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Networking and Asynchronous Execution}{15}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Cryptography and Secure Communication}{15}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Data Serialization and Parsing}{16}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}Terminal User Interface (TUI)}{16}{subsection.3.4.4}%
+\contentsline {subsection}{\numberline {3.4.5}Utilities}{16}{subsection.3.4.5}%
+\contentsline {chapter}{\numberline {4}Security Considerations}{17}{chapter.4}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{18}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{19}{chapter.6}%
