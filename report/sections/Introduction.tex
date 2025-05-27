@@ -1,0 +1,36 @@
+\chapter{Introduction}
+\label{cha:Inroduction}
+
+This report presents the design, implementation, and evaluation of \textbf{T.R.U.S.T.} (\textbf{T}he \textbf{R}ust \textbf{U}nique \textbf{S}ecure \textbf{T}alk), a terminal user interface (TUI)-based secure chat application developed in Rust. The primary objective of this project was to explore secure communication principles and implement a reliable end-to-end encryption system.
+
+To achieve this purpose we combined different cryptographic primitives to create a key agreement protocol based on \textbf{X3DH} \cite{x3dh} and later encrypt each message with a new key given by the key management scheme: \textbf{Double Ratchet} \cite{DoubleRachet} first introduced by Signal.
+
+The combination of the two gives resilience to both practical and complete leak of the encryption key during the same or different sessions as we will see in later chapters \ref{cha:Security}. More over thanks to the choice of \textbf{Rust} we are sure of not having memory issues or data race conditions, also when a variable is out-of scope we are sure it is set to zero before deleting it.
+
+\section{Organization of the Report}
+\label{sec:OrganizationReport}
+
+This document is organized as follows: Introduction \ref{cha:Inroduction} provides an overview of the application’s purpose and core functionalities; Requirements \ref{cha:Requirements} defines both the functional and security requirements; Technical Details \ref{cha:TechnicalDetails} outlines the system’s architecture, the main implementation decisions, and the code structure; Security Considerations \ref{cha:Security} discusses cryptographic measures and potential threats; Known Limitations \ref{cha:Limitations} highlights current constraints and possible improvements; and finally, Instructions for Installation and Execution \ref{cha:Installation} guides readers through setting up and running the application.
+
+\section{Overview of the Protocol}
+\label{sec:OverviewProtocol}
+
+The first step to achieve end-to-end encryption is to have a secure method of establishing a shared secrete. There exists many algorithms mainly based on public key cryptography, we decided to implement \textbf{X3DH}, both for its security derived by the Diffie-Hellman algorithm and the use of signatures to prevent miss-bindings compared to the classical implementation of Diffie-Hellman.
+
+\subsection {Extended Triple Diffie-Hellman}
+\label{subsec:ExtendedTripleDiffieHellman}
+
+X3DH establishes a shared secret key between two parties who mutually authenticate each other based on public keys. X3DH provides forward secrecy and cryptographic deniability.
+
+This choice was also due to the fact that X3DH is designed for asynchronous settings where one user (“Bob”) is offline but has published some information to a server. Another user (“Alice”) wants to use that information to send encrypted data to Bob, and also establish a shared secret key for future communication.
+
+Before exchanging keys with other users we first need to establish a secure connection between the user and the server so that the server can distribute the correct keys to whoever asks for them. This is done using X3DH between each user and the server we know that this process is secure because the public key of the server is hard-coded and a simple hash of the program ensures integrity.
+
+Once a shared key is established the user can request for any key bundle containing all the necessary keys to start a chat with another user. Now the user can start the establishment of a shared secrete with another user passing through the server. After the shared key is established the two parties will use the Double Ratchet to send and receive encrypted messages.
+
+\subsection{Double Ratchet}
+\label{subsec:DoubleRachet}
+
+The parties derive new keys for every message using \textbf{Double Ratchet}, so that earlier keys cannot be calculated from later ones. The parties also send Diffie-Hellman public values attached to their messages. The results of Diffie-Hellman calculations are mixed into the derived keys so that later keys cannot be calculated from earlier ones. These properties give some protection to earlier or later encrypted messages in case of a compromise of a party’s keys.
+
+Now that keys are derived we can send each of the messages encrypted using AES-GCM, an AEAD algorithm, which gives both CCA security and CI. Thanks to all of these algorithms we can have end-to-end encryption and ensure both confidentiality and integrity.

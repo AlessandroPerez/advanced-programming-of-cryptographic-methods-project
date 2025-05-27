@@ -1,0 +1,87 @@
+\documentclass[12pt]{report}
+\usepackage[left=2.5cm, right=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}   % For UTF-8 encoding
+\usepackage{lipsum}
+\usepackage{hyperref}
+\usepackage{amsfonts}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{graphicx}
+\graphicspath{{imgs/}}
+\usepackage{biblatex}
+\addbibresource{./sections/referecences.bib}
+\usepackage{listings}
+\author{Matteo Bordignon, Alessandro Perez, Christian Sassi}
+\title{
+    \includegraphics[width=0.7\textwidth]{./imgs/marchio_unitrento_colore_en.png} \\
+    \vspace{2 cm}
+    \large Advanced Programming of Cryptographic Methods\\
+    \vspace{1 cm}
+    \small Project Report \\
+    \vspace{1.5 cm}
+    \huge \textbf{The Rust Unique Secure Talk (T.R.U.S.T)} \\ 
+}
+\date{\today}
+
+\colorlet{punct}{red!60!black}
+\definecolor{background}{HTML}{EEEEEE}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
+
+\lstdefinelanguage{json}{
+    basicstyle=\normalfont\ttfamily,
+    numbers=left,
+    numberstyle=\scriptsize,
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    backgroundcolor=\color{background},
+    literate=
+     *{0}{{{\color{numb}0}}}{1}
+      {1}{{{\color{numb}1}}}{1}
+      {2}{{{\color{numb}2}}}{1}
+      {3}{{{\color{numb}3}}}{1}
+      {4}{{{\color{numb}4}}}{1}
+      {5}{{{\color{numb}5}}}{1}
+      {6}{{{\color{numb}6}}}{1}
+      {7}{{{\color{numb}7}}}{1}
+      {8}{{{\color{numb}8}}}{1}
+      {9}{{{\color{numb}9}}}{1}
+      {:}{{{\color{punct}{:}}}}{1}
+      {,}{{{\color{punct}{,}}}}{1}
+      {\{}{{{\color{delim}{\{}}}}{1}
+      {\}}{{{\color{delim}{\}}}}}{1}
+      {[}{{{\color{delim}{[}}}}{1}
+      {]}{{{\color{delim}{]}}}}{1},
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \maketitle
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\input{./sections/Introduction}
+
+\input{./sections/Requirements}
+
+\input{./sections/Technical_Details}
+
+\input{./sections/Security_Considerations}
+
+\input{./sections/Known_Limitations}
+
+\input{./sections/Installation}
+
+\printbibliography
+
+\end{document}

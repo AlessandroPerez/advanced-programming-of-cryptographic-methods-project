@@ -1,0 +1,44 @@
+\chapter{Requirements}
+\label{cha:Requirements}
+
+\textbf{TRUST} needs to follow a list of both \textbf{functional} requirements and \textbf{security} requirements, these properties are non negotiables, we implemented the application using these requirements as guidelines that helped us in choosing algorithms.
+
+\section{Functional Requirements}
+\label{sec:FunRequirements}
+
+This section defines the functional requirements of the system, outlining the core features and expected behaviors necessary for its operation. For this project we can split them further into two sub sets \textbf{server functional requirements} and \textbf{client functional requirements}.
+
+\subsection{Server Functional Requirements}
+\label{subsec:ServerFunctionalRequirements}
+
+The server must fulfill the following functional requirements:
+\begin{itemize}
+    \item \textbf{Manage user registration}
+    \item \textbf{Distribute public keys of registered users}
+    \item \textbf{Relay encrypted messages to their intended recipients}
+\end{itemize}
+The server cannot access the content of user messages; it can only identify the sender and recipient.
+
+\subsubsection{Client Functional Requirements}
+\label{ClientFunctionalRequirements}
+
+The client application, on the other hand, must meet the following requirements:\begin{itemize}
+    \item \textbf{Offer a user-friendly TUI}
+    \item \textbf{Allow users to register in the system}
+    \item \textbf{Enable users to add others to their contact list}
+    \item \textbf{Support message exchange between users}
+\end{itemize}
+This set of requirements should be enough to have a functional chat application, by adding the \textbf{security requirements} the application will also have: security of data in transit with end-to-end-encryption (E2EE).
+
+\section{Security Requirements}
+\label{sec:SecRequirements}
+
+In addition to the functional requirements, we have established the following security requirements:
+\begin{itemize}
+    \item \textbf{Server Authentication}: Clients must be able to verify the authenticity of the server.
+    \item \textbf{Client-Server Confidentiality}: Clients must be able to establish a shared secret with the server.
+    \item \textbf{End-to-End Confidentiality}: Clients must be able to establish a shared secret with other clients.
+    \item \textbf{End-to-End Integrity}: Clients must use shared secrets to encrypt, decrypt, and verify the integrity of messages exchanged with both the server and other clients.
+    \item \textbf{Forward Secrecy}: The compromise of a key must not affect the confidentiality of data exchanged previously.
+    \item\textbf{Self Healing (Post Compromise Security)}: even if an adversary temporarily compromises a user's device and obtains current session keys, future messages will remain secure as long as the device regains control and resumes proper ratcheting.
+\end{itemize}
