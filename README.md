@@ -28,9 +28,9 @@ The core of the project revolves around the **Extended Triple Diffie-Hellman** (
 
 Clone the repository:
 
-    ```bash
-    git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
-    ```
+```bash
+git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
+```
 
 > [!WARNING]  
 > There were some issues building the releases for macOS. However, you can still run the project by using `cargo run` in the [`server`](server) and [`tui`](tui) directories.
