@@ -58,18 +58,18 @@ You can modify the `config.toml` file located in the `config` directory to speci
 
 ### Server
 
-Start the server by executing the `server.*` script from the root directory. You should see something like:
+Start the server by executing `python server.py` from the root directory. You should see something like:
 
 <img alt="" src="assets/screenshots/server.png" width="100%">
 
 ### Client
 
-After the server is running, you can start the client by executing the `tui.*` script from the root directory.
+After the server is running, you can start the client by executing `python tui.py` from the root directory.
 
 The client operates in two modes:
 
 - **NORMAL**: Entered by pressing the `ESC` key. This mode allows interaction with the TUI. For a list of available key combinations, check the bottom of the TUI for instructions relevant to the current window.
-  
+
 - **INPUT**: Entered by pressing the `i` key. As the name suggests, this mode allows you to input text into the application’s input fields.
 
 #### Registration
@@ -115,11 +115,11 @@ Here's an overview of the server and clients in action (with two clients for dem
 
 # Contacts
 
-Matteo Bordignon -- [matteo.bordignon@studenti.unitn.it](mailto:matteo.bordignon@studenti.unitn.it)
+Matteo Bordignon - [matteo.bordignon@studenti.unitn.it](mailto:matteo.bordignon@studenti.unitn.it)
 
-Alessandro Perez -- [alessandro.perez@studenti.unitn.it](mailto:alessandro.perez@studenti.unitn.it)
+Alessandro Perez - [alessandro.perez@studenti.unitn.it](mailto:alessandro.perez@studenti.unitn.it)
 
-Christian Sassi -- [christian.sassi@studenti.unitn.it](mailto:christian.sassi@studenti.unitn.it)
+Christian Sassi - [christian.sassi@studenti.unitn.it](mailto:christian.sassi@studenti.unitn.it)
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/extras/dark.png">
