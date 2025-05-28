@@ -1,1 +1,0 @@
-.\tui\target\release\tui
