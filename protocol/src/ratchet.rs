@@ -15,16 +15,29 @@ use crate::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CURVE25519_PUB
 use crate::errors::RatchetError;
 use crate::errors::RatchetError::ConversionError;
 
-
-/// Represents a Diffie-Hellman key pair used in the ratchet process.
-/// The `RatchetKeyPair` struct contains a public key and a private key, and provides methods for generating a new key pair and performing Diffie-Hellman key exchange.
+/// A [`RatchetKeyPair`] consists of a public and private key, 
+/// used in the Diffie-Hellman ratchet process to generate new key pairs and perform key exchanges.
 #[derive(Clone)]
 pub struct RatchetKeyPair {
+    /// The public key component of the key pair.
+    /// For more information, see [`PublicKey`].
     public_key: PublicKey,
+
+    /// The private key component of the key pair.
+    /// For more information, see [`PrivateKey`].
     private_key: PrivateKey,
 }
 
 impl RatchetKeyPair {
+    /// Generates a new [`RatchetKeyPair`] with a freshly created private key
+    /// and its corresponding public key.
+    ///
+    /// If you want to create a [`RatchetKeyPair`] from an existing [`PrivateKey`] and [`PublicKey`],
+    /// see [`RatchetKeyPair::new_from`]
+    /// 
+    /// # Returns
+    /// 
+    /// - [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
     pub fn new() -> Self {
         let private_key = PrivateKey::new();
         let public_key = PublicKey::from(&private_key);
@@ -34,6 +47,16 @@ impl RatchetKeyPair {
         }
     }
 
+    /// Constructs a [`RatchetKeyPair`] from an existing private and public key.
+    ///
+    /// # Arguments
+    /// 
+    /// - `private_key` - The private key.
+    /// - `public_key` - The public key associated with the private key.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
     pub fn new_from(private_key: PrivateKey, public_key: PublicKey) -> Self {
         Self {
             public_key,
@@ -41,7 +64,16 @@ impl RatchetKeyPair {
         }
     }
 
-    /// Performs a Diffie-Hellman key exchange with another public key.
+    /// Performs a Diffie-Hellman key exchange with the provided public key.
+    /// This is used in the ratchet process to derive new shared secrets.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `other_public_key` - The public key of the other party involved in the key exchange.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`SharedSecret`] - A [`SharedSecret`] derived from this key pair's private key and the given public key.
     fn diffie_hellman(
         &self,
         other_public_key: &PublicKey,
@@ -50,22 +82,48 @@ impl RatchetKeyPair {
     }
 }
 
-
-/// Represents a header for the encrypted message.
+/// A [`Header`] represents a Double Ratchet header containing key and message state metadata for the encrypted message.
 #[derive(Clone)]
 struct Header {
-    dhs : PublicKey,
+
+    /// The sender's current Diffie-Hellman public key.
+    /// For more information, see [`PublicKey`].
+    dhs: PublicKey,
+
+    /// The previous chain length, indicating how many messages were sent under the previous sending chain.
     pn: u64,
+
+    /// The current message number in the sending chain.
     ns: u64,
 }
 
 impl Header {
+
+    /// The total byte length of the serialized [`Header`], which includes:
+    /// - the length of the public key ([`AES256_SECRET_LENGTH`])
+    /// - two `u64` values (`pn` and `ns`)
     const LENGTH: usize = AES256_SECRET_LENGTH + size_of::<u64>() * 2;
 
+    /// Constructs a new [`Header`] with the given public key and message counters.
+    ///
+    /// # Arguments
+    ///
+    /// - `dhs` – The sender's current Diffie-Hellman public key.
+    /// - `pn` – The number of messages sent in the previous sending chain (previous message number).
+    /// - `ns` – The message number in the current sending chain.
+    ///
+    /// # Returns
+    ///
+    /// - [`Header`] - A new [`Header`] instance containing the provided values.
     pub fn new(dhs: PublicKey, pn: u64, ns: u64) -> Self {
         Self { dhs, pn, ns }
     }
 
+    /// Converts each element of the [`Header`] into bytes.
+    ///
+    /// # Returns
+    ///
+    /// - `Vec<u8>` - A vector containing the byte representation of each element in the [`Header`].
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(self.dhs.as_ref());
@@ -79,6 +137,15 @@ impl TryFrom<&[u8; 48]> for Header {
 
     type Error = RatchetError;
 
+    /// Converts a vector into a [`PreKeyBundle`].
+    ///
+    /// # Returns
+    ///
+    /// - [`Header`] - The decoded [`Header`].
+    ///
+    /// # Errors
+    ///
+    /// - [`RatchetError::InvalidHeaderLength`] - Returned if `value` does not match the expected length of [`Header`] ([`Header::LENGTH`]).
     fn try_from(value: &[u8; 48]) -> Result<Self, Self::Error> {
         if value.len() != Self::LENGTH {
             return Err(RatchetError::InvalidHeaderLength(value.len()))
