@@ -39,5 +39,10 @@
 \contentsline {section}{\numberline {4.5}The X3DH protocol}{19}{section.4.5}%
 \contentsline {section}{\numberline {4.6}Publishing Keys}{19}{section.4.6}%
 \contentsline {section}{\numberline {4.7}Sending the Initial Message}{20}{section.4.7}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{22}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{23}{chapter.6}%
+\contentsline {section}{\numberline {4.8}Receiving the Initial Message}{21}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Security Considerations}{21}{section.4.9}%
+\contentsline {subsection}{\numberline {4.9.1}Authentication}{21}{subsection.4.9.1}%
+\contentsline {subsection}{\numberline {4.9.2}Protocol Replay}{21}{subsection.4.9.2}%
+\contentsline {subsection}{\numberline {4.9.3}Deniability}{22}{subsection.4.9.3}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{23}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{24}{chapter.6}%
