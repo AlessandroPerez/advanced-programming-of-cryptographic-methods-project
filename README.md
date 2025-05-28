@@ -3,8 +3,9 @@
 # Table of Contents
 
 - [Introduction](#introduction)
-- [Installation](#installation)
-- [Configuration](#configuration)
+- [Installation and Configuration](#installation-and-configuration)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
 - [Getting Started](#getting-started)
   - [Server](#server)
   - [Client](#client)
@@ -21,29 +22,20 @@
 **T**he **R**ust **U**nique **S**ecure **T**alk (T.R.U.S.T.) is a secure chat application with a terminal user interface (TUI), developed in Rust. This project focuses on exploring secure communication principles and implementing a robust end-to-end encryption system for reliable and private messaging. <br>
 The core of the project revolves around the **Extended Triple Diffie-Hellman** (**X3DH**) protocol for secure key establishment. Once a shared secret is established, the application switches to **AES-GCM** for symmetric message encryption. Together, these algorithms ensure end-to-end confidentiality and integrity of all communications.
 
-# Installation
+# Installation and Configuration
 
-1. Clone the repository:
+## Installation
+
+Clone the repository:
 
     ```bash
     git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
     ```
 
-2. **Depending on your operating system:**
-
-   - For **Unix-like systems** (e.g., *Linux*), use the provided bash scripts: [server.sh](server.sh) and [tui.sh](tui.sh).  
-     Before running them, make sure they are executable by running:
-     ```bash
-     chmod u+x server.sh tui.sh
-     ```
-
-   - For **Windows systems**, use the provided bat scripts: [server.bat](server.bat) and [tui.bat](tui.bat).
-
 > [!WARNING]  
 > There were some issues building the releases for macOS. However, you can still run the project by using `cargo run` in the [`server`](server) and [`tui`](tui) directories.
 
-
-# Configuration
+## Configuration
 
 You can modify the `config.toml` file located in the `config` directory to specify different application configurations:
 
@@ -64,7 +56,7 @@ Start the server by executing `python server.py` from the root directory. You sh
 
 ### Client
 
-After the server is running, you can start the client by executing `python tui.py` from the root directory.
+After the server is running, you can start one or more clients by executing `python tui.py` from the root directory.
 
 The client operates in two modes:
 
