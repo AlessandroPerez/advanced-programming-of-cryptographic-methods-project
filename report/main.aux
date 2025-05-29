@@ -15,10 +15,10 @@
 \newlabel{sec:OrganizationReport}{{1.1}{3}{Organization of the Report}{section.1.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {1.2}Overview of the Protocol}{4}{section.1.2}\protected@file@percent }
 \newlabel{sec:OverviewProtocol}{{1.2}{4}{Overview of the Protocol}{section.1.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman}{4}{subsection.1.2.1}\protected@file@percent }
-\newlabel{subsec:ExtendedTripleDiffieHellman}{{1.2.1}{4}{Extended Triple Diffie-Hellman}{subsection.1.2.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.2}Double Ratchet}{4}{subsection.1.2.2}\protected@file@percent }
-\newlabel{subsec:DoubleRachet}{{1.2.2}{4}{Double Ratchet}{subsection.1.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman Overview}{4}{subsection.1.2.1}\protected@file@percent }
+\newlabel{subsec:ExtendedTripleDiffieHellman Overview}{{1.2.1}{4}{Extended Triple Diffie-Hellman Overview}{subsection.1.2.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.2}Double Ratchet Overview}{4}{subsection.1.2.2}\protected@file@percent }
+\newlabel{subsec:DoubleRachetOverview}{{1.2.2}{4}{Double Ratchet Overview}{subsection.1.2.2}{}}
 \@writefile{toc}{\contentsline {chapter}{\numberline {2}Requirements}{5}{chapter.2}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
@@ -106,23 +106,66 @@
 \newlabel{sec:SendingTheInitialMessage}{{4.7}{20}{Sending the Initial Message}{section.4.7}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4.8}Receiving the Initial Message}{21}{section.4.8}\protected@file@percent }
 \newlabel{sec:ReceivingTheInitialMessage}{{4.8}{21}{Receiving the Initial Message}{section.4.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4.9}Security Considerations}{21}{section.4.9}\protected@file@percent }
-\newlabel{sec:SecurityConsideration}{{4.9}{21}{Security Considerations}{section.4.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.1}Authentication}{21}{subsection.4.9.1}\protected@file@percent }
-\newlabel{subsec:Authentication}{{4.9.1}{21}{Authentication}{subsection.4.9.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.2}Protocol Replay}{21}{subsection.4.9.2}\protected@file@percent }
-\newlabel{subsec:ProtocolReplay}{{4.9.2}{21}{Protocol Replay}{subsection.4.9.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.3}Deniability}{22}{subsection.4.9.3}\protected@file@percent }
-\newlabel{subsec:Deniability}{{4.9.3}{22}{Deniability}{subsection.4.9.3}{}}
-\@writefile{toc}{\contentsline {chapter}{\numberline {5}Known Limitations}{23}{chapter.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.9}Double Ratchet}{21}{section.4.9}\protected@file@percent }
+\newlabel{sec:DoubleRatchet}{{4.9}{21}{Double Ratchet}{section.4.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.1}KDF Chains}{21}{subsection.4.9.1}\protected@file@percent }
+\newlabel{subsec:KDF Chains}{{4.9.1}{21}{KDF Chains}{subsection.4.9.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.2}Symmetric-key ratchet}{23}{subsection.4.9.2}\protected@file@percent }
+\newlabel{subsec: Symmetric-keyRatchet}{{4.9.2}{23}{Symmetric-key ratchet}{subsection.4.9.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.3}Diffie-Hellman ratchet}{23}{subsection.4.9.3}\protected@file@percent }
+\newlabel{subsec:Diffie-HellmanRatchet}{{4.9.3}{23}{Diffie-Hellman ratchet}{subsection.4.9.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces \relax }}{24}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:dr1}{{4.1}{24}{\relax }{figure.caption.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.2}{\ignorespaces Bob's calculates his DH ratchet step}}{24}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:dr2}{{4.2}{24}{Bob's calculates his DH ratchet step}{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.3}{\ignorespaces \relax }}{25}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:dr3}{{4.3}{25}{\relax }{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.4}{\ignorespaces \relax }}{25}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:dr4}{{4.4}{25}{\relax }{figure.caption.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.5}{\ignorespaces \relax }}{26}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:dr5}{{4.5}{26}{\relax }{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.4}Combining both Ratchets}{26}{subsection.4.9.4}\protected@file@percent }
+\newlabel{subsec:CombiningBothRatchets}{{4.9.4}{26}{Combining both Ratchets}{subsection.4.9.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.6}{\ignorespaces \relax }}{27}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:dr6}{{4.6}{27}{\relax }{figure.caption.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.7}{\ignorespaces \relax }}{27}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:dr7}{{4.7}{27}{\relax }{figure.caption.13}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.8}{\ignorespaces \relax }}{28}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:dr8}{{4.8}{28}{\relax }{figure.caption.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.9}{\ignorespaces \relax }}{28}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:dr9}{{4.9}{28}{\relax }{figure.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.10}{\ignorespaces \relax }}{29}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:dr10}{{4.10}{29}{\relax }{figure.caption.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.5}Out-of-order messages}{29}{subsection.4.9.5}\protected@file@percent }
+\newlabel{Out-of-orderMessages}{{4.9.5}{29}{Out-of-order messages}{subsection.4.9.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.11}{\ignorespaces \relax }}{30}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:dr11}{{4.11}{30}{\relax }{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.10}Integration with X3DH}{30}{section.4.10}\protected@file@percent }
+\newlabel{sec:IntegrationWithX3DH}{{4.10}{30}{Integration with X3DH}{section.4.10}{}}
+\abx@aux@cite{0}{OTR}
+\abx@aux@segm{0}{0}{OTR}
+\@writefile{toc}{\contentsline {section}{\numberline {4.11}Security Considerations}{31}{section.4.11}\protected@file@percent }
+\newlabel{sec:SecurityConsideration}{{4.11}{31}{Security Considerations}{section.4.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11.1}Authentication}{31}{subsection.4.11.1}\protected@file@percent }
+\newlabel{subsec:Authentication}{{4.11.1}{31}{Authentication}{subsection.4.11.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11.2}Protocol Replay}{31}{subsection.4.11.2}\protected@file@percent }
+\newlabel{subsec:ProtocolReplay}{{4.11.2}{31}{Protocol Replay}{subsection.4.11.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11.3}Deniability}{31}{subsection.4.11.3}\protected@file@percent }
+\newlabel{subsec:Deniability}{{4.11.3}{31}{Deniability}{subsection.4.11.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11.4}Key Compromise}{31}{subsection.4.11.4}\protected@file@percent }
+\newlabel{subsec:KeyCompromise}{{4.11.4}{31}{Key Compromise}{subsection.4.11.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11.5}Server Trust}{32}{subsection.4.11.5}\protected@file@percent }
+\newlabel{subsec:ServerTrust}{{4.11.5}{32}{Server Trust}{subsection.4.11.5}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}Known Limitations}{33}{chapter.5}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\newlabel{cha:Limitations}{{5}{23}{Known Limitations}{chapter.5}{}}
-\@writefile{toc}{\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{24}{chapter.6}\protected@file@percent }
+\newlabel{cha:Limitations}{{5}{33}{Known Limitations}{chapter.5}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{34}{chapter.6}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\newlabel{cha:Installation}{{6}{24}{Instruction for Installation and Execution}{chapter.6}{}}
-\abx@aux@read@bbl@mdfivesum{B62241AA81F46CB71F7EB55A24AB3704}
+\newlabel{cha:Installation}{{6}{34}{Instruction for Installation and Execution}{chapter.6}{}}
+\abx@aux@read@bbl@mdfivesum{DAB62751765C202035350689CF1EEA4D}
 \abx@aux@defaultrefcontext{0}{DoubleRachet}{nty/global//global/global/global}
 \abx@aux@defaultrefcontext{0}{x3dh}{nty/global//global/global/global}
-\gdef \@abspage@last{26}
+\abx@aux@defaultrefcontext{0}{OTR}{nty/global//global/global/global}
+\gdef \@abspage@last{36}

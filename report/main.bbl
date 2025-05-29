@@ -45,7 +45,7 @@
       \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
       \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
-      \field{howpublished}{\url{https://signal.org/docs/specifications/doubleratchet/doubleratchet.pdf}}
+      \field{howpublished}{\url{ https://signal.org/docs/specifications/doubleratchet/doubleratchet.pdf }}
       \field{title}{The Double Ratchet Algorithm}
       \field{year}{2016}
     \endentry
@@ -78,6 +78,35 @@
       \field{howpublished}{\url{https://signal.org/docs/specifications/x3dh/x3dh.pdf}}
       \field{title}{The {X3DH} Key Agreement Protocol}
       \field{year}{2016}
+    \endentry
+    \entry{OTR}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=05f13570aaf9548ce8f7d33e9ae2cdfa}{%
+           family={N.\bibnamedelimi Borisov},
+           familyi={N\bibinitperiod\bibinitdelim B\bibinitperiod},
+           given={I.\bibnamedelimi Goldberg},
+           giveni={I\bibinitperiod\bibinitdelim G\bibinitperiod}}}%
+        {{hash=280d221db337c3558edebb32419e25e7}{%
+           family={Brewer},
+           familyi={B\bibinitperiod},
+           given={E.},
+           giveni={E\bibinitperiod}}}%
+      }
+      \strng{namehash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{fullhash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{fullhashraw}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{bibnamehash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{authorbibnamehash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{authornamehash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{authorfullhash}{8a4384a99d0718c89aa4363d7110704d}
+      \strng{authorfullhashraw}{8a4384a99d0718c89aa4363d7110704d}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{http://doi.acm.org/10.1145/1029179.1029200}}
+      \field{title}{Off-the-record Communication, or, Why Not to Use PGP}
+      \field{year}{2004}
     \endentry
   \enddatalist
 \endrefsection

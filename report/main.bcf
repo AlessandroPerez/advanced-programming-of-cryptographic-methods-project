@@ -2374,6 +2374,7 @@
   <bcf:section number="0">
     <bcf:citekey order="1" intorder="1">x3dh</bcf:citekey>
     <bcf:citekey order="2" intorder="1">DoubleRachet</bcf:citekey>
+    <bcf:citekey order="3" intorder="1">OTR</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="nty">

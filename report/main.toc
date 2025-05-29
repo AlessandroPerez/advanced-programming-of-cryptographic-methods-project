@@ -1,8 +1,8 @@
 \contentsline {chapter}{\numberline {1}Introduction}{3}{chapter.1}%
 \contentsline {section}{\numberline {1.1}Organization of the Report}{3}{section.1.1}%
 \contentsline {section}{\numberline {1.2}Overview of the Protocol}{4}{section.1.2}%
-\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman}{4}{subsection.1.2.1}%
-\contentsline {subsection}{\numberline {1.2.2}Double Ratchet}{4}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman Overview}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Double Ratchet Overview}{4}{subsection.1.2.2}%
 \contentsline {chapter}{\numberline {2}Requirements}{5}{chapter.2}%
 \contentsline {section}{\numberline {2.1}Functional Requirements}{5}{section.2.1}%
 \contentsline {subsection}{\numberline {2.1.1}Server Functional Requirements}{5}{subsection.2.1.1}%
@@ -40,9 +40,18 @@
 \contentsline {section}{\numberline {4.6}Publishing Keys}{19}{section.4.6}%
 \contentsline {section}{\numberline {4.7}Sending the Initial Message}{20}{section.4.7}%
 \contentsline {section}{\numberline {4.8}Receiving the Initial Message}{21}{section.4.8}%
-\contentsline {section}{\numberline {4.9}Security Considerations}{21}{section.4.9}%
-\contentsline {subsection}{\numberline {4.9.1}Authentication}{21}{subsection.4.9.1}%
-\contentsline {subsection}{\numberline {4.9.2}Protocol Replay}{21}{subsection.4.9.2}%
-\contentsline {subsection}{\numberline {4.9.3}Deniability}{22}{subsection.4.9.3}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{23}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{24}{chapter.6}%
+\contentsline {section}{\numberline {4.9}Double Ratchet}{21}{section.4.9}%
+\contentsline {subsection}{\numberline {4.9.1}KDF Chains}{21}{subsection.4.9.1}%
+\contentsline {subsection}{\numberline {4.9.2}Symmetric-key ratchet}{23}{subsection.4.9.2}%
+\contentsline {subsection}{\numberline {4.9.3}Diffie-Hellman ratchet}{23}{subsection.4.9.3}%
+\contentsline {subsection}{\numberline {4.9.4}Combining both Ratchets}{26}{subsection.4.9.4}%
+\contentsline {subsection}{\numberline {4.9.5}Out-of-order messages}{29}{subsection.4.9.5}%
+\contentsline {section}{\numberline {4.10}Integration with X3DH}{30}{section.4.10}%
+\contentsline {section}{\numberline {4.11}Security Considerations}{31}{section.4.11}%
+\contentsline {subsection}{\numberline {4.11.1}Authentication}{31}{subsection.4.11.1}%
+\contentsline {subsection}{\numberline {4.11.2}Protocol Replay}{31}{subsection.4.11.2}%
+\contentsline {subsection}{\numberline {4.11.3}Deniability}{31}{subsection.4.11.3}%
+\contentsline {subsection}{\numberline {4.11.4}Key Compromise}{31}{subsection.4.11.4}%
+\contentsline {subsection}{\numberline {4.11.5}Server Trust}{32}{subsection.4.11.5}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{33}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{34}{chapter.6}%

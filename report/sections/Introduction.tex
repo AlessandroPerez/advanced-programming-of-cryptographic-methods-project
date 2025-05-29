@@ -17,8 +17,8 @@ This document is organized as follows: Introduction \ref{cha:Inroduction} provid
 
 The first step to achieve end-to-end encryption is to have a secure method of establishing a shared secrete. There exists many algorithms mainly based on public key cryptography, we decided to implement \textbf{X3DH}, both for its security derived by the Diffie-Hellman algorithm and the use of signatures to prevent miss-bindings compared to the classical implementation of Diffie-Hellman.
 
-\subsection {Extended Triple Diffie-Hellman}
-\label{subsec:ExtendedTripleDiffieHellman}
+\subsection {Extended Triple Diffie-Hellman Overview}
+\label{subsec:ExtendedTripleDiffieHellman Overview}
 
 X3DH establishes a shared secret key between two parties who mutually authenticate each other based on public keys. X3DH provides forward secrecy and cryptographic deniability.
 
@@ -28,8 +28,8 @@ Before exchanging keys with other users we first need to establish a secure conn
 
 Once a shared key is established the user can request for any key bundle containing all the necessary keys to start a chat with another user. Now the user can start the establishment of a shared secrete with another user passing through the server. After the shared key is established the two parties will use the Double Ratchet to send and receive encrypted messages.
 
-\subsection{Double Ratchet}
-\label{subsec:DoubleRachet}
+\subsection{Double Ratchet Overview}
+\label{subsec:DoubleRachetOverview}
 
 The parties derive new keys for every message using \textbf{Double Ratchet}, so that earlier keys cannot be calculated from later ones. The parties also send Diffie-Hellman public values attached to their messages. The results of Diffie-Hellman calculations are mixed into the derived keys so that later keys cannot be calculated from earlier ones. These properties give some protection to earlier or later encrypted messages in case of a compromise of a party’s keys.
 

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.26)  28 MAY 2025 23:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.26)  29 MAY 2025 18:49
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -691,7 +691,7 @@ Package biblatex Info: ... file 'main.bbl' found.
  (./main.bbl)
 Package biblatex Info: Reference section=0 on input line 66.
 Package biblatex Info: Reference segment=0 on input line 66.
-<./imgs/marchio_unitrento_colore_en.png, id=188, 369.7815pt x 114.6684pt>
+<./imgs/marchio_unitrento_colore_en.png, id=225, 369.7815pt x 114.6684pt>
 File: ./imgs/marchio_unitrento_colore_en.png Graphic file (type png)
 <use ./imgs/marchio_unitrento_colore_en.png>
 Package pdftex.def Info: ./imgs/marchio_unitrento_colore_en.png  used on input line 70.
@@ -745,12 +745,12 @@ Chapter 3.
 [7
 
 ]
-<imgs/Websocket.png, id=293, 925.4575pt x 212.795pt>
+<imgs/Websocket.png, id=339, 925.4575pt x 212.795pt>
 File: imgs/Websocket.png Graphic file (type png)
 <use imgs/Websocket.png>
 Package pdftex.def Info: imgs/Websocket.png  used on input line 37.
 (pdftex.def)             Requested size: 377.62642pt x 86.83089pt.
-<imgs/secure-connection.png, id=294, 925.4575pt x 212.795pt>
+<imgs/secure-connection.png, id=340, 925.4575pt x 212.795pt>
 File: imgs/secure-connection.png Graphic file (type png)
 <use imgs/secure-connection.png>
 Package pdftex.def Info: imgs/secure-connection.png  used on input line 46.
@@ -797,24 +797,110 @@ Chapter 4.
 [19]
 
 [20]
+<imgs/KDF_Chain.png, id=425, 881.2925pt x 973.6375pt>
+File: imgs/KDF_Chain.png Graphic file (type png)
+<use imgs/KDF_Chain.png>
+Package pdftex.def Info: imgs/KDF_Chain.png  used on input line 156.
+(pdftex.def)             Requested size: 264.38979pt x 292.0935pt.
 
-[21]) (./sections/Known_Limitations.tex
 
-[22]
+[21]
+
+[22 <./imgs/KDF_Chain.png (PNG copy)>]
+
+[23]
+<imgs/dr1.png, id=439, 1035.87pt x 405.515pt>
+File: imgs/dr1.png Graphic file (type png)
+<use imgs/dr1.png>
+Package pdftex.def Info: imgs/dr1.png  used on input line 196.
+(pdftex.def)             Requested size: 258.96686pt x 101.3785pt.
+<imgs/dr2.png, id=441, 1039.885pt x 670.505pt>
+File: imgs/dr2.png Graphic file (type png)
+<use imgs/dr2.png>
+Package pdftex.def Info: imgs/dr2.png  used on input line 205.
+(pdftex.def)             Requested size: 259.97061pt x 167.62584pt.
+
+
+[24 <./imgs/dr1.png (PNG copy)> <./imgs/dr2.png (PNG copy)>]
+<imgs/dr3.png, id=450, 1037.8775pt x 879.285pt>
+File: imgs/dr3.png Graphic file (type png)
+<use imgs/dr3.png>
+Package pdftex.def Info: imgs/dr3.png  used on input line 216.
+(pdftex.def)             Requested size: 207.57182pt x 175.85388pt.
+<imgs/dr4.png, id=452, 1011.78pt x 1106.1325pt>
+File: imgs/dr4.png Graphic file (type png)
+<use imgs/dr4.png>
+Package pdftex.def Info: imgs/dr4.png  used on input line 225.
+(pdftex.def)             Requested size: 202.35242pt x 221.22258pt.
+
+
+[25 <./imgs/dr3.png (PNG copy)> <./imgs/dr4.png (PNG copy)>]
+<imgs/dr5.png, id=460, 1021.8175pt x 815.045pt>
+File: imgs/dr5.png Graphic file (type png)
+<use imgs/dr5.png>
+Package pdftex.def Info: imgs/dr5.png  used on input line 238.
+(pdftex.def)             Requested size: 306.54762pt x 244.51538pt.
+
+
+[26 <./imgs/dr5.png (PNG copy)>]
+<imgs/dr6.png, id=467, 1029.8475pt x 248.93pt>
+File: imgs/dr6.png Graphic file (type png)
+<use imgs/dr6.png>
+Package pdftex.def Info: imgs/dr6.png  used on input line 257.
+(pdftex.def)             Requested size: 308.95663pt x 74.67957pt.
+<imgs/dr7.png, id=469, 1019.81pt x 345.29pt>
+File: imgs/dr7.png Graphic file (type png)
+<use imgs/dr7.png>
+Package pdftex.def Info: imgs/dr7.png  used on input line 266.
+(pdftex.def)             Requested size: 305.94536pt x 103.58778pt.
+<imgs/dr8.png, id=471, 1011.78pt x 624.3325pt>
+File: imgs/dr8.png Graphic file (type png)
+<use imgs/dr8.png>
+Package pdftex.def Info: imgs/dr8.png  used on input line 275.
+(pdftex.def)             Requested size: 303.53633pt x 187.3012pt.
+<imgs/dr9.png, id=473, 1055.945pt x 798.985pt>
+File: imgs/dr9.png Graphic file (type png)
+<use imgs/dr9.png>
+Package pdftex.def Info: imgs/dr9.png  used on input line 284.
+(pdftex.def)             Requested size: 316.78595pt x 239.69734pt.
+<imgs/dr10.png, id=475, 1027.84pt x 1164.35pt>
+File: imgs/dr10.png Graphic file (type png)
+<use imgs/dr10.png>
+Package pdftex.def Info: imgs/dr10.png  used on input line 293.
+(pdftex.def)             Requested size: 308.35437pt x 349.3077pt.
+
+
+[27 <./imgs/dr6.png (PNG copy)> <./imgs/dr7.png (PNG copy)>]
+
+[28 <./imgs/dr8.png (PNG copy)> <./imgs/dr9.png (PNG copy)>]
+
+[29 <./imgs/dr10.png (PNG copy)>]
+<imgs/dr11.png, id=495, 997.7275pt x 803.0pt>
+File: imgs/dr11.png Graphic file (type png)
+<use imgs/dr11.png>
+Package pdftex.def Info: imgs/dr11.png  used on input line 311.
+(pdftex.def)             Requested size: 299.32056pt x 240.90186pt.
+
+
+[30 <./imgs/dr11.png (PNG copy)>]
+
+[31]) (./sections/Known_Limitations.tex
+
+[32]
 Chapter 5.
 ) (./sections/Installation.tex
 
-[23
+[33
 
 ]
 Chapter 6.
 )
 
-[24
+[34
 
 ]
 
-[25
+[35
 
 ] (./main.aux)
  ***********
@@ -822,24 +908,24 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 090B0C55728C5A0C9E06E19F915D373F;7333.
+(rerunfilecheck)             Checksum: E1997895EAEC2B9C76EE25CCD15E109A;8808.
 Package logreq Info: Writing requests to 'main.run.xml'.
 \openout1 = `main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 21598 strings out of 475171
- 372006 string characters out of 5767095
- 1326148 words of memory out of 5000000
- 44242 multiletter control sequences out of 15000+600000
+ 21770 strings out of 475171
+ 375003 string characters out of 5767095
+ 1327104 words of memory out of 5000000
+ 44382 multiletter control sequences out of 15000+600000
  569980 words of font info for 78 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  79i,8n,93p,790b,1406s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on main.pdf (26 pages, 297334 bytes).
+Output written on main.pdf (36 pages, 1001633 bytes).
 PDF statistics:
- 470 PDF objects out of 1000 (max. 8388607)
- 411 compressed objects within 5 object streams
- 102 named destinations out of 1000 (max. 500000)
- 384 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 601 PDF objects out of 1000 (max. 8388607)
+ 519 compressed objects within 6 object streams
+ 134 named destinations out of 1000 (max. 500000)
+ 516 words of extra memory for PDF output out of 10000 (max. 10000000)
 
