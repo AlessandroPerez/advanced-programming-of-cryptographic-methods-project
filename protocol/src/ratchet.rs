@@ -53,6 +53,9 @@ impl RatchetKeyPair {
 
     /// Constructs a [`RatchetKeyPair`] from an existing private and public key.
     ///
+    /// If you want to create a [`RatchetKeyPair`] without a [`PrivateKey`] and a [`PublicKey`],
+    /// see [`RatchetKeyPair::new`]
+    /// 
     /// # Arguments
     /// 
     /// * `private_key` - The private key.
@@ -141,7 +144,7 @@ impl TryFrom<&[u8; 48]> for Header {
 
     type Error = RatchetError;
 
-    /// Converts a vector into a [`PreKeyBundle`].
+    /// Converts a vector into a [`Header`].
     ///
     /// # Returns
     ///
