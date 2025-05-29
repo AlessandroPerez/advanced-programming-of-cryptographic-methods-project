@@ -7,7 +7,7 @@ These enums ensure precise error reporting and handling for various cryptographi
 The Double Ratchet ensures forward secrecy and post-compromise security by combining symmetric-key and Diffie-Hellman ratcheting.
 It manages the cryptographic state for sending and receiving messages, handling key derivation, message encryption,
 and decryption, including mechanisms for skipping and reordering messages.
-For more information, see the <a href="https://signal.org/docs/specifications/doubleratchet/">Signal Protocol specification</a>.</div></li><li><div class="item-name"><a class="mod" href="utils/index.html" title="mod protocol::utils">utils</a></div><div class="desc docblock-short">This module provides a collection of utility structures and helper functions essential for the cryptographic protocols.
+For more information, see the <a href="https://signal.org/docs/specifications/doubleratchet/">Signal Protocol specification: The Double Ratchet Algorithm</a>.</div></li><li><div class="item-name"><a class="mod" href="utils/index.html" title="mod protocol::utils">utils</a></div><div class="desc docblock-short">This module provides a collection of utility structures and helper functions essential for the cryptographic protocols.
 It defines fundamental data types such as <code>PublicKey</code>, <code>PrivateKey</code>, <code>SharedSecret</code>, <code>Signature</code>, and <code>AssociatedData</code>,
 along with their serialization, deserialization, and cryptographic operations (e.g., hashing, encryption, decryption).
 These utilities encapsulate common cryptographic operations and data representations,
@@ -15,4 +15,4 @@ supporting the X3DH and Double Ratchet implementations.</div></li><li><div class
 X3DH is used to establish a secure shared secret between two parties for end-to-end encrypted communication.
 It combines identity keys, signed pre-keys, and optional one-time pre-keys to provide strong authentication
 and forward secrecy, forming the initial key exchange for the Double Ratchet algorithm.
-For more information, see the <a href="https://signal.org/docs/specifications/x3dh/">Signal Protocol specification</a>.</div></li></ul></section></div></main></body></html>
+For more information, see the <a href="https://signal.org/docs/specifications/x3dh/">Signal Protocol specification: The X3DH Key Agreement Protocol</a>.</div></li></ul></section></div></main></body></html>

@@ -2,7 +2,7 @@
 //! X3DH is used to establish a secure shared secret between two parties for end-to-end encrypted communication.
 //! It combines identity keys, signed pre-keys, and optional one-time pre-keys to provide strong authentication
 //! and forward secrecy, forming the initial key exchange for the Double Ratchet algorithm.
-//! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/x3dh/).
+//! For more information, see the [Signal Protocol specification: The X3DH Key Agreement Protocol](https://signal.org/docs/specifications/x3dh/).
 
 use crate::constants::AES256_SECRET_LENGTH;
 use crate::errors::X3DHError;

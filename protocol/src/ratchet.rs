@@ -2,7 +2,7 @@
 //! The Double Ratchet ensures forward secrecy and post-compromise security by combining symmetric-key and Diffie-Hellman ratcheting.
 //! It manages the cryptographic state for sending and receiving messages, handling key derivation, message encryption,
 //! and decryption, including mechanisms for skipping and reordering messages.
-//! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/doubleratchet/).
+//! For more information, see the [Signal Protocol specification: The Double Ratchet Algorithm](https://signal.org/docs/specifications/doubleratchet/).
 
 use std::cmp::PartialEq;
 use std::collections::HashMap;
