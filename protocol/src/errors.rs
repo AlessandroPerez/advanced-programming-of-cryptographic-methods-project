@@ -1,10 +1,7 @@
-//! This module defines the error types used throughout the cryptographic protocol implementation.
-//! These error types encapsulate various error conditions from underlying cryptographic libraries
-//! and provide consistent error handling throughout the codebase.
-//! 
-//! The module provides two main error enums:
-//! - `X3DHError`: For errors related to the X3DH key agreement protocol.
-//! - `RatchetError`: For errors related to the Double Ratchet message encryption protocol.
+//! This module defines the custom error types used throughout the cryptographic protocol implementation.
+//! It provides two main error enums: `X3DHError` for errors specific to the X3DH key agreement protocol,
+//! and `RatchetError` for errors encountered during the Double Ratchet message encryption protocol.
+//! These enums ensure precise error reporting and handling for various cryptographic operations.
 
 use aes::cipher::crypto_common;
 use ed25519_dalek::SignatureError;

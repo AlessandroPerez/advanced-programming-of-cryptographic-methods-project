@@ -1,3 +1,9 @@
+//! This module provides a collection of utility structures and helper functions essential for the cryptographic protocols.
+//! It defines fundamental data types such as `PublicKey`, `PrivateKey`, `SharedSecret`, `Signature`, and `AssociatedData`,
+//! along with their serialization, deserialization, and cryptographic operations (e.g., hashing, encryption, decryption).
+//! These utilities encapsulate common cryptographic operations and data representations,
+//! supporting the X3DH and Double Ratchet implementations.
+
 use crate::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CHALLENGE_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH};
 use crate::errors::X3DHError;
 use aes_gcm::aead::{Aead, Buffer, Payload};

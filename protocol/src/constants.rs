@@ -1,3 +1,7 @@
+//! This module defines various cryptographic constants used throughout the protocol implementation.
+//! These constants specify fixed byte lengths for keys, hashes, nonces, and other cryptographic primitives,
+//! ensuring consistent sizing and preventing common errors related to buffer overflows or incorrect key derivations.
+
 /// Byte size of a Curve25519 private key.
 pub(crate) const CURVE25519_SECRET_LENGTH: usize = 32;
 
