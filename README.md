@@ -15,6 +15,8 @@
     - [Navigating Chats](#navigating-chats)
   - [Final Overview](#final-overview)
 - [Resources](#resources)
+  - [Report](#report)
+  - [Documentation](#documentation)
 - [Contacts](#contacts)
 
 # Introduction
@@ -103,7 +105,11 @@ Here's an overview of the server and clients in action (with two clients for dem
 
 # Resources
 
-[Report](report/report.pdf)
+## Report
+[Report](report/main.pdf)
+
+## Documentation
+[T.R.U.S.T.](https://christiansassi.github.io/advanced-programming-of-cryptographic-methods-project/)
 
 # Contacts
 
