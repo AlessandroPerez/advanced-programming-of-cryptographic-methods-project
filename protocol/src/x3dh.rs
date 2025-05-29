@@ -318,7 +318,6 @@ pub fn process_initial_message(
 /// * [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF fails due to incorrect output keying material length.
 /// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
 /// * [`X3DHError::InvalidKey`] - Returned if the decrypted challenge does not match the initiator's identity key.
-/// 
 pub fn process_server_initial_message(
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
