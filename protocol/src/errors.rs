@@ -11,9 +11,6 @@ use ed25519_dalek::SignatureError;
 use std::fmt::{Display, Formatter};
 
 /// Represents errors that can occur during the X3DH key agreement protocol.
-///
-/// This enum encapsulates various error conditions that might arise during key generation,
-/// signature verification, encryption/decryption operations, and format conversions.
 #[derive(Debug)]
 pub enum X3DHError {
 
@@ -56,12 +53,11 @@ impl Display for X3DHError {
     ///
     /// # Arguments
     ///
-    /// - `f` - A formatter used to write the error message.
+    /// * `f` - A formatter used to write the error message.
     ///
     /// # Returns
     ///
-    /// - `fmt::Result` - Indicating whether the operation succeeded or failed.
-    /// 
+    /// * `fmt::Result` - Indicating whether the operation succeeded or failed.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             X3DHError::InvalidSignature(e) => write!(f, "Invalid signature: {}", e),
@@ -118,10 +114,6 @@ impl From<base64::DecodeError> for X3DHError {
 }
 
 /// Represents errors that can occur during the Double Ratchet protocol.
-///
-/// This enum encapsulates various error conditions that might arise during
-/// message encryption, decryption, and ratchet operations in the Double Ratchet
-/// protocol used for secure messaging.
 #[derive(Debug)]
 pub enum RatchetError {
     /// Error indicating an invalid key material length during HKDF key derivation.
@@ -146,11 +138,11 @@ impl Display for RatchetError {
     ///
     /// # Arguments
     ///
-    /// - `f` - A formatter used to write the error message.
+    /// * `f` - A formatter used to write the error message.
     ///
     /// # Returns
     ///
-    /// - `fmt::Result` - Indicating whether the operation succeeded or failed.
+    /// * `fmt::Result` - Indicating whether the operation succeeded or failed.
     /// 
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
