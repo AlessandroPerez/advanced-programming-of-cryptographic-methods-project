@@ -109,7 +109,7 @@ Here's an overview of the server and clients in action (with two clients for dem
 [Report](report/main.pdf)
 
 ## Documentation
-[T.R.U.S.T.](https://christiansassi.github.io/advanced-programming-of-cryptographic-methods-project/)
+[The Rust Unique Secure Talk (T.R.U.S.T.)](https://christiansassi.github.io/advanced-programming-of-cryptographic-methods-project/)
 
 # Contacts
 
