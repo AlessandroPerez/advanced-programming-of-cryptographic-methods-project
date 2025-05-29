@@ -30,11 +30,10 @@ use sha2::Sha256;
 ///
 /// # Returns
 ///
-/// A tuple `(PreKeyBundle, PrivateKey, PrivateKey)` where:
-/// - [`PreKeyBundle`].
-/// - The first [`PrivateKey`] is the identity key.
-/// - The second [`PrivateKey`] is the signed pre-key.
-///
+/// * (PreKeyBundle, PrivateKey, PrivateKey) - A tuple where:
+///     * [`PreKeyBundle`].
+///     * The first [`PrivateKey`] is the identity key.
+///     * The second [`PrivateKey`] is the signed pre-key.
 pub fn generate_prekey_bundle()
     -> (PreKeyBundle, PrivateKey, PrivateKey) {
     // generate identity key
@@ -56,16 +55,15 @@ pub fn generate_prekey_bundle()
 ///
 /// # Arguments
 ///
-/// - `n` - The number of one-time pre-keys to generate.
+/// * `n` - The number of one-time pre-keys to generate.
 ///
 /// # Returns
 ///
-/// A tuple `(PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>)` where:
-/// - [`PreKeyBundle`].
-/// - The first [`PrivateKey`] is the identity key.
-/// - The second [`PrivateKey`] is the signed pre-key.
-/// - Vec<[`PrivateKey`]> - The list of generated one-time pre-keys.
-///
+/// * `(PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>)` - A tuple where:
+///     * [`PreKeyBundle`].
+///     * The first [`PrivateKey`] - The identity key.
+///     * The second [`PrivateKey`] - The signed pre-key.
+///     * Vec<[`PrivateKey`]> - The list of generated one-time pre-keys.
 pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, PrivateKey, Vec<PrivateKey>) {
 
     let mut otpk_private = Vec::new();
@@ -96,24 +94,22 @@ pub fn generate_prekey_bundle_with_otpk(n: u32) -> (PreKeyBundle, PrivateKey, Pr
 ///
 /// # Arguments
 ///
-/// - `ik` - The initiator’s private identity key.
-/// - `bundle` - The recipient’s `PreKeyBundle`, containing public identity and pre-keys.
+/// * `ik` - The initiator’s private identity key.
+/// * `bundle` - The recipient’s `PreKeyBundle`, containing public identity and pre-keys.
 ///
 /// # Returns
 ///
-/// `Ok((InitialMessage, EncryptionKey, DecryptionKey))` where:
-/// - [`InitialMessage`].
-/// - [`EncryptionKey`] - A symmetric key derived from the X3DH key agreement, used to encrypt messages.
-/// - [`DecryptionKey`] - A symmetric key derived from the X3DH key agreement, used to decrypt messages.
+/// * `Ok((InitialMessage, EncryptionKey, DecryptionKey))` - A tuple where:
+///     * [`InitialMessage`].
+///     * [`EncryptionKey`] - A symmetric key derived from the X3DH key agreement, used to encrypt messages.
+///     * [`DecryptionKey`] - A symmetric key derived from the X3DH key agreement, used to decrypt messages.
 ///
 /// # Errors
 ///
-/// [`X3DHError::InvalidSignature`] - Returned if the recipient's signed pre-key signature verification fails.
-///
+/// * [`X3DHError::InvalidSignature`] - Returned if the recipient's signed pre-key signature verification fails.
 pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
                             -> Result<(InitialMessage, EncryptionKey, DecryptionKey), X3DHError> {
     // process the prekey bundle
-
     bundle.verifying_key.verify(&bundle.sig, &bundle.spk.0)?;
 
     // create ephemeral private key
@@ -185,23 +181,21 @@ pub fn process_prekey_bundle(ik: PrivateKey, mut bundle: PreKeyBundle)
 ///
 /// # Arguments
 ///
-/// - `info` - An ASCII string that identifies the purpose or context of the derived keys (used as the HKDF `info` parameter).
-/// - `dh1` - The result of DH(SPKB, IKA), initiator's identity key with responder's signed pre-key.
-/// - `dh2` - The result of DH(IKB, EKA), responder's identity key with initiator's ephemeral key.
-/// - `dh3` - The result of DH(SPKB, EKA), responder's signed pre-key with initiator's ephemeral key.
-/// - `dh4` - The result of DH(OTPK, EKA), if a one-time pre-key was used.
+/// * `info` - An ASCII string that identifies the purpose or context of the derived keys (used as the HKDF `info` parameter).
+/// * `dh1` - The result of DH(SPKB, IKA), initiator's identity key with responder's signed pre-key.
+/// * `dh2` - The result of DH(IKB, EKA), responder's identity key with initiator's ephemeral key.
+/// * `dh3` - The result of DH(SPKB, EKA), responder's signed pre-key with initiator's ephemeral key.
+/// * `dh4` - The result of DH(OTPK, EKA), if a one-time pre-key was used.
 ///
 /// # Returns
 ///
-/// `Ok((SharedSecret, SharedSecret))` where:
-/// - The first [`SharedSecret`] is the encryption key used by the initiator.
-/// - The second [`SharedSecret`] is the decryption key used by the responder.
+/// * `Ok((SharedSecret, SharedSecret))` - A tuple where:
+///     * The first [`SharedSecret`] - The encryption key used by the initiator.
+///     * The second [`SharedSecret`] - The decryption key used by the responder.
 ///
 /// # Errors
 ///
-/// [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF expansion fails due to an invalid output length.
-/// This can occur if the `okm` buffer is misconfigured or too small for the desired key material.
-///
+/// * [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF expansion fails due to an invalid output length.
 fn hkdf(
     info: String,
     dh1: SharedSecret,
@@ -241,23 +235,22 @@ fn hkdf(
 ///
 /// # Arguments
 ///
-/// - `identity_key` - The responder's identity private key.
-/// - `signed_prekey` - The responder's signed pre-key private key.
-/// - `one_time_prekey` - An optional one-time pre-key private key, used if included by the initiator.
-/// - `msg` - The initial message from the initiator containing public keys and an encrypted challenge.
+/// * `identity_key` - The responder's identity private key.
+/// * `signed_prekey` - The responder's signed pre-key private key.
+/// * `one_time_prekey` - An optional one-time pre-key private key, used if included by the initiator.
+/// * `msg` - The initial message from the initiator containing public keys and an encrypted challenge.
 ///
 /// # Returns
 ///
-/// `Ok((EncryptionKey, DecryptionKey))` where:
-/// - The first [`EncryptionKey`] is used by the responder to encrypt messages to the initiator.
-/// - The second [`EncryptionKey`] is used to decrypt messages received from the initiator.
+/// * `Ok((EncryptionKey, DecryptionKey))` - A tuple where:
+///     * The first [`EncryptionKey`] - Used by the responder to encrypt messages to the initiator.
+///     * The second [`EncryptionKey`] - Used to decrypt messages received from the initiator.
 ///
 /// # Errors
 ///
-/// - [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF fails due to incorrect output keying material length.
-/// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
-/// - [`X3DHError::InvalidKey`] - Returned if the decrypted challenge does not match the initiator's identity key.
-///
+/// * [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF fails due to incorrect output keying material length.
+/// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+/// * [`X3DHError::InvalidKey`] - Returned if the decrypted challenge does not match the initiator's identity key.
 pub fn process_initial_message(
     identity_key: PrivateKey,
     signed_prekey: PrivateKey,
@@ -307,24 +300,24 @@ pub fn process_initial_message(
 ///
 /// # Arguments
 ///
-/// - `identity_key` - The responder's identity private key.
-/// - `signed_prekey` - The responder's signed pre-key private key.
-/// - `one_time_prekey` - An optional one-time pre-key private key, used if included by the initiator.
-/// - `server_ik` - The expected public identity key of the initiator (e.g., registered on the server).
-/// - `msg` - The initial message from the initiator containing public keys and an encrypted challenge.
+/// * `identity_key` - The responder's identity private key.
+/// * `signed_prekey` - The responder's signed pre-key private key.
+/// * `one_time_prekey` - An optional one-time pre-key private key, used if included by the initiator.
+/// * `server_ik` - The expected public identity key of the initiator (e.g., registered on the server).
+/// * `msg` - The initial message from the initiator containing public keys and an encrypted challenge.
 ///
 /// # Returns
 ///
 /// `Ok((EncryptionKey, DecryptionKey))` where:
-/// - The first [`EncryptionKey`] is used by the responder to encrypt messages to the initiator.
-/// - The second [`DecryptionKey`] is used to decrypt messages received from the initiator.
+/// * The first [`EncryptionKey`] is used by the responder to encrypt messages to the initiator.
+/// * The second [`DecryptionKey`] is used to decrypt messages received from the initiator.
 ///
 /// # Errors
 ///
-/// - [`X3DHError::InvalidInitialMessage`] - Returned if the initiator’s identity key in the message does not match the expected public key.
-/// - [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF fails due to incorrect output keying material length.
-/// - [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
-/// - [`X3DHError::InvalidKey`] - Returned if the decrypted challenge does not match the initiator's identity key.
+/// * [`X3DHError::InvalidInitialMessage`] - Returned if the initiator’s identity key in the message does not match the expected public key.
+/// * [`X3DHError::HkdfInvalidLengthError`] - Returned if HKDF fails due to incorrect output keying material length.
+/// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+/// * [`X3DHError::InvalidKey`] - Returned if the decrypted challenge does not match the initiator's identity key.
 /// 
 pub fn process_server_initial_message(
     identity_key: PrivateKey,
