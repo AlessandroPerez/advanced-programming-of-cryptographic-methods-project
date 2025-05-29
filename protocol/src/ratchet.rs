@@ -1,4 +1,8 @@
-//! This module implements the Double Ratchet Algorithm for secure messaging.
+//! This module implements the Double Ratchet algorithm.
+//!
+//! The Double Ratchet ensures forward secrecy and post-compromise security by combining symmetric-key and Diffie-Hellman ratcheting.
+//!
+//! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/doubleratchet/).
 
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -37,7 +41,7 @@ impl RatchetKeyPair {
     /// 
     /// # Returns
     /// 
-    /// - [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
+    /// * [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
     pub fn new() -> Self {
         let private_key = PrivateKey::new();
         let public_key = PublicKey::from(&private_key);
@@ -51,12 +55,12 @@ impl RatchetKeyPair {
     ///
     /// # Arguments
     /// 
-    /// - `private_key` - The private key.
-    /// - `public_key` - The public key associated with the private key.
+    /// * `private_key` - The private key.
+    /// * `public_key` - The public key associated with the private key.
     /// 
     /// # Returns
     /// 
-    /// - [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
+    /// * [`RatchetKeyPair`] - A [`RatchetKeyPair`] struct.
     pub fn new_from(private_key: PrivateKey, public_key: PublicKey) -> Self {
         Self {
             public_key,
@@ -69,11 +73,11 @@ impl RatchetKeyPair {
     /// 
     /// # Arguments
     /// 
-    /// - `other_public_key` - The public key of the other party involved in the key exchange.
+    /// * `other_public_key` - The public key of the other party involved in the key exchange.
     /// 
     /// # Returns
     /// 
-    /// - [`SharedSecret`] - A [`SharedSecret`] derived from this key pair's private key and the given public key.
+    /// * [`SharedSecret`] - A [`SharedSecret`] derived from this key pair's private key and the given public key.
     fn diffie_hellman(
         &self,
         other_public_key: &PublicKey,
@@ -100,21 +104,21 @@ struct Header {
 impl Header {
 
     /// The total byte length of the serialized [`Header`], which includes:
-    /// - the length of the public key ([`AES256_SECRET_LENGTH`])
-    /// - two `u64` values (`pn` and `ns`)
+    /// * the length of the public key ([`AES256_SECRET_LENGTH`])
+    /// * two `u64` values (`pn` and `ns`)
     const LENGTH: usize = AES256_SECRET_LENGTH + size_of::<u64>() * 2;
 
     /// Constructs a new [`Header`] with the given public key and message counters.
     ///
     /// # Arguments
     ///
-    /// - `dhs` – The sender's current Diffie-Hellman public key.
-    /// - `pn` – The number of messages sent in the previous sending chain (previous message number).
-    /// - `ns` – The message number in the current sending chain.
+    /// * `dhs` – The sender's current Diffie-Hellman public key.
+    /// * `pn` – The number of messages sent in the previous sending chain (previous message number).
+    /// * `ns` – The message number in the current sending chain.
     ///
     /// # Returns
     ///
-    /// - [`Header`] - A new [`Header`] instance containing the provided values.
+    /// * [`Header`] - A new [`Header`] instance containing the provided values.
     pub fn new(dhs: PublicKey, pn: u64, ns: u64) -> Self {
         Self { dhs, pn, ns }
     }
@@ -123,7 +127,7 @@ impl Header {
     ///
     /// # Returns
     ///
-    /// - `Vec<u8>` - A vector containing the byte representation of each element in the [`Header`].
+    /// * `Vec<u8>` - A vector containing the byte representation of each element in the [`Header`].
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(self.dhs.as_ref());
@@ -141,11 +145,11 @@ impl TryFrom<&[u8; 48]> for Header {
     ///
     /// # Returns
     ///
-    /// - [`Header`] - The decoded [`Header`].
+    /// * [`Header`] - The decoded [`Header`].
     ///
     /// # Errors
     ///
-    /// - [`RatchetError::InvalidHeaderLength`] - Returned if `value` does not match the expected length of [`Header`] ([`Header::LENGTH`]).
+    /// * [`RatchetError::InvalidHeaderLength`] - Returned if `value` does not match the expected length of [`Header`] ([`Header::LENGTH`]).
     fn try_from(value: &[u8; 48]) -> Result<Self, Self::Error> {
         if value.len() != Self::LENGTH {
             return Err(RatchetError::InvalidHeaderLength(value.len()))
@@ -169,22 +173,56 @@ impl TryFrom<&[u8; 48]> for Header {
     }
 }
 
-/// Represents a Diffie-Hellman key pair used in the ratchet process.
+/// A [`Ratchet`] represents the Double Ratchet state used for secure message encryption and decryption.
 #[derive(Clone)]
 pub struct Ratchet {
+    /// The local Diffie-Hellman key pair used for sending messages.
+    /// For more information, see [`RatchetKeyPair`].
     dh_sending: RatchetKeyPair,
+
+    /// The most recently received public key from the remote party.
+    /// For more information, see [`PublicKey`].
     dh_receiving: Option<PublicKey>,
+
+    /// The current root key shared between both parties.
+    /// For more information, see [`SharedSecret`].
     root_key: SharedSecret,
+
+    /// The current chain key used for deriving message keys in the sending direction.
+    /// For more information, see [`SharedSecret`].
     sending_chain_key: Option<SharedSecret>,
+
+    /// The current chain key used for deriving message keys in the receiving direction.
+    /// For more information, see [`SharedSecret`].
     receiving_chain_key: Option<SharedSecret>,
+
+    /// The number of messages sent in the current sending chain.
     n_messages_sent: u64,
+
+    /// The number of messages received in the current receiving chain.
     n_messages_received: u64,
+
+    /// The number of messages sent in the previous sending chain.
     pn: u64,
-    mk_skipped: HashMap<(PublicKey, u64), SharedSecret>
+
+    /// A map of skipped message keys indexed by (sender public key, message number).
+    /// For more information, see [`PublicKey`] and [`SharedSecret`].
+    mk_skipped: HashMap<(PublicKey, u64), SharedSecret>,
 }
 
 
 impl Ratchet {
+
+    /// Initializes the ratchet state for Alice (the initiator).
+    ///
+    /// # Arguments
+    ///
+    /// * `shared_secret` – The pre-shared secret derived during X3DH or initial key exchange.
+    /// * `bob_pk` – Bob's initial public key.
+    ///
+    /// # Returns
+    ///
+    /// * [`Ratchet`] - A [`Ratchet`] instance with sending and receiving chain keys set.
     pub fn init_alice(shared_secret: SharedSecret, bob_pk: PublicKey) -> Self {
         // TODO: make sure that also bob start the conversation
         let dh_sending = RatchetKeyPair::new();
@@ -209,6 +247,17 @@ impl Ratchet {
             mk_skipped
         }
     }
+
+    /// Initializes the ratchet state for Bob (the receiver).
+    ///
+    /// # Arguments
+    ///
+    /// * `shared_secret` – The pre-shared secret derived during X3DH or initial key exchange.
+    /// * `dk_sending` – Bob's initial Diffie-Hellman key pair.
+    ///
+    /// # Returns
+    ///
+    /// * [`Ratchet`] - A [`Ratchet`] instance with a sending chain key but without a receiving key yet.
     pub fn init_bob(shared_secret: SharedSecret, dk_sending: RatchetKeyPair) -> Self {
         let dh_sending = dk_sending;
         let dh_receiving = None;
@@ -233,6 +282,20 @@ impl Ratchet {
         }
     }
 
+    /// Encrypts a message using the current sending chain state.
+    ///
+    /// # Arguments
+    ///
+    /// * `plaintext` – The message to encrypt.
+    /// * `aad` – Associated data to authenticate (but not encrypt).
+    ///
+    /// # Returns
+    ///
+    /// * `String` - A base64-encoded ciphertext string.
+    /// 
+    /// # Errors
+    /// 
+    /// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
     pub fn encrypt(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<String, RatchetError> {
         let (ck, mk) = hkdf_ck(self.sending_chain_key.clone().unwrap())?;
         self.sending_chain_key = Some(ck);
@@ -246,6 +309,22 @@ impl Ratchet {
         Ok(mk.encrypt(plaintext, &new_aad)?)
     }
 
+    /// Decrypts a received message, performing ratchet step if necessary.
+    ///
+    /// # Arguments
+    ///
+    /// * `ciphertext` – The base64-encoded encrypted message.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<u8>` - The decrypted plaintext message.
+    /// 
+    /// # Errors
+    /// 
+    /// * [`RatchetError::ConversionError`] - Returned if Base64 decoding of the ciphertext or conversion to `AssociatedData` fails.
+    /// * [`RatchetError::InvalidHeaderLength`] - Returned if `value` does not match the expected length of [`Header`] ([`Header::LENGTH`]).
+    /// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length.
+    /// * [`RatchetError::MaxSkipsExceeded`] - Returned if the number of skipped messages exceeds the allowed maximum when attempting to handle out-of-order messages or advance the ratchet state.
     pub fn decrypt(&mut self, ciphertext: String) -> Result<Vec<u8>, RatchetError> {
         let ciphertext = general_purpose::STANDARD.decode(ciphertext).map_err(|_| {
             ConversionError
@@ -279,6 +358,27 @@ impl Ratchet {
 
     }
 
+    /// Attempts to decrypt the message using any skipped keys.
+    /// This function checks whether a message key corresponding to the given header
+    /// and message number has been stored in the `mk_skipped` map. If found, it uses
+    /// that key to decrypt the message. This allows the receiver to handle out-of-order
+    /// messages or skipped messages without losing forward secrecy. 
+    /// 
+    /// # Arguments
+    ///
+    /// * `header` - The message header containing the sender's public key and message number.
+    /// * `ciphertext` - The encrypted message payload (excluding nonce, header, and AAD).
+    /// * `aad` - The associated data used to authenticate the message.
+    /// * `nonce` - The nonce used during encryption.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Some(plaintext))` - If a matching skipped message key was found and decryption succeeded.
+    /// * `Ok(None)` - If no matching skipped message key was found.
+    /// 
+    /// # Errors
+    /// 
+    /// * [`X3DHError::AesGcmInvalidLength`] - Returned if AES-GCM decryption fails due to an unexpected ciphertext length. 
     fn try_skipped_message_keys(
         &mut self,
         header: Header,
@@ -299,6 +399,11 @@ impl Ratchet {
         }
     }
 
+    /// Skips message keys up to a given message number and stores them.
+    ///
+    /// # Arguments
+    ///
+    /// * `until` – The message number to skip up to (exclusive).
     fn skip_message_keys(&mut self, until: u64) -> Result<(), RatchetError> {
         if self.n_messages_received + MAX_SKIPS < until {
             return Err(RatchetError::MaxSkipsExceeded);
@@ -318,6 +423,11 @@ impl Ratchet {
         Ok(())
     }
 
+    /// Performs a DH ratchet step: updates keys and state for a new incoming public key.
+    ///
+    /// # Arguments
+    ///
+    /// * `header` – The header containing the new public key.
     fn dh_ratchet(&mut self, header: Header) -> Result<(), RatchetError> {
         self.pn = self.n_messages_sent;
         self.n_messages_sent = 0;
@@ -341,6 +451,23 @@ impl Ratchet {
     }
 }
 
+/// Derives a new root key and chain key from the current root key and a Diffie-Hellman shared secret.
+/// This function implements the `HKDF(rk, dh)` step from the Double Ratchet algorithm, using the current
+/// root key `rk` and a new shared secret `dh` as inputs. It applies HKDF with SHA-256 to produce two
+/// new secrets: a derived root key and a new receiving chain key.
+///
+/// # Arguments
+///
+/// * `rk` - The current root key (a shared secret).
+/// * `dh` - The Diffie-Hellman shared secret between the new and previous public keys.
+///
+/// # Returns
+///
+/// * ([`SharedSecret`], [`SharedSecret`]) - A tuple `(new_root_key, receiving_chain_key)` derived from HKDF.
+///
+/// # Errors
+///
+/// * [`RatchetError::KeyDerivationError`] - If the HKDF expand step fails.
 fn hkdf_rk(
     rk: SharedSecret,
     dh: SharedSecret,
@@ -363,6 +490,22 @@ fn hkdf_rk(
     Ok((shared_key1, shared_key2))
 }
 
+/// Derives a new chain key and message key from the current chain key using HKDF.
+/// This function applies HKDF with SHA-256 to derive two secrets from a single chain key:
+/// the next chain key and a message encryption key. This step is used for each message sent or received
+/// in the Double Ratchet protocol to ensure forward secrecy.
+///
+/// # Arguments
+///
+/// * `ck` - The current chain key, a [`SharedSecret`] used as input key material for HKDF.
+///
+/// # Returns
+///
+/// * ([`SharedSecret`], [`SharedSecret`]) - A tuple `(next_chain_key, message_key)` used to continue the ratchet chain and encrypt/decrypt a message.
+///
+/// # Errors
+///
+/// * [`RatchetError::KeyDerivationError`] - if HKDF expansion fails.
 fn hkdf_ck(
     ck: SharedSecret,
 ) -> Result<(SharedSecret, SharedSecret), RatchetError> {
