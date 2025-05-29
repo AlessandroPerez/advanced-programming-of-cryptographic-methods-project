@@ -21,7 +21,15 @@
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// Byte size of a Curve25519 private key.
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! This module defines various cryptographic constants used throughout the protocol implementation.
+//! These constants specify fixed byte lengths for keys, hashes, nonces, and other cryptographic primitives,
+//! ensuring consistent sizing and preventing common errors related to buffer overflows or incorrect key derivations.
+
+/// Byte size of a Curve25519 private key.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CURVE25519_SECRET_LENGTH: usize = <span class="number">32</span>;
 
 <span class="doccomment">/// Byte size of a Curve25519 public key.

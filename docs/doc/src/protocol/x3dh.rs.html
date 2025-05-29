@@ -470,14 +470,10 @@
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! This module implements the X3DH (Extended Triple Diffie-Hellman) key agreement protocol.
-//!
-//! X3DH is used to establish a shared secret between two parties for end-to-end encrypted communication.
-//! It combines identity keys, signed pre-keys, and one-time pre-keys to provide forward secrecy and
-//! authentication.
-//!
+//! X3DH is used to establish a secure shared secret between two parties for end-to-end encrypted communication.
+//! It combines identity keys, signed pre-keys, and optional one-time pre-keys to provide strong authentication
+//! and forward secrecy, forming the initial key exchange for the Double Ratchet algorithm.
 //! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/x3dh/).
 
 </span><span class="kw">use </span><span class="kw">crate</span>::constants::AES256_SECRET_LENGTH;

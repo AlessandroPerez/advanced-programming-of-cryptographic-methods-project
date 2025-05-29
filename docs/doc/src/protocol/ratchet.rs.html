@@ -596,10 +596,10 @@
 <a href="#596" id="596">596</a>
 <a href="#597" id="597">597</a>
 <a href="#598" id="598">598</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! This module implements the Double Ratchet algorithm.
-//!
+</pre></div><pre class="rust"><code><span class="doccomment">//! This module implements the Double Ratchet algorithm, a core component for secure, asynchronous messaging.
 //! The Double Ratchet ensures forward secrecy and post-compromise security by combining symmetric-key and Diffie-Hellman ratcheting.
-//!
+//! It manages the cryptographic state for sending and receiving messages, handling key derivation, message encryption,
+//! and decryption, including mechanisms for skipping and reordering messages.
 //! For more information, see the [Signal Protocol specification](https://signal.org/docs/specifications/doubleratchet/).
 
 </span><span class="kw">use </span>std::cmp::PartialEq;

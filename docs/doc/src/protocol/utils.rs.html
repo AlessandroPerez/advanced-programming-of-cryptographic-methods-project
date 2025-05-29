@@ -1536,7 +1536,19 @@
 <a href="#1536" id="1536">1536</a>
 <a href="#1537" id="1537">1537</a>
 <a href="#1538" id="1538">1538</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CHALLENGE_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH};
+<a href="#1539" id="1539">1539</a>
+<a href="#1540" id="1540">1540</a>
+<a href="#1541" id="1541">1541</a>
+<a href="#1542" id="1542">1542</a>
+<a href="#1543" id="1543">1543</a>
+<a href="#1544" id="1544">1544</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! This module provides a collection of utility structures and helper functions essential for the cryptographic protocols.
+//! It defines fundamental data types such as `PublicKey`, `PrivateKey`, `SharedSecret`, `Signature`, and `AssociatedData`,
+//! along with their serialization, deserialization, and cryptographic operations (e.g., hashing, encryption, decryption).
+//! These utilities encapsulate common cryptographic operations and data representations,
+//! supporting the X3DH and Double Ratchet implementations.
+
+</span><span class="kw">use </span><span class="kw">crate</span>::constants::{AES256_NONCE_LENGTH, AES256_SECRET_LENGTH, CHALLENGE_LENGTH, CURVE25519_PUBLIC_LENGTH, CURVE25519_SECRET_LENGTH, SHA256_HASH_LENGTH, SIGNATURE_LENGTH};
 <span class="kw">use </span><span class="kw">crate</span>::errors::X3DHError;
 <span class="kw">use </span>aes_gcm::aead::{Aead, Buffer, Payload};
 <span class="kw">use </span>aes_gcm::{AeadCore, Aes256Gcm, KeyInit, Nonce};

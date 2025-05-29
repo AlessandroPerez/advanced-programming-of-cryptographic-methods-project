@@ -168,16 +168,10 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! This module defines the error types used throughout the cryptographic protocol implementation.
-//! These error types encapsulate various error conditions from underlying cryptographic libraries
-//! and provide consistent error handling throughout the codebase.
-//! 
-//! The module provides two main error enums:
-//! - `X3DHError`: For errors related to the X3DH key agreement protocol.
-//! - `RatchetError`: For errors related to the Double Ratchet message encryption protocol.
+</pre></div><pre class="rust"><code><span class="doccomment">//! This module defines the custom error types used throughout the cryptographic protocol implementation.
+//! It provides two main error enums: `X3DHError` for errors specific to the X3DH key agreement protocol,
+//! and `RatchetError` for errors encountered during the Double Ratchet message encryption protocol.
+//! These enums ensure precise error reporting and handling for various cryptographic operations.
 
 </span><span class="kw">use </span>aes::cipher::crypto_common;
 <span class="kw">use </span>ed25519_dalek::SignatureError;
