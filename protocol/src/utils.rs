@@ -91,7 +91,6 @@ impl PreKeyBundle {
     /// # Returns
     ///
     /// * [`PreKeyBundle`] - A [`PreKeyBundle`] struct.
-    ///
     pub fn new_with_otpk(ik: &PrivateKey, spk: PublicKey, otpk: Vec<PublicKey>) -> Self {
         let ik_signing = SigningKey::from(ik);
         let sig = ik_signing.sign(&spk.0);
@@ -109,7 +108,6 @@ impl PreKeyBundle {
     /// # Arguments
     ///
     /// * `otpk` - The one-time pre-key to be added.
-    ///
     pub fn add_otpk(&mut self, otpk: PublicKey) {
         self.otpk.push(otpk);
     }
@@ -119,7 +117,6 @@ impl PreKeyBundle {
     /// # Returns
     ///
     /// * `usize` - The number of elements in the pre-key bundle.
-    /// 
     pub fn size(&self) -> usize {
         CURVE25519_SECRET_LENGTH * 3 + SIGNATURE_LENGTH + self.otpk.len() * CURVE25519_PUBLIC_LENGTH
     }
@@ -129,7 +126,6 @@ impl PreKeyBundle {
     /// # Returns
     ///
     /// * `Vec<u8>` - A vector containing the byte representation of each element in the pre-key bundle.
-    /// 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(self.verifying_key.0.as_ref());
@@ -149,7 +145,6 @@ impl PreKeyBundle {
     /// # Returns
     ///
     /// * `String` - The base64-encoded string of the pre-key bundle.
-    /// 
     pub fn to_base64(self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
     }
@@ -168,7 +163,6 @@ impl TryFrom<String> for PreKeyBundle {
     ///
     /// * [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
     /// * [`X3DHError::InvalidPreKeyBundle`] - Returned if the decoded byte vector does not match the expected size of [`PreKeyBundle::BASE_SIZE`].
-    /// 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() < Self::BASE_SIZE {
@@ -265,7 +259,6 @@ impl SessionKeys {
     /// # Returns
     ///
     /// * [`SessionKeys`] - A session object containing the provided keys and associated data.
-    /// 
     pub fn new_with_keys(
         ek: EncryptionKey,
         dk: DecryptionKey,
@@ -285,7 +278,6 @@ impl SessionKeys {
     /// * `Option<EncryptionKey>`  
     ///   * `Some(EncryptionKey)` - If the encryption key has been set.  
     ///   * `None` - If no encryption key is present.
-    /// 
     pub fn get_encryption_key(&self) -> Option<EncryptionKey> {
         self.ek.clone()
     }
@@ -297,7 +289,6 @@ impl SessionKeys {
     /// * `Option<DecryptionKey>`  
     ///   * `Some(DecryptionKey)` - If the decryption key has been set.  
     ///   * `None` - If no decryption key is present.
-    /// 
     pub fn get_decryption_key(&self) -> Option<DecryptionKey> {
         self.dk.clone()
     }
@@ -309,7 +300,6 @@ impl SessionKeys {
     /// * `Option<AssociatedData>`  
     ///   * `Some(AssociatedData)` - If the associated data has been set.  
     ///   * `None` - If no associated data is present.
-    ///
     pub fn get_associated_data(&self) -> Option<AssociatedData> {
         self.aad.clone()
     }
@@ -319,7 +309,6 @@ impl SessionKeys {
     /// # Arguments
     ///
     /// * `ek` - The encryption key to assign to the session.
-    /// 
     pub fn set_encryption_key(&mut self, ek: EncryptionKey) {
         self.ek = Some(ek);
     }
@@ -329,7 +318,6 @@ impl SessionKeys {
     /// # Arguments
     ///
     /// * `dk` - The decryption key to assign to the session.
-    /// 
     pub fn set_decryption_key(&mut self, dk: DecryptionKey) {
         self.dk = Some(dk);
     }
@@ -339,7 +327,6 @@ impl SessionKeys {
     /// # Arguments
     ///
     /// * `aad` - The associated data to assign to the session.
-    /// 
     pub fn set_associated_data(&mut self, aad: AssociatedData) {
         self.aad = Some(aad);
     }
@@ -347,9 +334,6 @@ impl SessionKeys {
 }
 
 /// A 256-bit secret shared between two parties after performing a key agreement (in this case, Diffie-Hellman).
-///
-/// `SharedSecret` is the foundation for deriving encryption and decryption keys in the X3DH protocol,
-/// and is securely zeroized from memory when dropped.
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
 pub struct SharedSecret([u8; AES256_SECRET_LENGTH]);
 
@@ -365,7 +349,6 @@ impl From<(EncryptionKey, DecryptionKey)> for SharedSecret {
     /// # Returns
     /// 
     /// * [`SharedSecret`] - The derived shared secret.
-    /// 
     fn from((ek, dk): (EncryptionKey, DecryptionKey)) -> SharedSecret {
         let mut vec = ek.as_ref().to_vec();
         vec.extend_from_slice(dk.as_ref());
@@ -385,7 +368,6 @@ impl From<(DecryptionKey, EncryptionKey)> for SharedSecret {
     /// # Returns
     /// 
     /// * [`SharedSecret`] - The derived shared secret.
-    /// 
     fn from((dk, ek): (DecryptionKey, EncryptionKey)) -> SharedSecret {
         let mut vec = dk.as_ref().to_vec();
         vec.extend_from_slice(ek.as_ref());
@@ -400,7 +382,6 @@ impl AsRef<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
     /// # Returns
     /// 
     /// * [`&SharedSecret`] - The shared reference.
-    /// 
     fn as_ref(&self) -> &[u8; AES256_SECRET_LENGTH] {
         &self.0
     }
@@ -417,16 +398,12 @@ impl From<[u8; AES256_SECRET_LENGTH]> for SharedSecret {
     /// # Returns
     /// 
     /// * [`SharedSecret`] - The derived shared secret.
-    ///  
     fn from(value: [u8; AES256_SECRET_LENGTH]) -> SharedSecret {
         SharedSecret(value)
     }
 }
 
 /// A public key used to verify signatures in the X3DH protocol.
-///
-/// This is an Ed25519 public key derived from a corresponding [`SigningKey`], and is used
-/// to authenticate identity keys and signed pre-keys.
 #[derive(Clone, Debug)]
 pub struct VerifyingKey(pub [u8; CURVE25519_PUBLIC_LENGTH]);
 
@@ -441,7 +418,6 @@ impl From<SigningKey> for VerifyingKey {
     /// # Returns
     ///
     /// * [`VerifyingKey`] - The derived verifying key.
-    /// 
     fn from(private_key: SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
@@ -460,7 +436,6 @@ impl From<&SigningKey> for VerifyingKey {
     /// # Returns
     ///
     /// * [`VerifyingKey`] - The derived verifying key.
-    ///
     fn from(private_key: &SigningKey) -> VerifyingKey {
         let dalek_private_key = ed25519_dalek::SigningKey::from(private_key.0);
         let dalek_public_key = ed25519_dalek::VerifyingKey::from(&dalek_private_key);
@@ -479,7 +454,6 @@ impl From<PublicKey> for VerifyingKey {
     /// # Returns
     ///
     /// * [`VerifyingKey`] - The derived verifying key.
-    ///
     fn from(public_key: PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
@@ -496,7 +470,6 @@ impl From<&PublicKey> for VerifyingKey {
     /// # Returns
     ///
     /// * [`VerifyingKey`] - The derived verifying key.
-    ///
     fn from(public_key: &PublicKey) -> VerifyingKey {
         VerifyingKey(public_key.0)
     }
@@ -509,7 +482,6 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for VerifyingKey {
     /// # Returns
     /// 
     /// * [`&VerifyingKey`] - The shared reference.
-    /// 
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
@@ -531,7 +503,6 @@ impl VerifyingKey {
     /// # Errors
     /// 
     /// * [`ed25519_dalek::SignatureError`] - Returned if the signature is invalid or the key is malformed.
-    /// 
     pub(crate) fn verify(
         &self,
         signature: &Signature,
@@ -544,9 +515,6 @@ impl VerifyingKey {
 }
 
 /// An Ed25519 signing key used to create digital signatures in the X3DH protocol.
-///
-/// This key is responsible for signing pre-keys and authenticating identity in the key exchange.
-/// It is zeroized from memory when dropped for security.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct SigningKey([u8; CURVE25519_PUBLIC_LENGTH]);
 
@@ -558,7 +526,6 @@ impl SigningKey {
     /// # Returns
     ///
     /// * [`SigningKey`] - A newly generated signing key based on the Ed25519 curve.
-    ///
     pub(crate) fn new() -> SigningKey {
         let key = ed25519_dalek::SigningKey::generate(&mut OsRng);
         SigningKey(key.to_bytes())
@@ -573,7 +540,6 @@ impl SigningKey {
     /// # Returns
     ///
     /// * [`Signature`] - The Ed25519 signature of the message.
-    /// 
     pub(crate) fn sign(&self, message: &[u8]) -> Signature {
         let mut dalek_private_key = ed25519_dalek::SigningKey::from(self.0);
         let signature = dalek_private_key.sign(message);
@@ -591,7 +557,6 @@ impl SigningKey {
     /// # Returns
     ///
     /// * [`SharedSecret`] - The resulting shared secret derived from the key exchange.
-    /// 
     pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
         let dalek_private_key = StaticSecret::from(self.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
@@ -611,7 +576,6 @@ impl From<PrivateKey> for SigningKey {
     /// # Returns
     ///
     /// * [`SigningKey`] - The derived verifying key.
-    ///
     fn from(private_key: PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
@@ -628,16 +592,12 @@ impl From<&PrivateKey> for SigningKey {
     /// # Returns
     ///
     /// * [`SigningKey`] - The derived verifying key.
-    ///
     fn from(private_key: &PrivateKey) -> SigningKey {
         SigningKey(private_key.0)
     }
 }
 
 /// A key pair used as a signed pre-key in the X3DH protocol.
-/// A signed pre-key consists of a long-term key pair (private and public) that is signed by the identity key.
-/// It is used in the initial key agreement phase to provide forward secrecy and authentication.
-///
 #[derive(Clone)]
 pub(crate) struct SignedPreKey {
 
@@ -657,7 +617,6 @@ impl SignedPreKey {
     /// # Returns
     ///
     /// * [`SignedPreKey`] - A newly generated key pair containing both private and public keys.
-    /// 
     pub(crate) fn new() -> SignedPreKey {
         let private_key = PrivateKey::new();
         let public_key = PublicKey::from(&private_key);
@@ -669,9 +628,6 @@ impl SignedPreKey {
 }
 
 /// A Curve25519 private key used in the X3DH key exchange for computing shared secrets.
-///
-/// This key supports Diffie-Hellman operations and can be derived from or converted into
-/// signing keys when needed. Securely zeroized on drop.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct PrivateKey([u8; CURVE25519_SECRET_LENGTH]);
 
@@ -684,7 +640,6 @@ impl PrivateKey {
     /// # Returns
     ///
     /// * [`PrivateKey`] - A randomly generated Curve25519 private key.
-    ///  
     pub fn new() -> PrivateKey {
         let key = StaticSecret::random_from_rng(&mut OsRng);
         PrivateKey(key.to_bytes())
@@ -701,7 +656,6 @@ impl PrivateKey {
     /// # Returns
     ///
     /// * [`SharedSecret`] - The derived shared secret.
-    /// 
     pub(crate) fn diffie_hellman(&self, public_key: &PublicKey) -> SharedSecret {
         let dalek_private_key = StaticSecret::from(self.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(public_key.0);
@@ -714,7 +668,6 @@ impl PrivateKey {
     /// # Returns
     ///
     /// * `Vec<u8>` - A vector of bytes derived from the current [`PrivateKey`].
-    ///  
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
@@ -724,7 +677,6 @@ impl PrivateKey {
     /// # Returns
     ///
     /// * `String` - The base64-encoded string of the current [`PrivateKey`].
-    ///
     pub fn to_base64(&self) -> String {
         general_purpose::STANDARD.encode(self.to_bytes())
     }
@@ -743,7 +695,6 @@ impl PrivateKey {
     ///
     /// * [`X3DHError::Base64DecodeError`] - Returned if `value` is not a valid Base64 string.
     /// * [`X3DHError::InvalidPrivateKey`] - Returned if the decoded byte vector does not match the expected size of [`CURVE25519_SECRET_LENGTH`].
-    ///
     pub fn from_base64(value: String) -> Result<PrivateKey, X3DHError> {
         let bytes = general_purpose::STANDARD.decode(value)?;
         if bytes.len() != CURVE25519_SECRET_LENGTH {
@@ -762,7 +713,6 @@ impl AsRef<[u8; CURVE25519_SECRET_LENGTH]> for PrivateKey {
     /// # Returns
     /// 
     /// * `&[u8; CURVE25519_SECRET_LENGTH]` - The shared reference.
-    ///
     fn as_ref(&self) -> &[u8; CURVE25519_SECRET_LENGTH] {
         &self.0
     }
@@ -779,7 +729,6 @@ impl From<SigningKey> for PrivateKey {
     /// # Returns
     /// 
     /// * [`PrivateKey`] - The derived private key.
-    ///
     fn from(private_key: SigningKey) -> PrivateKey {
         let dalek_private_key = StaticSecret::from(private_key.0);
         PrivateKey(dalek_private_key.to_bytes())
@@ -797,7 +746,6 @@ impl From<&SigningKey> for PrivateKey {
     /// # Returns
     /// 
     /// * [`PrivateKey`] - The derived private key.
-    ///
     fn from(private_key: &SigningKey) -> PrivateKey {
         let dalek_private_key = StaticSecret::from(private_key.0);
         PrivateKey(dalek_private_key.to_bytes())
@@ -820,7 +768,6 @@ impl From<PrivateKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(private_key: PrivateKey) -> PublicKey {
         let dalek_private_key = x25519_dalek::StaticSecret::from(private_key.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(&dalek_private_key);
@@ -839,7 +786,6 @@ impl From<&PrivateKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(private_key: &PrivateKey) -> PublicKey {
         let dalek_private_key = x25519_dalek::StaticSecret::from(private_key.0);
         let dalek_public_key = x25519_dalek::PublicKey::from(&dalek_private_key);
@@ -858,7 +804,6 @@ impl From<VerifyingKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(public_key: VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
@@ -875,7 +820,6 @@ impl From<&VerifyingKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(public_key: &VerifyingKey) -> PublicKey {
         PublicKey(public_key.0)
     }
@@ -892,7 +836,6 @@ impl From<SigningKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(value: SigningKey) -> Self {
         let key = VerifyingKey::from(&value);
         PublicKey::from(key)
@@ -910,7 +853,6 @@ impl From<&SigningKey> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(value: &SigningKey) -> Self {
         let key = VerifyingKey::from(value);
         PublicKey::from(key)
@@ -928,7 +870,6 @@ impl From<&[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
     /// # Returns
     /// 
     /// * [`PublicKey`] - The derived public key.
-    ///
     fn from(value: &[u8; CURVE25519_PUBLIC_LENGTH]) -> PublicKey {
         PublicKey(value.clone())
     }
@@ -942,7 +883,6 @@ impl AsRef<[u8; CURVE25519_PUBLIC_LENGTH]> for PublicKey {
     /// # Returns
     /// 
     /// * `&[u8; CURVE25519_PUBLIC_LENGTH]` - The shared reference.
-    ///
     fn as_ref(&self) -> &[u8; CURVE25519_PUBLIC_LENGTH] {
         &self.0
     }
@@ -959,7 +899,6 @@ impl PartialEq for PublicKey {
     /// # Returns
     ///
     /// * `bool` - `true` if the underlying byte representations of both keys are equal, otherwise `false`.
-    /// 
     fn eq(&self, other: &Self) -> bool {
         self.as_ref() == other.as_ref()
     }
@@ -972,7 +911,6 @@ impl PublicKey {
     /// # Returns
     ///
     /// * [`Sha256Hash`] - The SHA-256 digest of the public key.
-    ///
     pub fn hash(&self) -> Sha256Hash {
         let digest = Sha256::digest(self.0.as_ref());
         Sha256Hash(*array_ref![digest, 0, SHA256_HASH_LENGTH])
@@ -983,7 +921,6 @@ impl PublicKey {
     /// # Returns
     ///
     /// * `String` - The base64-encoded string of the current [`PublicKey`].
-    ///
     pub fn to_base64(&self) -> String {
         general_purpose::STANDARD.encode(self.0.to_vec())
     }
@@ -1040,15 +977,12 @@ impl From<[u8; SIGNATURE_LENGTH]> for Signature {
     /// # Returns
     /// 
     /// * [`Signature`] - The derived signature.
-    ///
     fn from(value: [u8; SIGNATURE_LENGTH]) -> Signature {
         Signature(value)
     }
 }
 
 /// Additional data exchanged during the X3DH handshake, containing both parties' identity keys.
-///
-/// This ensures authenticity and context binding for encryption and decryption during the session.
 #[derive(Clone, Debug)]
 pub struct AssociatedData {
     /// The identity public key of the initiator.
@@ -1139,6 +1073,7 @@ impl From<&[u8; SHA256_HASH_LENGTH]> for Sha256Hash {
         Sha256Hash(*value)
     }
 }
+
 impl Hash for Sha256Hash {
 
     /// Feeds the internal byte array into the given hasher.
@@ -1290,8 +1225,8 @@ impl InitialMessage {
     /// # Returns
     ///
     /// * `usize` - The size of the current [`InitialMessage`]:
-    ///     - [`Self::BASE_SIZE`] if there is no one-time prekey hash.
-    ///     - [`Self::SIZE_WITH_OTPK`] if there is a one-time prekey hash.
+    ///     * [`Self::BASE_SIZE`] - If there is no one-time prekey hash.
+    ///     * [`Self::SIZE_WITH_OTPK`] - If there is a one-time prekey hash.
     pub fn size(&self) -> usize {
         if self.one_time_key_hash.is_some() {
             Self::SIZE_WITH_OTPK
