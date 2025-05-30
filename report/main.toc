@@ -1,61 +1,66 @@
-\contentsline {chapter}{\numberline {1}Introduction}{3}{chapter.1}%
-\contentsline {section}{\numberline {1.1}Organization of the Report}{3}{section.1.1}%
-\contentsline {section}{\numberline {1.2}Overview of the Protocol}{4}{section.1.2}%
-\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman Overview}{4}{subsection.1.2.1}%
-\contentsline {subsection}{\numberline {1.2.2}Double Ratchet Overview}{4}{subsection.1.2.2}%
-\contentsline {chapter}{\numberline {2}Requirements}{5}{chapter.2}%
-\contentsline {section}{\numberline {2.1}Functional Requirements}{5}{section.2.1}%
-\contentsline {subsection}{\numberline {2.1.1}Server Functional Requirements}{5}{subsection.2.1.1}%
-\contentsline {subsubsection}{Client Functional Requirements}{5}{section*.2}%
-\contentsline {section}{\numberline {2.2}Security Requirements}{6}{section.2.2}%
-\contentsline {chapter}{\numberline {3}Technical Details}{7}{chapter.3}%
-\contentsline {section}{\numberline {3.1}Architecture}{7}{section.3.1}%
-\contentsline {subsection}{\numberline {3.1.1}Establishment of a Secure Connection}{8}{subsection.3.1.1}%
-\contentsline {subsection}{\numberline {3.1.2}User Registration}{8}{subsection.3.1.2}%
-\contentsline {subsection}{\numberline {3.1.3}Adding a Friend}{9}{subsection.3.1.3}%
-\contentsline {subsection}{\numberline {3.1.4}Sending Messages}{9}{subsection.3.1.4}%
-\contentsline {section}{\numberline {3.2}Implementation}{10}{section.3.2}%
-\contentsline {subsection}{\numberline {3.2.1}Key Generation for X3DH}{10}{subsection.3.2.1}%
-\contentsline {subsection}{\numberline {3.2.2}Pre-Key Bundle Processing}{11}{subsection.3.2.2}%
-\contentsline {subsection}{\numberline {3.2.3}Initial Message Processing}{11}{subsection.3.2.3}%
-\contentsline {subsection}{\numberline {3.2.4}AES Encryption}{12}{subsection.3.2.4}%
-\contentsline {subsection}{\numberline {3.2.5}AES Decryption}{12}{subsection.3.2.5}%
-\contentsline {subsubsection}{Server}{12}{section*.5}%
-\contentsline {subsection}{\numberline {3.2.6}Task Receiver}{12}{subsection.3.2.6}%
-\contentsline {subsection}{\numberline {3.2.7}Task Sender}{13}{subsection.3.2.7}%
-\contentsline {subsection}{\numberline {3.2.8}Client \& TUI}{14}{subsection.3.2.8}%
-\contentsline {section}{\numberline {3.3}Code Structure}{14}{section.3.3}%
-\contentsline {section}{\numberline {3.4}Dependencies}{14}{section.3.4}%
-\contentsline {subsection}{\numberline {3.4.1}Networking and Asynchronous Execution}{15}{subsection.3.4.1}%
-\contentsline {subsection}{\numberline {3.4.2}Cryptography and Secure Communication}{15}{subsection.3.4.2}%
-\contentsline {subsection}{\numberline {3.4.3}Data Serialization and Parsing}{16}{subsection.3.4.3}%
-\contentsline {subsection}{\numberline {3.4.4}Terminal User Interface (TUI)}{16}{subsection.3.4.4}%
-\contentsline {subsection}{\numberline {3.4.5}Utilities}{16}{subsection.3.4.5}%
-\contentsline {chapter}{\numberline {4}Security Considerations}{17}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Preliminaries}{17}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Cryptographic Notation}{17}{section.4.2}%
-\contentsline {section}{\numberline {4.3}Roles}{18}{section.4.3}%
-\contentsline {section}{\numberline {4.4}Keys}{18}{section.4.4}%
-\contentsline {section}{\numberline {4.5}The X3DH protocol}{19}{section.4.5}%
-\contentsline {section}{\numberline {4.6}Publishing Keys}{19}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Sending the Initial Message}{20}{section.4.7}%
-\contentsline {section}{\numberline {4.8}Receiving the Initial Message}{21}{section.4.8}%
-\contentsline {section}{\numberline {4.9}Double Ratchet}{21}{section.4.9}%
-\contentsline {subsection}{\numberline {4.9.1}KDF Chains}{21}{subsection.4.9.1}%
-\contentsline {subsection}{\numberline {4.9.2}Symmetric-key ratchet}{23}{subsection.4.9.2}%
-\contentsline {subsection}{\numberline {4.9.3}Diffie-Hellman ratchet}{23}{subsection.4.9.3}%
-\contentsline {subsection}{\numberline {4.9.4}Combining both Ratchets}{26}{subsection.4.9.4}%
-\contentsline {subsection}{\numberline {4.9.5}Out-of-order messages}{29}{subsection.4.9.5}%
-\contentsline {section}{\numberline {4.10}Integration with X3DH}{30}{section.4.10}%
-\contentsline {section}{\numberline {4.11}Security Considerations}{31}{section.4.11}%
-\contentsline {subsection}{\numberline {4.11.1}Authentication}{31}{subsection.4.11.1}%
-\contentsline {subsection}{\numberline {4.11.2}Protocol Replay}{31}{subsection.4.11.2}%
-\contentsline {subsection}{\numberline {4.11.3}Deniability}{31}{subsection.4.11.3}%
-\contentsline {subsection}{\numberline {4.11.4}Key Compromise}{31}{subsection.4.11.4}%
-\contentsline {subsection}{\numberline {4.11.5}Server Trust}{32}{subsection.4.11.5}%
-\contentsline {subsection}{\numberline {4.11.6}Secure Deletion}{32}{subsection.4.11.6}%
-\contentsline {subsection}{\numberline {4.11.7}Recovery from Compromise}{32}{subsection.4.11.7}%
-\contentsline {subsection}{\numberline {4.11.8}Cryptanalysis and Ratchet Public Keys}{33}{subsection.4.11.8}%
-\contentsline {subsection}{\numberline {4.11.9}Deletion of Skipped Message Keys}{33}{subsection.4.11.9}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{34}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{35}{chapter.6}%
+\contentsline {chapter}{\numberline {1}Introduction}{4}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Organization of the Report}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Overview of the Protocol}{5}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Extended Triple Diffie-Hellman Overview}{5}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Double Ratchet Overview}{5}{subsection.1.2.2}%
+\contentsline {chapter}{\numberline {2}Requirements}{6}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Functional Requirements}{6}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Server Functional Requirements}{6}{subsection.2.1.1}%
+\contentsline {subsubsection}{Client Functional Requirements}{6}{section*.2}%
+\contentsline {section}{\numberline {2.2}Security Requirements}{7}{section.2.2}%
+\contentsline {chapter}{\numberline {3}Technical Details}{8}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Architecture}{8}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}Establishment of a Secure Connection}{9}{subsection.3.1.1}%
+\contentsline {subsection}{\numberline {3.1.2}User Registration}{9}{subsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.1.3}Adding a Friend}{10}{subsection.3.1.3}%
+\contentsline {subsection}{\numberline {3.1.4}Sending Messages}{10}{subsection.3.1.4}%
+\contentsline {section}{\numberline {3.2}Implementation}{11}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Key Generation for X3DH}{11}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Pre-Key Bundle Processing}{12}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Initial Message Processing}{12}{subsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.2.4}AES Encryption}{13}{subsection.3.2.4}%
+\contentsline {subsection}{\numberline {3.2.5}AES Decryption}{13}{subsection.3.2.5}%
+\contentsline {subsubsection}{Server}{13}{section*.5}%
+\contentsline {subsection}{\numberline {3.2.6}Task Receiver}{13}{subsection.3.2.6}%
+\contentsline {subsection}{\numberline {3.2.7}Task Sender}{14}{subsection.3.2.7}%
+\contentsline {subsection}{\numberline {3.2.8}Client \& TUI}{15}{subsection.3.2.8}%
+\contentsline {section}{\numberline {3.3}Code Structure}{15}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Dependencies}{15}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Networking and Asynchronous Execution}{16}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Cryptography and Secure Communication}{16}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Data Serialization and Parsing}{17}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}Terminal User Interface (TUI)}{17}{subsection.3.4.4}%
+\contentsline {subsection}{\numberline {3.4.5}Utilities}{17}{subsection.3.4.5}%
+\contentsline {chapter}{\numberline {4}Security Considerations}{18}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Preliminaries}{18}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Cryptographic Notation}{18}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Roles}{19}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Keys}{19}{section.4.4}%
+\contentsline {section}{\numberline {4.5}The X3DH protocol}{20}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Publishing Keys}{20}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Sending the Initial Message}{21}{section.4.7}%
+\contentsline {section}{\numberline {4.8}Receiving the Initial Message}{22}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Double Ratchet}{22}{section.4.9}%
+\contentsline {subsection}{\numberline {4.9.1}KDF Chains}{22}{subsection.4.9.1}%
+\contentsline {subsection}{\numberline {4.9.2}Symmetric-key ratchet}{24}{subsection.4.9.2}%
+\contentsline {subsection}{\numberline {4.9.3}Diffie-Hellman ratchet}{24}{subsection.4.9.3}%
+\contentsline {subsection}{\numberline {4.9.4}Combining both Ratchets}{27}{subsection.4.9.4}%
+\contentsline {subsection}{\numberline {4.9.5}Out-of-order messages}{30}{subsection.4.9.5}%
+\contentsline {section}{\numberline {4.10}Integration with X3DH}{31}{section.4.10}%
+\contentsline {section}{\numberline {4.11}Security Considerations}{32}{section.4.11}%
+\contentsline {subsection}{\numberline {4.11.1}Authentication}{32}{subsection.4.11.1}%
+\contentsline {subsection}{\numberline {4.11.2}Protocol Replay}{32}{subsection.4.11.2}%
+\contentsline {subsection}{\numberline {4.11.3}Deniability}{32}{subsection.4.11.3}%
+\contentsline {subsection}{\numberline {4.11.4}Key Compromise}{32}{subsection.4.11.4}%
+\contentsline {subsection}{\numberline {4.11.5}Server Trust}{33}{subsection.4.11.5}%
+\contentsline {subsection}{\numberline {4.11.6}Secure Deletion}{33}{subsection.4.11.6}%
+\contentsline {subsection}{\numberline {4.11.7}Recovery from Compromise}{33}{subsection.4.11.7}%
+\contentsline {subsection}{\numberline {4.11.8}Cryptanalysis and Ratchet Public Keys}{34}{subsection.4.11.8}%
+\contentsline {subsection}{\numberline {4.11.9}Deletion of Skipped Message Keys}{34}{subsection.4.11.9}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{35}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Limited Number of OTP}{35}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Lack of Persistent Database}{35}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Check for Crashes}{35}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Side Channels}{36}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Further Improvements}{36}{section.5.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{37}{chapter.6}%

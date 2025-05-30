@@ -1,3 +1,31 @@
 \chapter{Known Limitations}
 \label{cha:Limitations}
-aaaaaaaaaaaaaaaaaaaa
+
+While the system is designed to provide a secure and efficient messaging platform, there are several limitations arising from design choices, cryptographic constraints, time constraints, and practical implementation trade-offs. 
+
+\section{Limited Number of OTP}
+\label{sec:LimitedNumberofOTP}
+
+One of the most significant limitations is that once a user exhausts their \textbf{One-Time Pre-Keys}, they cannot upload more to the server, effectively limiting the number of sessions (and thus contacts) a user can have. 
+
+\section{Lack of Persistent Database}
+\label{sec:LackofServer}
+
+The absence of a database means that the system is not scalable, as all data are stored in RAM, which limits its long-term viability. Another limitation is that when a user logs out, all session data and keys are discarded, so upon logging back in—even with the same username—the user cannot retrieve past messages.
+
+\section{Check for Crashes}
+\label{sec:CheckforCrashes}
+
+Since we did not implement heart-beat system, the server has no way to verify if a client has crashed or is online, this could lead to messages towards disconnected users, thus making the message sent unreceived even if there is no indication of that behavior neither from the server nor the recipient. But this goes beyond the scope of this project.
+
+\section{Side Channels}
+\label{sec:SideChannels}
+
+While the system relies on secure, well-established libraries, it does not address potential side-channel attacks, which remain an unaccounted-for vulnerability. One example are time based side channels due to the complexity of the primitives used or known vulnerabilities like power consumption at decryption time.
+
+\section{Further Improvements}
+\label{sec:FurtherImpromvements}
+
+Further improvements, other that fixing the problems already mentioned, could involve the implementation of \textbf{Encrypted Header of Double Ratchet} making impossible for an attacker to know the sender or recipient of a message.
+
+One final possible addition is the implementation of \textbf{Post-Quantum Extended Diffie-Hellman} (PQXDH) to give us post-quantum security. The DH input of the double ratchet needs to be changed as well, as for the encryption system doubling the keys size should be enough. One final possible change is the use of \textbf{XChaChaPoly} which is as secure as AES-GCM, but it is faster especially on IoT devices.

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.26)  30 MAY 2025 10:50
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.26)  30 MAY 2025 13:35
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -691,7 +691,7 @@ Package biblatex Info: ... file 'main.bbl' found.
  (./main.bbl)
 Package biblatex Info: Reference section=0 on input line 66.
 Package biblatex Info: Reference segment=0 on input line 66.
-<./imgs/marchio_unitrento_colore_en.png, id=241, 369.7815pt x 114.6684pt>
+<./imgs/marchio_unitrento_colore_en.png, id=261, 369.7815pt x 114.6684pt>
 File: ./imgs/marchio_unitrento_colore_en.png Graphic file (type png)
 <use ./imgs/marchio_unitrento_colore_en.png>
 Package pdftex.def Info: ./imgs/marchio_unitrento_colore_en.png  used on input line 70.
@@ -713,51 +713,53 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.30 ...ecure Communication}{15}{subsection.3.4.2}
+l.30 ...ecure Communication}{16}{subsection.3.4.2}
                                                   % [1
 
-])
+]
+
+[2])
 \tf@toc=\write5
 \openout5 = `main.toc'.
 
 
 
-[2] (./sections/Introduction.tex
+[3] (./sections/Introduction.tex
 Chapter 1.
 
 
-[3
+[4
 
 ]) (./sections/Requirements.tex
 
-[4]
+[5]
 Chapter 2.
 
 
-[5
+[6
 
 {/usr/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]) (./sections/Technical_Details.tex
 
-[6]
+[7]
 Chapter 3.
 
 
-[7
+[8
 
 ]
-<imgs/Websocket.png, id=359, 925.4575pt x 212.795pt>
+<imgs/Websocket.png, id=388, 925.4575pt x 212.795pt>
 File: imgs/Websocket.png Graphic file (type png)
 <use imgs/Websocket.png>
 Package pdftex.def Info: imgs/Websocket.png  used on input line 37.
 (pdftex.def)             Requested size: 377.62642pt x 86.83089pt.
-<imgs/secure-connection.png, id=360, 925.4575pt x 212.795pt>
+<imgs/secure-connection.png, id=389, 925.4575pt x 212.795pt>
 File: imgs/secure-connection.png Graphic file (type png)
 <use imgs/secure-connection.png>
 Package pdftex.def Info: imgs/secure-connection.png  used on input line 46.
 (pdftex.def)             Requested size: 377.62642pt x 86.83089pt.
 
 
-[8 <./imgs/Websocket.png>]
+[9 <./imgs/Websocket.png>]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on input line 61.
 LaTeX Font Info:    Trying to load font information for OMS+cmtt on input line 62.
  (/usr/share/texmf/tex/latex/omscmtt.fd
@@ -767,9 +769,7 @@ LaTeX Font Info:    Font shape `OMS/cmtt/m/n' in size <12> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 62.
 
 
-[9 <./imgs/secure-connection.png>]
-
-[10]
+[10 <./imgs/secure-connection.png>]
 
 [11]
 
@@ -778,131 +778,135 @@ LaTeX Font Info:    Font shape `OMS/cmtt/m/n' in size <12> not available
 [13]
 
 [14]
+
+[15]
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
 (Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 234.
 
 
-[15]) (./sections/Security_Considerations.tex
+[16]) (./sections/Security_Considerations.tex
 
-[16]
+[17]
 Chapter 4.
 
 
-[17
+[18
 
 ]
-
-[18]
 
 [19]
 
 [20]
-<imgs/KDF_Chain.png, id=445, 881.2925pt x 973.6375pt>
+
+[21]
+<imgs/KDF_Chain.png, id=474, 881.2925pt x 973.6375pt>
 File: imgs/KDF_Chain.png Graphic file (type png)
 <use imgs/KDF_Chain.png>
 Package pdftex.def Info: imgs/KDF_Chain.png  used on input line 156.
 (pdftex.def)             Requested size: 264.38979pt x 292.0935pt.
 
 
-[21]
+[22]
 
-[22 <./imgs/KDF_Chain.png (PNG copy)>]
+[23 <./imgs/KDF_Chain.png (PNG copy)>]
 
-[23]
-<imgs/dr1.png, id=459, 1035.87pt x 405.515pt>
+[24]
+<imgs/dr1.png, id=489, 1035.87pt x 405.515pt>
 File: imgs/dr1.png Graphic file (type png)
 <use imgs/dr1.png>
 Package pdftex.def Info: imgs/dr1.png  used on input line 196.
 (pdftex.def)             Requested size: 258.96686pt x 101.3785pt.
-<imgs/dr2.png, id=461, 1039.885pt x 670.505pt>
+<imgs/dr2.png, id=491, 1039.885pt x 670.505pt>
 File: imgs/dr2.png Graphic file (type png)
 <use imgs/dr2.png>
 Package pdftex.def Info: imgs/dr2.png  used on input line 205.
 (pdftex.def)             Requested size: 259.97061pt x 167.62584pt.
 
 
-[24 <./imgs/dr1.png (PNG copy)> <./imgs/dr2.png (PNG copy)>]
-<imgs/dr3.png, id=470, 1037.8775pt x 879.285pt>
+[25 <./imgs/dr1.png (PNG copy)> <./imgs/dr2.png (PNG copy)>]
+<imgs/dr3.png, id=499, 1037.8775pt x 879.285pt>
 File: imgs/dr3.png Graphic file (type png)
 <use imgs/dr3.png>
 Package pdftex.def Info: imgs/dr3.png  used on input line 216.
 (pdftex.def)             Requested size: 207.57182pt x 175.85388pt.
-<imgs/dr4.png, id=472, 1011.78pt x 1106.1325pt>
+<imgs/dr4.png, id=501, 1011.78pt x 1106.1325pt>
 File: imgs/dr4.png Graphic file (type png)
 <use imgs/dr4.png>
 Package pdftex.def Info: imgs/dr4.png  used on input line 225.
 (pdftex.def)             Requested size: 202.35242pt x 221.22258pt.
 
 
-[25 <./imgs/dr3.png (PNG copy)> <./imgs/dr4.png (PNG copy)>]
-<imgs/dr5.png, id=480, 1021.8175pt x 815.045pt>
+[26 <./imgs/dr3.png (PNG copy)> <./imgs/dr4.png (PNG copy)>]
+<imgs/dr5.png, id=509, 1021.8175pt x 815.045pt>
 File: imgs/dr5.png Graphic file (type png)
 <use imgs/dr5.png>
 Package pdftex.def Info: imgs/dr5.png  used on input line 238.
 (pdftex.def)             Requested size: 306.54762pt x 244.51538pt.
 
 
-[26 <./imgs/dr5.png (PNG copy)>]
-<imgs/dr6.png, id=487, 1029.8475pt x 248.93pt>
+[27 <./imgs/dr5.png (PNG copy)>]
+<imgs/dr6.png, id=516, 1029.8475pt x 248.93pt>
 File: imgs/dr6.png Graphic file (type png)
 <use imgs/dr6.png>
 Package pdftex.def Info: imgs/dr6.png  used on input line 257.
 (pdftex.def)             Requested size: 308.95663pt x 74.67957pt.
-<imgs/dr7.png, id=489, 1019.81pt x 345.29pt>
+<imgs/dr7.png, id=518, 1019.81pt x 345.29pt>
 File: imgs/dr7.png Graphic file (type png)
 <use imgs/dr7.png>
 Package pdftex.def Info: imgs/dr7.png  used on input line 266.
 (pdftex.def)             Requested size: 305.94536pt x 103.58778pt.
-<imgs/dr8.png, id=491, 1011.78pt x 624.3325pt>
+<imgs/dr8.png, id=520, 1011.78pt x 624.3325pt>
 File: imgs/dr8.png Graphic file (type png)
 <use imgs/dr8.png>
 Package pdftex.def Info: imgs/dr8.png  used on input line 275.
 (pdftex.def)             Requested size: 303.53633pt x 187.3012pt.
-<imgs/dr9.png, id=493, 1055.945pt x 798.985pt>
+<imgs/dr9.png, id=522, 1055.945pt x 798.985pt>
 File: imgs/dr9.png Graphic file (type png)
 <use imgs/dr9.png>
 Package pdftex.def Info: imgs/dr9.png  used on input line 284.
 (pdftex.def)             Requested size: 316.78595pt x 239.69734pt.
-<imgs/dr10.png, id=495, 1027.84pt x 1164.35pt>
+<imgs/dr10.png, id=524, 1027.84pt x 1164.35pt>
 File: imgs/dr10.png Graphic file (type png)
 <use imgs/dr10.png>
 Package pdftex.def Info: imgs/dr10.png  used on input line 293.
 (pdftex.def)             Requested size: 308.35437pt x 349.3077pt.
 
 
-[27 <./imgs/dr6.png (PNG copy)> <./imgs/dr7.png (PNG copy)>]
+[28 <./imgs/dr6.png (PNG copy)> <./imgs/dr7.png (PNG copy)>]
 
-[28 <./imgs/dr8.png (PNG copy)> <./imgs/dr9.png (PNG copy)>]
+[29 <./imgs/dr8.png (PNG copy)> <./imgs/dr9.png (PNG copy)>]
 
-[29 <./imgs/dr10.png (PNG copy)>]
-<imgs/dr11.png, id=515, 997.7275pt x 803.0pt>
+[30 <./imgs/dr10.png (PNG copy)>]
+<imgs/dr11.png, id=545, 997.7275pt x 803.0pt>
 File: imgs/dr11.png Graphic file (type png)
 <use imgs/dr11.png>
 Package pdftex.def Info: imgs/dr11.png  used on input line 311.
 (pdftex.def)             Requested size: 299.32056pt x 240.90186pt.
 
 
-[30 <./imgs/dr11.png (PNG copy)>]
+[31 <./imgs/dr11.png (PNG copy)>]
 
-[31]
+[32]
 
-[32]) (./sections/Known_Limitations.tex
+[33]) (./sections/Known_Limitations.tex
 
-[33]
+[34]
 Chapter 5.
-) (./sections/Installation.tex
 
-[34
-
-]
-Chapter 6.
-)
 
 [35
 
+]) (./sections/Installation.tex
+
+[36]
+Chapter 6.
+)
+
+[37
+
 ]
 
-[36
+[38
 
 ] (./main.aux)
  ***********
@@ -910,24 +914,24 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: FE65A5E5E515DF8E967CA6C19BB9AFC3;9637.
+(rerunfilecheck)             Checksum: 1A65B973456FABCC3B29BB959D87DEB7;10432.
 Package logreq Info: Writing requests to 'main.run.xml'.
 \openout1 = `main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 21783 strings out of 475171
- 375287 string characters out of 5767095
- 1327360 words of memory out of 5000000
- 44390 multiletter control sequences out of 15000+600000
+ 21800 strings out of 475171
+ 375528 string characters out of 5767095
+ 1327605 words of memory out of 5000000
+ 44400 multiletter control sequences out of 15000+600000
  569980 words of font info for 78 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  79i,8n,93p,790b,1406s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on main.pdf (37 pages, 1004365 bytes).
+Output written on main.pdf (39 pages, 1007993 bytes).
 PDF statistics:
- 629 PDF objects out of 1000 (max. 8388607)
- 546 compressed objects within 6 object streams
- 139 named destinations out of 1000 (max. 500000)
- 548 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 664 PDF objects out of 1000 (max. 8388607)
+ 579 compressed objects within 6 object streams
+ 146 named destinations out of 1000 (max. 500000)
+ 588 words of extra memory for PDF output out of 10000 (max. 10000000)
 
