@@ -53,5 +53,9 @@
 \contentsline {subsection}{\numberline {4.11.3}Deniability}{31}{subsection.4.11.3}%
 \contentsline {subsection}{\numberline {4.11.4}Key Compromise}{31}{subsection.4.11.4}%
 \contentsline {subsection}{\numberline {4.11.5}Server Trust}{32}{subsection.4.11.5}%
-\contentsline {chapter}{\numberline {5}Known Limitations}{33}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{34}{chapter.6}%
+\contentsline {subsection}{\numberline {4.11.6}Secure Deletion}{32}{subsection.4.11.6}%
+\contentsline {subsection}{\numberline {4.11.7}Recovery from Compromise}{32}{subsection.4.11.7}%
+\contentsline {subsection}{\numberline {4.11.8}Cryptanalysis and Ratchet Public Keys}{33}{subsection.4.11.8}%
+\contentsline {subsection}{\numberline {4.11.9}Deletion of Skipped Message Keys}{33}{subsection.4.11.9}%
+\contentsline {chapter}{\numberline {5}Known Limitations}{34}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{35}{chapter.6}%

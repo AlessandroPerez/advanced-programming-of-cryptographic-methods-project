@@ -362,3 +362,40 @@ A malicious server could cause communication between Alice and Bob to fail for e
 The other possible issue is the inability to check in person keys, but a system similar to the one implemented by many Linux distros should suffice as integrity check for the key of the server. Once we have established a root of trust we can rely on the checks implemented by the protocol.
 
 Another final possible attack is due to the limited number of $OTK$ if an attacker drains another party's one-time prekys, making them unable to create new connections. A system to replenish one-time prekys should be implemented, and the server should limit the rate keys are requested.
+
+\subsection{Secure Deletion}
+\label{subsec:SecureDeletion}
+
+The double ratchet algorithm is designed to provide security against and attacker who records encrypted messages and then compromises the sender or receiver at a later time. This security could be deleted if deleted plaintext or keys could be recovered by an attacker with low-level access to the compromised device. But the main focus of this project is security of data in transit.
+
+\subsection{Recovery from Compromise}
+\label{subsec:RecoveryFromCompromise}
+
+The DH ratchet is designed to recover security against a passive eavesdropper who observes encrypted messages after compromising the parties to a session. Compromise of secrete keys will:
+
+\begin{itemize}
+  \item The attacker could use the compromised keys to impersonate the compromised party.
+  \item The attacker could substitute her own ratchet keys via continuous active MitM attack, to maintain eavesdropper on the compromised session.
+  \item The attacker could modify a compromised party's RNG so that future ratchet private keys are predictable.
+\end{itemize}
+
+If a party suspects its keys or devices have been compromised, it must replace them immediately.
+
+\subsection{Cryptanalysis and Ratchet Public Keys}
+\label{subsec:CryptanalysisandRatchetPublicKeys}
+
+Because all DH ratchet computations are mixed into the root key, an attacker who can decrypt a session with passive cryptanalysis, an attacker who can decrypt a session with passive cryptanalysis might lose this ability if she fails to observe some ratchet public keys.
+
+But in our implementation cryptanalysis should not be an issue due to the use of strong encryption function like AES-GCM.
+
+\subsection{Deletion of Skipped Message Keys}
+\label{subsec:DeletionofSkippedMessageKeys}
+
+Storing skipped message keys introduces some risks:
+
+\begin{itemize}
+  \item A malicious sender could induce recipients to store large numbers of skipped message keys, possibly causing DoS due to consuming storage space.
+  \item The lost messages may have been seen by an attacker, even though they did not reach the recipient. The attacker can compromise the intended recipient at a later time to retrieve the skipped message keys.
+\end{itemize}
+
+The implemented mitigation is limiting the number of skipped messages to 1000. For the second one we created a set timer after which keys are deleted as proposed by the Signal documentation.
