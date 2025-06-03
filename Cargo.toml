@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "server",
+    "client",
+    "common",
+    "config",
+    "protocol",
+    "tui"
+]
+
+resolver = "2"
