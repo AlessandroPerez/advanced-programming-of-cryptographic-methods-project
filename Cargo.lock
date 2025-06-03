@@ -1706,7 +1706,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "update_server_keys"
+name = "updater"
 version = "0.1.0"
 dependencies = [
  "protocol",

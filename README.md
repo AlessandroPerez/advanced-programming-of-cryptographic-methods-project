@@ -33,6 +33,44 @@ Clone the repository:
 ```bash
 git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
 ```
+Navigate to the project directory:
+
+```bash
+cd advanced-programming-of-cryptographic-methods-project
+```
+
+### Run with Docker
+1. Ensure you have Docker installed on your machine by doing:
+```bash
+docker --version
+```
+2. Ensure that on the `config.toml` file the following line is present:
+```toml
+server_ip = "server"
+```
+3. Build the Docker image:
+```bash
+docker compose build --no-cache
+```
+4. Run the updater to update server key:
+```bash
+docker compose run --rm updater
+```
+5. Run the server and clients:
+```bash
+docker compose up server client1 client2
+```
+6. Open a new terminal and connect to the client's TUI by executing:
+```bash
+docker container attach client1
+```
+7. You can repeat step 6 for `client2`.
+8. To stop the containers, press `CTRL+C` in the terminal where you ran the `docker compose up` command or use the following command:
+```bash
+docker compose down
+```
+
+### Run locally
 
 > [!WARNING]  
 > There were some issues building the releases for macOS. However, you can still run the project by using `cargo run` in the [`server`](server) and [`tui`](tui) directories.

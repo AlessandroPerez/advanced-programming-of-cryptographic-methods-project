@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 # Build binaries separately to speed up rebuilds if needed
-RUN cargo build --release -p update_server_keys
+RUN cargo build --release -p updater
 RUN cargo build --release -p server
 
 # Stage 2: Create a lightweight runtime image
@@ -19,14 +19,14 @@ WORKDIR /app
 # RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy built binaries from the builder stage
-COPY --from=builder /app/target/release/update_server_keys .
+COPY --from=builder /app/target/release/updater .
 COPY --from=builder /app/target/release/server .
 
 # Copy the config folder (will be overwritten by volume in compose)
 COPY config/ ./config/
 
 # Make binaries executable (just in case)
-RUN chmod +x update_server_keys server
+RUN chmod +x updater server
 
 # Set default command (can be overridden in docker-compose)
 CMD ["bash"]

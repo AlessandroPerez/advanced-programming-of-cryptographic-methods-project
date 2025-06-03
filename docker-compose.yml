@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-server
-    command: ["./update_server_keys"]
+    command: ["./updater"]
     volumes:
       - ./config:/app/config
 
