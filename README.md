@@ -52,7 +52,7 @@ server_ip = "server"
 ```bash
 docker compose build --no-cache
 ```
-4. Run the updater to update server key:
+4. Run the updater to update server keys:
 ```bash
 docker compose run --rm updater
 ```
