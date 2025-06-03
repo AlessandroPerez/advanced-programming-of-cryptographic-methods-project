@@ -411,6 +411,10 @@ impl Client {
     pub fn remove_friend(&mut self, f: String) {
         self.friends.remove(&f);
     }
+
+    pub fn get_friends_count(&self) -> usize {
+        return self.friends.len();
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

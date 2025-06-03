@@ -46,6 +46,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 let active_chat_history = app.client.get_chat_history(&chats[app.active_chat]);
                 frame.render_widget(
                     ChatsWidget::new(
+                        app.client.username.clone(),
                         if app.show_popup {String::new()} else { app.input.clone() },
                         app.character_index,
                         app.input_mode.clone(),

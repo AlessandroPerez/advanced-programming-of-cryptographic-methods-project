@@ -11,6 +11,7 @@ use ratatui::widgets::{List, ListItem};
 use crate::app::InputMode;
 
 pub(crate) struct ChatsWidget {
+    whoami: String,
     input: String,
     character_index: usize,
     input_mode: InputMode,
@@ -23,6 +24,7 @@ pub(crate) struct ChatsWidget {
 
 impl ChatsWidget {
     pub fn new(
+        whoami: String,
         input: String,
         character_index: usize,
         input_mode: InputMode,
@@ -33,6 +35,7 @@ impl ChatsWidget {
         message_history: Option<Vec<ChatMessage>>,
     ) -> Self {
         Self {
+            whoami,
             input,
             character_index,
             input_mode,
@@ -70,9 +73,9 @@ impl Widget for ChatsWidget {
             .title_alignment(Alignment::Center)
             .border_style(Style::default().fg(
                 if self.active_window == 0 {
-                        Color::LightGreen
+                        Color::Rgb(156,207, 216)
                     } else {
-                        Color::White
+                        Color::Rgb(49, 116, 143)
                     }
                 )
                 .add_modifier(
@@ -97,8 +100,16 @@ impl Widget for ChatsWidget {
         let messages = self.message_history.unwrap_or(vec![])
             .iter()
             .map(|msg| {
-                ListItem::new(format!("{}: {}", msg.from, msg.text))
-                    .style(Style::default().fg(Color::White))
+                let style = if msg.from == self.whoami {
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Rgb(224, 222, 244))
+                } else {
+                    Style::default().fg(Color::Rgb(144, 140, 170))
+                };
+
+                ListItem::new(format!("> {}", msg.text))
+                    .style(style)
             })
             .collect::<Vec<_>>();
 
@@ -109,9 +120,9 @@ impl Widget for ChatsWidget {
                 .title_alignment(Alignment::Center)
                 .border_style(Style::default().fg(
                         if self.active_window == 1 {
-                        Color::LightGreen
+                        Color::Rgb(156,207, 216)
                     } else {
-                        Color::White
+                        Color::Rgb(49, 116, 143)
                     }
                 ).add_modifier(
                     if self.active_window == 1 {
@@ -145,9 +156,9 @@ impl Widget for ChatsWidget {
                     .title("Input")
                     .border_style(Style::default().fg(
                         if self.active_window == 1 {
-                            Color::LightGreen
+                            Color::Rgb(156,207, 216)
                         } else {
-                            Color::White
+                            Color::Rgb(49, 116, 143)
                         }
                     ).add_modifier(
                         if self.active_window == 1 {
@@ -162,6 +173,7 @@ impl Widget for ChatsWidget {
 
         let inner_chats_area = main_layout[0].inner(Margin { vertical: 1, horizontal: 1 });
 
+        
         let chats_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(
@@ -170,26 +182,30 @@ impl Widget for ChatsWidget {
             .split(inner_chats_area);
 
         for (i, chat) in self.chats.iter().enumerate() {
+            let (text_style, border_style) = if i == self.selected_chat {
+                (
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Rgb(156, 207, 216)),
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Rgb(156, 207, 216))
+                )
+            } else {
+                (
+                    Style::default().fg(Color::Rgb(49, 116, 143)),
+                    Style::default().fg(Color::Rgb(49, 116, 143))
+                )
+            };
+
             let chat_rows_layout = Paragraph::new(Span::styled(
                 chat.clone(),
-                Style::default().add_modifier(
-                    if i == self.selected_chat {
-                        Modifier::BOLD
-                    } else {
-                        Modifier::empty()
-                    }
-                ),
+                text_style,
             ))
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .border_style(Style::default().add_modifier(
-                            if i == self.selected_chat {
-                                Modifier::BOLD
-                            } else {
-                                Modifier::empty()
-                            }
-                        )),
+                        .border_style(border_style),
                 );
 
             chat_rows_layout.render(chats_layout[i], buf);
@@ -197,12 +213,12 @@ impl Widget for ChatsWidget {
 
         let bottom_text = match self.input_mode {
             InputMode::Normal => Line::from(vec![
-                Span::styled(" NORMAL ", Style::default().fg(Color::Black).bg(Color::Rgb(130, 170, 255))),
+                Span::styled(" NORMAL ", Style::default().fg(Color::Black).bg(Color::Rgb(196, 167, 231))),
                 Span::styled(" | Press 'a' to add a friend, 'i' to enter INSERT mode, 'q' to quit", Style::default().fg(Color::White)),
             ]),
 
             InputMode::Insert => Line::from(vec![
-                Span::styled(" INSERT ", Style::default().fg(Color::Black).bg(Color::Rgb(195, 232, 141))),
+                Span::styled(" INSERT ", Style::default().fg(Color::Black).bg(Color::Rgb(246, 193, 119))),
                 Span::styled(" | Press 'ESC' to enter NORMAL mode", Style::default().fg(Color::White)),
             ])
         };

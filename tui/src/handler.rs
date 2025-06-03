@@ -44,14 +44,14 @@ pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
 
                 KeyCode::Down | KeyCode::Char('j') if app.state == AppState::Chats && app.active_window == 0 => {
                     if !app.show_popup {
-                        app.selected_chat = (app.selected_chat + 1) % 3; //app.client.friends.len();
+                        app.selected_chat = (app.selected_chat + 1) % app.client.get_friends_count(); //app.client.friends.len();
                     }
 
                 },
 
                 KeyCode::Up | KeyCode::Char('k') if app.state == AppState::Chats && app.active_window == 0 => {
                     if !app.show_popup {
-                        app.selected_chat = (app.selected_chat  + 3 - 1) % 3; //app.client.friends.len();
+                        app.selected_chat = (app.selected_chat  + app.client.get_friends_count() - 1) % app.client.get_friends_count(); //app.client.friends.len();
                     }
                 },
 
