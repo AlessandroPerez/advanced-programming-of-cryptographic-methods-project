@@ -22,7 +22,7 @@
 # Introduction
 
 **T**he **R**ust **U**nique **S**ecure **T**alk (T.R.U.S.T.) is a secure chat application with a terminal user interface (TUI), developed in Rust. This project focuses on exploring secure communication principles and implementing a robust end-to-end encryption system for reliable and private messaging. <br>
-The core of the project revolves around the **Extended Triple Diffie-Hellman** (**X3DH**) protocol for secure key establishment. Once a shared secret is established, the application switches to **AES-GCM** for symmetric message encryption. Together, these algorithms ensure end-to-end confidentiality and integrity of all communications.
+The core of the project revolves around the **Extended Triple Diffie-Hellman** (**X3DH**) protocol for secure key establishment and **Double Ratchet** protocol for frequent key update. Once a shared secret is established, the application switches to **AES-GCM** for symmetric message encryption. Together, these algorithms ensure end-to-end confidentiality and integrity of all communications.
 
 # Installation and Configuration
 
