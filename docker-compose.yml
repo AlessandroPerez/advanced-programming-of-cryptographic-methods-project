@@ -1,45 +1,60 @@
-version: "3.8"
-
 services:
   updater:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-server
     command: ["./update_server_keys"]
     volumes:
       - ./config:/app/config
-    # Once updater finishes, config/config.toml is updated on host
 
   server:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-server
     depends_on:
       - updater
     command: ["./server"]
     volumes:
       - ./config:/app/config
+    container_name: trust_server
+    networks:
+        - chatnet
     ports:
-      - "8080:3333"
+      - "8080:3333"  # Expose outside if needed
+    stdin_open: true
+    tty: true
 
   client1:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-client
     depends_on:
       - updater
       - server
     command: ["./tui"]
     volumes:
       - ./config:/app/config
+    container_name: client1
+    networks:
+      - chatnet
+    stdin_open: true
+    tty: true
 
   client2:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-client
     depends_on:
       - updater
       - server
     command: ["./tui"]
     volumes:
       - ./config:/app/config
+    container_name: client2
+    networks:
+      - chatnet
+    stdin_open: true
+    tty: true
+
+networks:
+  chatnet:

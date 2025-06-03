@@ -1,4 +1,3 @@
-# Stage 1: Build Rust binaries
 FROM rust:latest as builder
 
 WORKDIR /app
@@ -9,7 +8,6 @@ COPY . .
 # Build binaries separately to speed up rebuilds if needed
 RUN cargo build --release -p update_server_keys
 RUN cargo build --release -p server
-RUN cargo build --release -p tui
 
 # Stage 2: Create a lightweight runtime image
 FROM ubuntu:22.04
@@ -23,13 +21,12 @@ WORKDIR /app
 # Copy built binaries from the builder stage
 COPY --from=builder /app/target/release/update_server_keys .
 COPY --from=builder /app/target/release/server .
-COPY --from=builder /app/target/release/tui .
 
 # Copy the config folder (will be overwritten by volume in compose)
 COPY config/ ./config/
 
 # Make binaries executable (just in case)
-RUN chmod +x update_server_keys server tui
+RUN chmod +x update_server_keys server
 
 # Set default command (can be overridden in docker-compose)
 CMD ["bash"]
