@@ -11,6 +11,14 @@ The application is built using Rust’s asynchronous runtime (\texttt{tokio}) an
 \label{sec:Architecture}
 
 The application follows a client-server architecture with some modifications to enhance flexibility. By leveraging \textbf{WebSockets}, which provide bidirectional TCP communication, both the client and server can initiate requests. This approach simplifies development by enabling real-time message exchange without requiring traditional request-response cycles, making the system more efficient and responsive.
+
+
+\subsection{Architecture overview}
+\label{subsec:ArchitectureOverview}
+From Server-side, incoming connections from clients are handled leveraging different threads, each responsible for managing a specific client connection.
+Upon start up, the server call the \texttt{listen} method which is responsible for accepting incoming connections and spawning a new thread, named \texttt{acceptor}, for each connection. Each thread is responsible for handling the communication with a specific client, allowing the server to manage multiple clients simultaneously. The \texttt{acceptor} thread is responsible for initializing and managing the connection, to doing so, it spaws two additional threads, named \texttt{task\_receiver} and \texttt{task\_sender}. The \texttt{task\_receiver} thread is responsible for listening for incoming requests from the client and send responses back, while the \texttt{task\_sender} thread is responsible for forwarding messages to the client (see fig. \ref{fig:architecture-overview}).
+The client, on the other hand, is designed to be a terminal-based user interface (TUI) application that interacts with the server. It consists of a main process that manages the user interface and sends requests to the server, a separate thread for listening to incoming responses or messages and forwarding them to the TUI, ultimetly the TUI levarages on a \texttt{tokio} task that listens for incoming messages on a \texttt{mpsc channel} and invokes the appropriate handler to process the message and render it in the user interface (see fig. \ref{fig:client-architecture-overview}).\\
+
 To better understand the application's functionality, we outline four key scenarios that define its core operations:
 
 \begin{enumerate}
@@ -156,9 +164,9 @@ The function responsible for AES decryption is \texttt{decrypt()}. It takes as i
 
 This function checks for integrity and then performs the inverse operation of the encryption process if the message has not been tampered with. Finally, it returns the decrypted data as a \textbf{byte vector}.
 
-\subsubsection{Server}
-\label{subsec:Server}
 
+\subsection{Server}
+\label{subsec:Server}
 The server implementation is built on an asynchronous runtime provided by the \texttt{tokio} library in Rust. This library enables the server to perform non-blocking asynchronous operations, improving both flexibility and performance.  
 
 Each new connection is handled by a separate Tokio task, allowing the server to efficiently manage multiple concurrent connections. For each \textbf{Connection task}, two additional Tokio tasks are generated:
@@ -168,7 +176,7 @@ Each new connection is handled by a separate Tokio task, allowing the server to 
     \item the second task (\texttt{task\_sender}) forwards messages to the client;
 \end{itemize}
 
-\subsection{Task Receiver}
+\subsubsection{Task Receiver}
 \label{subsec:TaskReceiver}
 
 This task continuously listens for incoming requests on the WebSocket connection from the client. It exposes four API endpoints:
@@ -187,12 +195,29 @@ This task continuously listens for incoming requests on the WebSocket connection
 
 All API requests received after the secure connection is established are decrypted upon arrival, and all responses are encrypted before being sent to the client. 
 
-\subsection{Task Sender}
+\subsubsection{Task Sender}
 \label{subsec:TaskSender}
 
 The Task Sender is responsible for message forwarding. It continuously listens on a \texttt{mpsc channel} for incoming messages. Upon receiving a message, it encrypts the content using the session key shared between the recipient client and the server, ensuring secure communication. Once the message is encrypted, it forwards the encrypted message to the recipient.
 
 The content of messages is encrypted using the shared key between the two clients. The \texttt{send\_message} request undergoes two layers of encryption: first, the message text is encrypted with the shared key between the clients, and then the entire request is encrypted using the shared key between the client and the server, ensuring end-to-end security.
+
+%put image here
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/server-arch.png}
+  \caption{Server Architecture Overview}
+  \label{fig:architecture-overview}
+\end{figure}
+
+
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/client-arch.png}
+  \caption{Client Architecture Overview}
+  \label{fig:client-architecture-overview}
+\end{figure}
 
 \subsection{Client \& TUI}
 \label{subsec:ClientTUI}
@@ -202,7 +227,7 @@ The client backend also utilizes \texttt{tokio} for asynchronous runtime. When a
 To manage the correlation between requests and responses, we introduced a struct called \texttt{RequestWrapper}. This struct contains two fields: \texttt{request\_uuid}, which uniquely identifies the request, and \texttt{body}, which holds the actual request to be sent to the server. When the server responds, it includes the same \texttt{request\_uuid} in the \texttt{ResponseWrapper}, allowing the client to match each response to its corresponding request.  
 
 Chat messages, on the other hand, are handled as regular \texttt{send\_message} requests. When the client receives a message, it forwards it to a task running in the TUI binary, which listens for incoming messages on a \texttt{mpsc channel}. This task then invokes the appropriate handler to process the message and render it in the user interface.
-
+\newpage
 \section{Code Structure}
 \label{sec:CodeStructure}
 
