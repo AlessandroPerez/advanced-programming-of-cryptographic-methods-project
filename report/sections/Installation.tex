@@ -19,10 +19,10 @@ cd advanced-programming-of-cryptographic-methods-project
 
 \section{Configuration}
 
-Modify the \texttt{config.toml} file located in the \texttt{config} directory to adjust the application settings:
+Modify the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/blob/main/config/config.toml}{\texttt{config.toml}} file located in the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/blob/main/config}{\texttt{config}} directory to adjust the application settings:
 
 \begin{itemize}
-    \item \texttt{server\_ip}: The IP address of the server (default: \texttt{127.0.0.1}). If you plan to use Docker (see \ref{sec:docker}), set this to \texttt{"server"}.
+    \item \texttt{server\_ip}: The IP address of the server (default: \texttt{127.0.0.1}). If you plan to use Docker (see Section~\ref{sec:docker}), set this to \texttt{"server"}.
     \item \texttt{server\_port}: The port on which the server listens (default: \texttt{3333}).
     \item \texttt{log\_level}: The logging level (default: \texttt{info}).
 \end{itemize}
@@ -32,7 +32,14 @@ Modify the \texttt{config.toml} file located in the \texttt{config} directory to
 \textbf{Warning:} Do not modify \texttt{private\_key\_server} and \texttt{public\_key\_server}. These values are automatically generated when the server starts.
 \end{myWarning}
 
-\section{Installation with Docker (Recommended)}
+\section{Installation}
+
+You can choose between installing the project using Docker, using the pre-built executables with Python as a launcher, or building the executables yourself.  
+The Docker-based method is recommended, as it minimizes compatibility issues by encapsulating all dependencies within containers.  
+The local installation is less user-friendly, especially on macOS (see the warning in Section~\ref{sec:python}), as it \textbf{may} require manually building the source files.  
+However, both methods provide the same functionality. Choose the installation method that best fits your environment and preferences.
+
+\subsection{Installation with Docker (Recommended)}
 \label{sec:docker}
 
 \begin{enumerate}
@@ -68,18 +75,66 @@ docker container attach client1
 
     \item Repeat the previous step for \texttt{client2}, if desired.
 
-    \item To stop the containers, press \texttt{CTRL+C} in the terminal where you ran \texttt{docker compose up}, or run:
+    \item To stop the containers, press \texttt{CTRL+C} in the terminal where you ran \texttt{docker compose up}, or run \texttt{docker compose down}.
 
-        \begin{lstlisting}
-docker compose down
-        \end{lstlisting}
 \end{enumerate}
 
-\section{Local Installation with Python}
+\subsection{Local Installation from Source}
+\label{sec:source}
+
+\begin{enumerate}
+    \item Ensure that Rust and Cargo are installed by running:
+    
+    \begin{lstlisting}
+rustc --version
+cargo --version
+    \end{lstlisting}
+    
+    \item Build the server:
+    
+    From the root of the repository:
+    
+    \begin{enumerate}
+        \item Navigate to the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/server}{\texttt{server}} directory:
+        
+        \begin{lstlisting}
+cd server
+        \end{lstlisting}
+        
+        \item Build the server source files:
+        
+        \begin{lstlisting}
+cargo build --release
+        \end{lstlisting}
+    \end{enumerate}
+    
+    \item Build the TUI:
+    
+    From the root of the repository:
+    
+    \begin{enumerate}
+        \item Navigate to the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/tui}{\texttt{tui}} directory:
+        
+        \begin{lstlisting}
+cd tui
+        \end{lstlisting}
+        
+        \item Build the TUI source files:
+        
+        \begin{lstlisting}
+cargo build --release
+        \end{lstlisting}
+    \end{enumerate}
+    
+    \item You can run the compiled executables located in the \texttt{release} subdirectory of both the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/server/target/release}{\texttt{server}} and \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/tui/target/release}{\texttt{tui}} directories.
+\end{enumerate}
+
+\subsection{Python Launcher (No Installation Required)}
+\label{sec:python}
 
 \noindent
 \begin{myWarning}
-\textbf{Warning:} Building releases on macOS may encounter issues. If proceeding with this method, consider running \texttt{cargo build} manually in the \texttt{server} and \texttt{tui} directories.
+\textbf{Warning:} With this installation method, you will use pre-built executables. If you are using macOS, please follow the instructions in Section~\ref{sec:source}, as no pre-built executable is provided. If you are using another platform (e.g., Windows or Linux) and encounter issues, you can also refer to Section~\ref{sec:source}. Once you have successfully built the executables, you can return to this section.
 \end{myWarning}
 
 \begin{enumerate}

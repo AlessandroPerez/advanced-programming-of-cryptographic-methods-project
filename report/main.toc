@@ -66,5 +66,7 @@
 \contentsline {chapter}{\numberline {6}Installation and Configuration}{37}{chapter.6}%
 \contentsline {section}{\numberline {6.1}Getting Started}{37}{section.6.1}%
 \contentsline {section}{\numberline {6.2}Configuration}{37}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Installation with Docker (Recommended)}{38}{section.6.3}%
-\contentsline {section}{\numberline {6.4}Local Installation with Python}{38}{section.6.4}%
+\contentsline {section}{\numberline {6.3}Installation}{38}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Installation with Docker (Recommended)}{38}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Local Installation from Source}{39}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Python Launcher (No Installation Required)}{39}{subsection.6.3.3}%
