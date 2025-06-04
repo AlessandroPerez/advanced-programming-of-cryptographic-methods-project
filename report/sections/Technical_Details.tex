@@ -3,7 +3,7 @@
 
 This section provides an in-depth overview of the architecture, implementation, and key components of TRUST. It covers the cryptographic protocols used, system architecture, core libraries, and design decisions that ensure security and usability.
 
-The application is built using Rust’s asynchronous runtime (\texttt{tokio}) and the  framework for networking is \texttt{tokio-tungstenite}, while the user interface is implemented with \texttt{ratatui}. X3DH was implemented using primitives provided by the \texttt{dalek-cryptography} library, and AES-GCM using primitives provided by the \texttt{aes\_gcm} library, ensuring end-to-end encryption for user messages.
+The application is built using Rust’s asynchronous runtime (\texttt{tokio}) and the  framework for networking is \texttt{tokio-tungstenite}, while the user interface is implemented with \texttt{ratatui}. X3DH and Double Ratchet were implemented using primitives provided by the \texttt{dalek-cryptography} library, and AES-GCM using primitives provided by the \texttt{aes\_gcm} library, ensuring end-to-end encryption for user messages.
 
 % TODO bisogna aggiunere la parte di Double Ratchet
 
