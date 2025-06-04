@@ -1,9 +1,9 @@
 [package]
-name = "update_server_keys"
+name = "updater"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 serde = "1.0.217"
-protocol = { path = "../../protocol"}
+protocol = { path = "../protocol" }
 toml = "0.8.20"

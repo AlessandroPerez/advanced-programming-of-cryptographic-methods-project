@@ -1,0 +1,16 @@
+# Stage 1: Build Rust binaries
+FROM rust:latest as builder
+
+WORKDIR /app
+COPY . .
+RUN cargo build --release -p tui
+
+FROM ubuntu:22.04
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/tui .
+COPY config/ ./config/
+RUN chmod +x tui
+
+CMD ["bash"]

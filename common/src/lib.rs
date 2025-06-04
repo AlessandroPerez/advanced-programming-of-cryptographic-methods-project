@@ -201,4 +201,4 @@ impl Config {
     }
 }
 
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::new("../config/config.toml"));
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::new("./config/config.toml"));
