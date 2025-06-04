@@ -32,3 +32,6 @@ tui/target/release/*
 
 !tui/target/release/tui
 !tui/target/release/tui.exe
+report/
+!report/*.tex
+!report/section/*.tex
