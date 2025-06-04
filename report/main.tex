@@ -63,6 +63,117 @@
       {]}{{{\color{delim}{]}}}}{1},
 }
 
+\definecolor{bgcolor}{RGB}{246,248,250}       % GitHub light theme background
+\definecolor{ghkeyword}{RGB}{0,77,175}       % GitHub light theme keywords (a darker blue)
+\definecolor{ghcomment}{RGB}{106,115,125}     % GitHub light theme comments (a muted green-gray)
+\definecolor{ghstring}{RGB}{203,36,49}        % GitHub light theme strings (a strong red)
+\definecolor{ghtext}{RGB}{36,41,46}           % GitHub light theme general text (dark gray)
+
+
+\lstdefinelanguage{bash}{
+    keywords={sudo, cp, mv, rm, ls, cd, mkdir, echo, cat, grep, find, chmod, chown, tar, curl, wget, git, docker}, % Added git and docker for the example
+    sensitive=true,
+    comment=[l]{\#},
+    morecomment=[l]{\#},
+    morestring=[b]",
+    morestring=[b]'
+}
+
+\lstset{
+    language=bash,
+    backgroundcolor=\color{bgcolor},
+    basicstyle=\ttfamily\small\color{ghtext}, % Changed to ghtext for general commands
+    keywordstyle=\color{ghkeyword}\bfseries,
+    commentstyle=\color{ghcomment}\itshape,
+    stringstyle=\color{ghstring},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{bgcolor}, % Lighter border color for GitHub feel
+    numbers=none,
+    xleftmargin=10pt,
+    xrightmargin=10pt,
+    tabsize=4,
+    captionpos=b
+}
+
+% Required packages for custom boxes and colors
+\usepackage{tcolorbox}
+\usepackage{xcolor}
+
+% Define custom colors for the boxes (you can fine-tune these RGB values)
+% Note Box Colors
+\definecolor{notebackground}{RGB}{230,255,230} % Very light green
+\definecolor{noteleftborder}{RGB}{0,150,0}   % Dark green
+
+% Warning Box Colors
+\definecolor{warningbackground}{RGB}{255,255,230} % Very light yellow
+\definecolor{warningleftborder}{RGB}{255,165,0} % Orange
+
+% Important Box Colors
+\definecolor{importantbackground}{RGB}{255,230,230} % Very light red/pink
+\definecolor{importantleftborder}{RGB}{200,0,0}   % Dark red
+
+% --- Define the tcolorbox environments (Adjusted for older tcolorbox versions) ---
+
+% Note Box Environment
+\newtcolorbox{myNote}{
+    % enhanced, % REMOVED - this key is not recognized by your version
+    colback=notebackground,     % Background color
+    colframe=noteleftborder,    % Frame color (will apply to the left rule)
+    leftrule=4pt,               % Thickness of the left rule
+    toprule=0pt,                % Hide top rule
+    bottomrule=0pt,             % Hide bottom rule
+    rightrule=0pt,              % Hide right rule
+    boxsep=5pt,                 % Space between box content and frame
+    left=10pt,                  % Extra padding on the left (between rule and text)
+    right=5pt,                  % Padding on the right
+    top=5pt,                    % Padding on the top
+    bottom=5pt,                 % Padding on the bottom
+    arc=0pt,                    % No rounded corners
+    outer arc=0pt,              % Ensure outer corners are also sharp
+    parbox=false,               % Content is a normal paragraph
+    nobeforeafter,              % No extra vertical space before/after the box
+}
+
+% Warning Box Environment
+\newtcolorbox{myWarning}{
+    colback=warningbackground,
+    colframe=warningleftborder,
+    leftrule=4pt,
+    toprule=0pt,
+    bottomrule=0pt,
+    rightrule=0pt,
+    boxsep=5pt,
+    left=10pt,
+    right=5pt,
+    top=5pt,
+    bottom=5pt,
+    arc=0pt,
+    outer arc=0pt,
+    parbox=false,
+    nobeforeafter,
+}
+
+% Important Box Environment
+\newtcolorbox{myImportant}{
+    colback=importantbackground,
+    colframe=importantleftborder,
+    leftrule=4pt,
+    toprule=0pt,
+    bottomrule=0pt,
+    rightrule=0pt,
+    boxsep=5pt,
+    left=10pt,
+    right=5pt,
+    top=5pt,
+    bottom=5pt,
+    arc=0pt,
+    outer arc=0pt,
+    parbox=false,
+    nobeforeafter,
+}
+
 \begin{document}
 
 \begin{titlepage}

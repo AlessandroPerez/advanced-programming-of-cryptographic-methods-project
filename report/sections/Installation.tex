@@ -1,3 +1,111 @@
-\chapter{Instruction for Installation and Execution}
+\chapter{Installation and Configuration}
 \label{cha:Installation}
-aaaaaaaaaaaaaaaaaaaa
+
+\section{Getting Started}
+
+\begin{enumerate}
+    \item Clone the repository:
+
+        \begin{lstlisting}
+git clone https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project
+        \end{lstlisting}
+
+    \item Navigate to the project directory:
+    
+        \begin{lstlisting}
+cd advanced-programming-of-cryptographic-methods-project
+        \end{lstlisting}
+\end{enumerate}
+
+\section{Configuration}
+
+Modify the \texttt{config.toml} file located in the \texttt{config} directory to adjust the application settings:
+
+\begin{itemize}
+    \item \texttt{server\_ip}: The IP address of the server (default: \texttt{127.0.0.1}). If you plan to use Docker (see \ref{sec:docker}), set this to \texttt{"server"}.
+    \item \texttt{server\_port}: The port on which the server listens (default: \texttt{3333}).
+    \item \texttt{log\_level}: The logging level (default: \texttt{info}).
+\end{itemize}
+
+\noindent
+\begin{myWarning}
+\textbf{Warning:} Do not modify \texttt{private\_key\_server} and \texttt{public\_key\_server}. These values are automatically generated when the server starts.
+\end{myWarning}
+
+\section{Installation with Docker (Recommended)}
+\label{sec:docker}
+
+\begin{enumerate}
+    \item Verify that Docker is installed by running:
+
+        \begin{lstlisting}
+docker --version
+        \end{lstlisting}
+
+    \item Ensure the following line is present in \texttt{config.toml}:
+
+        \begin{lstlisting}
+server_ip = "server"
+        \end{lstlisting}
+
+    \item Build the Docker image:
+
+        \begin{lstlisting}
+docker compose build --no-cache
+        \end{lstlisting}
+
+    \item Run the updater to generate server keys:
+
+        \begin{lstlisting}
+docker compose run --rm updater
+        \end{lstlisting}
+
+    \item Start the server and clients:
+
+        \begin{lstlisting}
+docker compose up server client1 client2
+        \end{lstlisting}
+
+    \item Open a new terminal and attach to the TUI of \texttt{client1}:
+
+        \begin{lstlisting}
+docker container attach client1
+        \end{lstlisting}
+
+    \item Repeat the previous step for \texttt{client2}, if desired.
+
+    \item To stop the containers, press \texttt{CTRL+C} in the terminal where you ran \texttt{docker compose up}, or run:
+
+        \begin{lstlisting}
+docker compose down
+        \end{lstlisting}
+\end{enumerate}
+
+\section{Local Installation with Python}
+
+\noindent
+\begin{myWarning}
+\textbf{Warning:} Building releases on macOS may encounter issues. If proceeding with this method, consider running \texttt{cargo build} manually in the \texttt{server} and \texttt{tui} directories.
+\end{myWarning}
+
+\begin{enumerate}
+    \item Ensure Python is installed by running:
+
+        \begin{lstlisting}
+python --version
+        \end{lstlisting}
+
+    There is no specific Python version or dependency requirement, as Python is only used to simplify the launching process.
+
+    \item Run the server:
+
+        \begin{lstlisting}
+python server.py
+        \end{lstlisting}
+
+    \item Run one or more clients:
+
+        \begin{lstlisting}
+python tui.py
+        \end{lstlisting}
+\end{enumerate}

@@ -63,4 +63,8 @@
 \contentsline {section}{\numberline {5.3}Check for Crashes}{35}{section.5.3}%
 \contentsline {section}{\numberline {5.4}Side Channels}{36}{section.5.4}%
 \contentsline {section}{\numberline {5.5}Further Improvements}{36}{section.5.5}%
-\contentsline {chapter}{\numberline {6}Instruction for Installation and Execution}{37}{chapter.6}%
+\contentsline {chapter}{\numberline {6}Installation and Configuration}{37}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Getting Started}{37}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Configuration}{37}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Installation with Docker (Recommended)}{38}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Local Installation with Python}{38}{section.6.4}%
