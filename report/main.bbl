@@ -19,6 +19,43 @@
 
 \refsection{0}
   \datalist[entry]{nty/global//global/global/global}
+    \entry{X3DHproof}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=21c3f418cb4820a77de660d40a6b9337}{%
+           family={Have},
+           familyi={H\bibinitperiod},
+           given={Ferran},
+           giveni={F\bibinitperiod},
+           prefix={van\bibnamedelima der},
+           prefixi={v\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+        {{hash=9eb29e20b4cbc5fe675d8136c1fb6bc7}{%
+           family={Mennink},
+           familyi={M\bibinitperiod},
+           given={Dr.\bibnamedelimi B.J.M.},
+           giveni={D\bibinitperiod\bibinitdelim B\bibinitperiod}}}%
+        {{hash=59f4af313357cd9e2a69af8d6d7fe30f}{%
+           family={Daemen},
+           familyi={D\bibinitperiod},
+           given={Prof.\bibnamedelimi Dr.\bibnamedelimi J.J.C.},
+           giveni={P\bibinitperiod\bibinitdelim D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{11659c6ad95728986b237540bf3db805}
+      \strng{fullhash}{11659c6ad95728986b237540bf3db805}
+      \strng{fullhashraw}{11659c6ad95728986b237540bf3db805}
+      \strng{bibnamehash}{11659c6ad95728986b237540bf3db805}
+      \strng{authorbibnamehash}{11659c6ad95728986b237540bf3db805}
+      \strng{authornamehash}{11659c6ad95728986b237540bf3db805}
+      \strng{authorfullhash}{11659c6ad95728986b237540bf3db805}
+      \strng{authorfullhashraw}{11659c6ad95728986b237540bf3db805}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{The X3DH protocols is a key agreement protocol that is used in the Signal protocol to establish a shared secret key between two parties. While there is a rigorous security analysis for the Signal protocol, the X3DH protocol does not have the same level of analysis. In this paper we will provide such an analysis and provide explanations for most of the theory that is used. We will define the security this protocol gives and give a proof of security of the X3DH protocol by using game hops and introducing an adversary with power over the network and proving a bound on the advantage of the adversary. The conclusion is that the X3DH protocol provides secrecy of the shared secret and the message}
+      \field{howpublished}{\url{ https://www.cs.ru.nl/bachelors-theses/2021/Ferran_van_der_Have___4104145___The_X3DH_Protocol_-_A_Proof_of_Security.pdf }}
+      \field{title}{The X3DH Protocol: A Proof of Securit}
+      \field{year}{2022}
+    \endentry
     \entry{DoubleRachet}{article}{}{}
       \name{author}{2}{}{%
         {{hash=9dfd0bf532dd1b08969afefcdd7188b5}{%
