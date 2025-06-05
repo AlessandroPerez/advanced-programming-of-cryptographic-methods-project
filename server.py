@@ -4,17 +4,17 @@ import subprocess
 if sys.platform.startswith("win"):
 
     commands = [
-        ".\\config\\update_server_keys\\target\\release\\update_server_keys.exe",
-        ".\\server\\target\\release\\server.exe"
+        ".\\target\\release\\updater.exe",
+        ".\\target\\release\\server.exe",
     ]
 
 elif sys.platform.startswith(["linux", "darwin"]):
 
     commands = [
-        "chmod u+x ./config/update_server_keys/target/release/update_server_keys",
-        "chmod u+x ./server/target/release/server",
-        "./config/update_server_keys/target/release/update_server_keys",
-        "./server/target/release/server"
+        "chmod u+x ./target/release/updater",
+        "chmod u+x ./target/release/server",
+        "./target/release/updater",
+        "./target/release/server",
     ]
 
 else:

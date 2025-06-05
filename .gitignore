@@ -17,6 +17,7 @@ tui/target/CACHEDIR.TAG
 
 **/.vscode/
 **/__pycache__/
+**/debug
 
 build_all.bat
 

@@ -4,14 +4,14 @@ import subprocess
 if sys.platform.startswith("win"):
 
     commands = [
-        ".\\tui\\target\\release\\tui"
+        ".\\target\\release\\tui"
     ]
 
 elif sys.platform.startswith(["linux", "darwin"]):
 
     commands = [
-        "chmod u+x ./tui/target/release/tui",
-        "./tui/target/release/tui"
+        "chmod u+x ./target/release/tui",
+        "./target/release/tui"
     ]
 
 else:
