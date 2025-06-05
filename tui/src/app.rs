@@ -9,8 +9,6 @@ pub type AppResult<T> = Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) enum AppState {
-    Animation,
-
     #[default]
     Register,
 

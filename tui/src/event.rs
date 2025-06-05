@@ -11,9 +11,6 @@ use crate::app::AppResult;
 pub enum Event {
     Tick,
     Key(KeyEvent),
-
-    //Mouse(MouseEvent),
-    //Resize(u16, u16),
 }
 
 /// Terminal event handler.

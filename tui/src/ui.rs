@@ -14,10 +14,10 @@ use crate::widgets::empty_page::EmptyPage;
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
+
+    frame.render_widget(ratatui::widgets::Block::default().style(Style::default().bg(Color::Rgb(31, 29, 46))), frame.area());
+
     match app.state {
-        AppState::Animation => {
-            //TODO
-        },
         AppState::Register => {
             let mut error_message = String::new();
             if let Some(error) = &app.error {
@@ -40,6 +40,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             if chats.is_empty() {
 
                 frame.render_widget(Clear, frame.area()); //this clears out the background
+                frame.render_widget(ratatui::widgets::Block::default().style(Style::default().bg(Color::Rgb(31, 29, 46))), frame.area());
                 frame.render_widget(EmptyPage::new(app.input_mode.clone()), frame.area());
 
             }else {
@@ -67,6 +68,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 };
                 let area = popup_area(area, 30, 4);
                 frame.render_widget(Clear, area); //this clears out the background
+                frame.render_widget(ratatui::widgets::Block::default().style(Style::default().bg(Color::Rgb(31, 29, 46))), area);
                 frame.render_widget(PopupWidget::new(
                     app.input.clone(),
                     app.character_index,

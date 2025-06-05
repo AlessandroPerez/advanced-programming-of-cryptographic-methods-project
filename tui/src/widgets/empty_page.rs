@@ -67,18 +67,5 @@ impl Widget for EmptyPage {
 
         bottom_paragraph.render(vertical_layout[1], buf);
 
-        // let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
-        // let horizontal = Layout::horizontal([Constraint::Length(30)]).flex(Flex::Center);
-        // let [area] = vertical.areas(area);
-        // let [area] = horizontal.areas(area);
-        // frame.render_widget(Clear, area); //this clears out the background
-        // frame.render_widget(
-        //     Paragraph::new("No chats available")
-        //         .style(Style::default().fg(Color::White))
-        //         .alignment(Alignment::Center),
-        //     area,
-        // );
-
-
     }
 }
