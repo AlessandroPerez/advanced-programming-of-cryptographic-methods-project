@@ -16,7 +16,6 @@
     - [Main Window](#main-window)
     - [Adding Friends](#adding-friends)
     - [Navigating Chats](#navigating-chats)
-  - [Final Overview](#final-overview)
 - [Resources](#resources)
   - [Report](#report)
   - [Documentation](#documentation)
@@ -164,13 +163,12 @@ While in `NORMAL` mode:
     - Use the **up/down arrow keys** to navigate through your chats.
     - Press `ENTER` to select a chat and start messaging.
 
-<img alt="Chat Interface" src="assets/screenshots/chat.png" width="100%">
-
-### Final Overview
-
-Here's an overview of the server and clients in action (with two clients for demonstration purposes):
-
-<img alt="Server and Clients Overview" src="assets/demo/demo.gif" width="100%">
+<p align="center" text-align="center">
+  <img width="49%" src="assets/screenshots/bob.png">
+  <img width="49%" src="assets/screenshots/alice.png">
+  <br>
+  <span><i>Bob and Alice chatting</i></span>
+</p>
 
 # Resources
 
