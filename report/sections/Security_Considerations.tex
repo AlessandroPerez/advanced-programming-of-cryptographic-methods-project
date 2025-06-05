@@ -3,7 +3,7 @@
 
 In this chapter we are going to discuss the cryptographic principles that ensure security. A detailed description of both algorithms can be found in Singnal's protocol \cite{x3dh} \cite{DoubleRachet}. Since our starting point was Signal and the fact that we implemented all the necessary components, we can say that our implementation is secure so long as all the parts of the X3DH are not compromised as proved by Ferran van der Have and B.J.M. Mennink \cite{X3DHproof}. In fact as shown the loss of just one of the components is not enough to compromise the communication.
 
-\section{Integration with X3DH}
+\section{Integration between X3DH and Double Ratchet}
 \label{sec:IntegrationWithX3DH}
 
 Both algorithms work very well together: the outputs of the X3DH are used by the Double Ratchet:

@@ -68,7 +68,6 @@ Once a secure connection with the server is established, the user can register b
 
 \begin{lstlisting}[language=json, caption= Example of a Registration request]
 {
-    "action":"register",
     "username":"xyz",
     "bundle:"dGhpcyBpcyB0aGUgdXNlciBwcmVrZXkgYnVuZGxGluIGJ2U2NA=="
 }
@@ -93,7 +92,6 @@ Upon receiving the requested user's \textbf{Pre-Key Bundle}, the user derives th
 
 \begin{lstlisting}[language=json, caption={Initial Message Request Format}]
 {
-  "action": "send_message",
   "msg_type": "initial_message",
   "to": "alice",
   "from": "bob",
@@ -108,6 +106,7 @@ The user who will receive the initial message will derive the shared key and the
 \label{sec:Implementation}
 
 This section will provide a comprehensive explanation of the implementation of each key component of the application. Each aspect of the application, from the underlying security mechanisms to the user-facing interface, is discussed in detail to give a clear understanding of the technical choices and how they come together to ensure a seamless and secure user experience.
+For the implementation of X3DH and Double Ratchet protocols, we followed the specifications outlined in the \textbf{Signal Protocol} documentation \cite{x3dh} \cite{DoubleRachet}. The implementation is designed to be modular, allowing for easy updates and maintenance. Moreover, we lavaraged the \texttt{dalek-cryptography} library, which provides a robust set of cryptographic primitives, including Ed25519 signatures and X25519 key exchange.
 
 \subsection{Key Generation for X3DH}
 \label{subsec:KeyGeneration}
@@ -150,6 +149,23 @@ The functions responsible for processing the \textbf{Initial Message} are respec
 
 Both functions take as input the received Initial Message, the receiver's \textbf{Private Identity Key}, \textbf{Private Signed Key}, and \textbf{Private One-Time Pre-Key (OTPK)}. They compute the three Diffie-Hellman (3DH) secrets and pass the resulting value through a \textbf{Key Derivation Function (KDF)} to derive the 32-byte shared key. Finally, they return the computed shared key.  
 
+\subsection{Ratchet Initialization}
+\label{subsec:RatchetInitialization}
+Upon receiving a user's (Bob) pre-key bundle, the client (Alice) initializes the \textbf{Double Ratchet} algorithm by calling the function \texttt{init\_alice()}. This function takes as input the shared key derived from the X3DH computed using the received pre-key bundle and the Bob's public signed key, and generates a new \textbf{Ratchet State}.
+Upon receiving the \textbf{Initial Message} from Alice, Bob calls the function \texttt{init\_bob()}. This function takes as input the shared key derived from the X3DH computed using the received initial message and Bob's Ratchet key pair composed of the private and public Bob's signed pre-keys, and generates a new \textbf{Ratchet State}.
+
+\subsection{Ratchet Encryption}
+\label{subsec:RatchetEncryption}
+The function responsible for encrypting messages using the Double Ratchet algorithm is \texttt{Ratchet::encrypt()}. This function takes as input the message to be encrypted, the sender's \textbf{Ratchet State}, the plaintext to be encrypted and the associated data.
+The function derives the \textbf{Message Key} and \textbf{Chain Key} from the Ratchet State, then it updates the Ratche State. The encryption is performed using the \textbf{AES-GCM} algorithm, ensuring both confidentiality and integrity of the message. The function returns the encrypted message.
+
+\subsection{Ratchet Decryption}
+\label{subsec:RatchetDecryption}
+The function responsible for decrypting messages using the Double Ratchet algorithm is \texttt{Ratchet::decrypt()}. This function takes as input the recipient's \textbf{Ratchet State} and the ciphertext to be decrypted.
+It first decode the ciphertext from Base64, then it extracts the \textbf{Nonce}, \textbf{Associated Data (AD)} and the \textbf{Header} from the ciphertext. Finally, it checks the synchronization of the Ratchet State and performs the \textbf{Symmetric Ratchet Step} before the decryption. If the decryption is successful, it returns the decrypted message; otherwise, it returns an error indicating that the message could not be decrypted.
+
+
+
 \subsection{AES Encryption}
 \label{subsec:AESEncryption}
 
@@ -186,9 +202,9 @@ This task continuously listens for incoming requests on the WebSocket connection
     \texttt{handle\_establish\_connection()}, which first verifies whether the Pre-Key bundle is correctly formatted. If the verification is successful, the function calls  \\
     \texttt{process\_key\_bundle()} to generate the shared secret; otherwise, it returns an error. Once the shared secret is derived, it is stored in a shared variable called \texttt{session}, allowing both tasks to access it. This endpoint is only accessible if no shared secret exists, meaning that a secure connection has not yet been established.
 
-    \item \texttt{register}: Accessible once the secure connection is established, allowing the client to register within the application. This API endpoint is handled by the function \texttt{handle\_registration\_request()}, which first performs the necessary username validation (ensuring it is alphanumeric and not already in use). It then verifies whether the Pre-Key bundle is well-formed. If all checks pass, the user is registered in the system and it sends back a confirmation response.
+    \item \texttt{register}: Accessible once the secure connection is established, allowing the client to register within the application. This API endpoint is handled by the function \texttt{handle\_registration()}, which first performs the necessary username validation (ensuring it is alphanumeric and not already in use). It then verifies whether the Pre-Key bundle is well-formed. If all checks pass, the user is registered in the system and it sends back a confirmation response.
 
-    \item \texttt{get\_user\_bundle}: Accessible after the secure connection is established, enabling the client to retrieve a user's key bundle. This API endpoint is handled by the function \texttt{handle\_get\_bundle\_request()}, which verifies whether the requested user is registered in the system. If the user exists, the function generates a response containing the corresponding key bundle; otherwise, it returns a \texttt{User Not Found} error.
+    \item \texttt{get\_user\_bundle}: Accessible after the secure connection is established, enabling the client to retrieve a user's key bundle. This API endpoint is handled by the function \texttt{handle\_get\_prekey\_bundle}, which verifies whether the requested user is registered in the system. If the user exists, the function generates a response containing the corresponding key bundle; otherwise, it returns a \texttt{UserNotFound} error.
 
     \item \texttt{send\_message}: Available once the secure connection is established, allowing the client to exchange messages with other users. This API endpoint is handled directly by the task. It first checks whether the recipient is registered (and thus connected) to the system. If the recipient is online, the task forwards the message to the recipient's sender task, which then delivers it to the recipient's client.
 \end{itemize}
@@ -202,22 +218,22 @@ The Task Sender is responsible for message forwarding. It continuously listens o
 
 The content of messages is encrypted using the shared key between the two clients. The \texttt{send\_message} request undergoes two layers of encryption: first, the message text is encrypted with the shared key between the clients, and then the entire request is encrypted using the shared key between the client and the server, ensuring end-to-end security.
 
-%put image here
-% \begin{figure}
-%   \centering
-%   \includegraphics[width=0.8\linewidth]{imgs/server-arch.png}
-%   \caption{Server Architecture Overview}
-%   \label{fig:architecture-overview}
-% \end{figure}
+put image here
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/server-arch.png}
+  \caption{Server Architecture Overview}
+  \label{fig:architecture-overview}
+\end{figure}
 
 
 
-% \begin{figure}
-%   \centering
-%   \includegraphics[width=0.8\linewidth]{imgs/client-arch.png}
-%   \caption{Client Architecture Overview}
-%   \label{fig:client-architecture-overview}
-% \end{figure}
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/client-arch.png}
+  \caption{Client Architecture Overview}
+  \label{fig:client-architecture-overview}
+\end{figure}
 
 \subsection{Client \& TUI}
 \label{subsec:ClientTUI}

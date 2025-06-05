@@ -23,7 +23,7 @@ Modify the \href{https://github.com/christiansassi/advanced-programming-of-crypt
 
 \begin{itemize}
     \item \texttt{server\_ip}: The IP address of the server (default: \texttt{server}). If you do not plan to use Docker (see Section~\ref{sec:source}), set this to \texttt{127.0.0.1} or another valid IP address.
-    \item \texttt{server\_port}: The port on which the server listens (default: \texttt{3333}).
+    \item \texttt{server\_port}: The port on which the server listens (default: \texttt{3333}). If you plan to use Docker, remember to also update the port in the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/blob/main/docker-compose.yml#L23}{\texttt{docker-compose.yml}} file.
     \item \texttt{log\_level}: The logging level (default: \texttt{info}).
 \end{itemize}
 
@@ -99,7 +99,7 @@ cargo --version
     \item Build all components (\href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/server}{\texttt{server}}, \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/tui}{\texttt{tui}}, \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/config}{\texttt{updater}}) by running the following command from the root of the repository:
 
         \begin{lstlisting}
-carbo build --release
+cargo build --release
         \end{lstlisting}
 
     \item The built executables will be located in the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/target/release}{\texttt{target/release}} folder.

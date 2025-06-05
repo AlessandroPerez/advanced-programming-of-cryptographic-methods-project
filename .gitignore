@@ -28,8 +28,11 @@ config/update_server_keys/target/release/*
 server/target/release/*
 tui/target/release/*
 **/target
-!server/target/release/server
-!server/target/release/server.exe
+!target/release/*.exe
+!target/release/tui
+!target/release/server
+!target/release/updater
+
 
 !tui/target/release/tui
 !tui/target/release/tui.exe
