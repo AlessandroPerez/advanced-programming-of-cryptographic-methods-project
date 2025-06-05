@@ -1,15 +1,30 @@
+# IDE & Editor Configs
 .idea/
+**/.vscode/
 
+# Secrets
 *.pem
 
-**/.vscode/
+# Python Caches
 **/__pycache__/
-**/debug
 
+# Debug Artifacts
+**/debug/
+
+# Scripts
 build_all.bat
 
+# Rust Build Artifacts
+**/target/
+!target/
+target/release/build/
+target/release/incremental/
+target/release/deps/
+target/release/examples/
+target/release/.fingerprint
+target/release/*.d
+target/release/*.rlib
 
-**/target
 !target/release/tui.exe
 !target/release/server.exe
 !target/release/updater.exe
@@ -17,9 +32,16 @@ build_all.bat
 !target/release/server
 !target/release/updater
 
+# Report Files
 report/
 !report/*.tex
 !report/*.bib
 !report/section/*.tex
-!report/section/.bib
+!report/section/*.bib
 !report/imgs/
+
+# Optional: Ignore LaTeX build artifacts
+report/**/*.aux
+report/**/*.log
+report/**/*.out
+report/**/*.toc
