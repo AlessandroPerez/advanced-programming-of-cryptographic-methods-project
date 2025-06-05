@@ -1,18 +1,5 @@
 .idea/
 
-client/target
-common/target
-protocol/target
-config/update_server_keys/target/debug
-config/update_server_keys/target/.rustc_info.json
-config/update_server_keys/target/CACHEDIR.TAG
-server/target/debug
-server/target/.rustc_info.json
-server/target/CACHEDIR.TAG
-tui/target/debug
-tui/target/.rustc_info.json
-tui/target/CACHEDIR.TAG
-
 *.pem
 
 **/.vscode/
@@ -21,21 +8,15 @@ tui/target/CACHEDIR.TAG
 
 build_all.bat
 
-client/target/release/*
-common/target/release/*
-protocol/target/release/*
-config/update_server_keys/target/release/*
-server/target/release/*
-tui/target/release/*
+
 **/target
-!target/release/*.exe
+!target/release/tui.exe
+!target/release/server.exe
+!target/release/updater.exe
 !target/release/tui
 !target/release/server
 !target/release/updater
 
-
-!tui/target/release/tui
-!tui/target/release/tui.exe
 report/
 !report/*.tex
 !report/*.bib

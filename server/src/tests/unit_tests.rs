@@ -80,7 +80,7 @@ async fn test_registration() {
         let aad =  initial_msg.associated_data.clone();
         let req = registration_req.to_string().into_bytes();
         let enc_req = if let Some(ek) = enc_k {
-            ek.encrypt(&req, &aad).unwrap()
+            ek.encrypt(&req, &aad.to_bytes()).unwrap()
         } else {
             panic!("Not encryption key found!");
         };
@@ -97,7 +97,7 @@ async fn test_registration() {
                 let nonce = *array_ref!(r, 0, AES256_NONCE_LENGTH);
                 let aad = AssociatedData::try_from(array_ref!(r, AES256_NONCE_LENGTH, AssociatedData::SIZE)).expect("Failed to parse associated data");
                 let enc_response = &r[offset..end];
-                let response = dk.decrypt(enc_response, &nonce, &aad).expect("Failed to decrypt response");
+                let response = dk.decrypt(enc_response, &nonce, &aad.to_bytes()).expect("Failed to decrypt response");
                 println!("Decrypted: {}", String::from_utf8(response).unwrap());
             }
         } else {
@@ -150,7 +150,7 @@ async fn test_get_bundle() {
         let aad =  initial_msg.associated_data.clone();
         let req = registration_req.to_string().into_bytes();
         let enc_req = if let Some(ek) = enc_k.clone() {
-            ek.encrypt(&req, &aad).unwrap()
+            ek.encrypt(&req, &aad.clone().to_bytes()).unwrap()
         } else {
             panic!("Not encryption key found!");
         };
@@ -167,7 +167,7 @@ async fn test_get_bundle() {
                 let nonce = *array_ref!(r, 0, AES256_NONCE_LENGTH);
                 let aad = AssociatedData::try_from(array_ref!(r, AES256_NONCE_LENGTH, AssociatedData::SIZE)).expect("Failed to parse associated data");
                 let enc_response = &r[offset..end];
-                let response = dk.decrypt(enc_response, &nonce, &aad).expect("Failed to decrypt response");
+                let response = dk.decrypt(enc_response, &nonce, &aad.clone().to_bytes()).expect("Failed to decrypt response");
                 println!("Decrypted: {}", String::from_utf8(response).unwrap());
             }
 
@@ -177,7 +177,7 @@ async fn test_get_bundle() {
             });
 
             let enc_req = if let Some(ek) = enc_k {
-                ek.encrypt(&req.to_string().into_bytes(), &aad).unwrap()
+                ek.encrypt(&req.to_string().into_bytes(), &aad.to_bytes()).unwrap()
             } else {
                 panic!("Not encryption key found!");
             };
@@ -194,7 +194,7 @@ async fn test_get_bundle() {
                     let nonce = *array_ref!(r, 0, AES256_NONCE_LENGTH);
                     let aad = AssociatedData::try_from(array_ref!(r, AES256_NONCE_LENGTH, AssociatedData::SIZE)).expect("Failed to parse associated data");
                     let enc_response = &r[offset..end];
-                    let response = dk.decrypt(enc_response, &nonce, &aad).expect("Failed to decrypt response");
+                    let response = dk.decrypt(enc_response, &nonce, &aad.to_bytes()).expect("Failed to decrypt response");
                     let pb_string = String::from_utf8(response).unwrap();
                     let json = serde_json::from_str::<Value>(&pb_string).expect("Failed to parse json");
                     println!("json: {:?}", json);
