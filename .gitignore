@@ -38,3 +38,4 @@ report/
 !report/*.bib
 !report/section/*.tex
 !report/section/.bib
+!report/imgs/
