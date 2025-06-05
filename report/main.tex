@@ -29,46 +29,47 @@
 }
 \date{\today}
 
-\colorlet{punct}{red!60!black}
-\definecolor{background}{HTML}{EEEEEE}
-\definecolor{delim}{RGB}{20,105,176}
-\colorlet{numb}{magenta!60!black}
+\definecolor{bgcolor}{RGB}{246,248,250}       % GitHub light theme background
+\definecolor{ghkeyword}{RGB}{0,77,175}        % GitHub light theme keywords (optional)
+\definecolor{ghcomment}{RGB}{106,115,125}     % GitHub light theme comments (unused in JSON)
+\definecolor{ghstring}{RGB}{203,36,49}        % GitHub light theme strings
+\definecolor{ghtext}{RGB}{36,41,46}           % GitHub light theme general text
+
 
 \lstdefinelanguage{json}{
-    basicstyle=\normalfont\ttfamily,
+    basicstyle=\ttfamily\small\color{ghtext},
     numbers=left,
-    numberstyle=\scriptsize,
+    numberstyle=\scriptsize\color{ghcomment},
     stepnumber=1,
     numbersep=8pt,
     showstringspaces=false,
     breaklines=true,
-    frame=lines,
-    backgroundcolor=\color{background},
+    frame=single,
+    backgroundcolor=\color{bgcolor},
+    rulecolor=\color{bgcolor},
     literate=
-     *{0}{{{\color{numb}0}}}{1}
-      {1}{{{\color{numb}1}}}{1}
-      {2}{{{\color{numb}2}}}{1}
-      {3}{{{\color{numb}3}}}{1}
-      {4}{{{\color{numb}4}}}{1}
-      {5}{{{\color{numb}5}}}{1}
-      {6}{{{\color{numb}6}}}{1}
-      {7}{{{\color{numb}7}}}{1}
-      {8}{{{\color{numb}8}}}{1}
-      {9}{{{\color{numb}9}}}{1}
-      {:}{{{\color{punct}{:}}}}{1}
-      {,}{{{\color{punct}{,}}}}{1}
-      {\{}{{{\color{delim}{\{}}}}{1}
-      {\}}{{{\color{delim}{\}}}}}{1}
-      {[}{{{\color{delim}{[}}}}{1}
-      {]}{{{\color{delim}{]}}}}{1},
+     *{0}{{{\color{ghtext}0}}}{1}
+      {1}{{{\color{ghtext}1}}}{1}
+      {2}{{{\color{ghtext}2}}}{1}
+      {3}{{{\color{ghtext}3}}}{1}
+      {4}{{{\color{ghtext}4}}}{1}
+      {5}{{{\color{ghtext}5}}}{1}
+      {6}{{{\color{ghtext}6}}}{1}
+      {7}{{{\color{ghtext}7}}}{1}
+      {8}{{{\color{ghtext}8}}}{1}
+      {9}{{{\color{ghtext}9}}}{1}
+      {:}{{{\color{ghtext}{:}}}}{1}
+      {,}{{{\color{ghtext}{,}}}}{1}
+      {\{}{{{\color{ghtext}{\{}}}}{1}
+      {\}}{{{\color{ghtext}{\}}}}}{1}
+      {[}{{{\color{ghtext}{[}}}}{1}
+      {]}{{{\color{ghtext}{]}}}}{1}
+      {"}{{{\color{ghstring}{"}}}}{1}
+      % Optional: Add booleans and null with keyword color
+      {true}{{{\color{ghkeyword}true}}}{4}
+      {false}{{{\color{ghkeyword}false}}}{5}
+      {null}{{{\color{ghkeyword}null}}}{4}
 }
-
-\definecolor{bgcolor}{RGB}{246,248,250}       % GitHub light theme background
-\definecolor{ghkeyword}{RGB}{0,77,175}       % GitHub light theme keywords (a darker blue)
-\definecolor{ghcomment}{RGB}{106,115,125}     % GitHub light theme comments (a muted green-gray)
-\definecolor{ghstring}{RGB}{203,36,49}        % GitHub light theme strings (a strong red)
-\definecolor{ghtext}{RGB}{36,41,46}           % GitHub light theme general text (dark gray)
-
 
 \lstdefinelanguage{bash}{
     keywords={sudo, cp, mv, rm, ls, cd, mkdir, echo, cat, grep, find, chmod, chown, tar, curl, wget, git, docker}, % Added git and docker for the example

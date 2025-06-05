@@ -15,9 +15,10 @@ The application follows a client-server architecture with some modifications to 
 
 \subsection{Architecture overview}
 \label{subsec:ArchitectureOverview}
+
 From Server-side, incoming connections from clients are handled leveraging different threads, each responsible for managing a specific client connection.
-Upon start up, the server call the \texttt{listen} method which is responsible for accepting incoming connections and spawning a new thread, named \texttt{acceptor}, for each connection. Each thread is responsible for handling the communication with a specific client, allowing the server to manage multiple clients simultaneously. The \texttt{acceptor} thread is responsible for initializing and managing the connection, to doing so, it spaws two additional threads, named \texttt{task\_receiver} and \texttt{task\_sender}. The \texttt{task\_receiver} thread is responsible for listening for incoming requests from the client and send responses back, while the \texttt{task\_sender} thread is responsible for forwarding messages to the client (see fig. \ref{fig:architecture-overview}).
-The client, on the other hand, is designed to be a terminal-based user interface (TUI) application that interacts with the server. It consists of a main process that manages the user interface and sends requests to the server, a separate thread for listening to incoming responses or messages and forwarding them to the TUI, ultimetly the TUI levarages on a \texttt{tokio} task that listens for incoming messages on a \texttt{mpsc channel} and invokes the appropriate handler to process the message and render it in the user interface (see fig. \ref{fig:client-architecture-overview}).\\
+Upon start up, the server calls the \texttt{listen} method which is responsible for accepting incoming connections and spawning a new thread, named \texttt{acceptor}, for each connection. Each thread is responsible for handling the communication with a specific client, allowing the server to manage multiple clients simultaneously. The \texttt{acceptor} thread is responsible for initializing and managing the connection, to doing so, it spawns two additional threads, named \texttt{task\_receiver} and \texttt{task\_sender}. The \texttt{task\_receiver} thread is responsible for listening for incoming requests from the client and send responses back, while the \texttt{task\_sender} thread is responsible for forwarding messages to the client (see fig. \ref{fig:architecture-overview}).
+The client, on the other hand, is designed to be a terminal-based user interface (TUI) application that interacts with the server. It consists of a main process that manages the user interface and sends requests to the server, a separate thread for listening to incoming responses or messages and forwarding them to the TUI, ultimately the TUI leverages on a \texttt{tokio} task that listens for incoming messages on a \texttt{mpsc channel} and invokes the appropriate handler to process the message and render it in the user interface (see fig. \ref{fig:client-architecture-overview}).\\
 
 To better understand the application's functionality, we outline four key scenarios that define its core operations:
 
@@ -106,7 +107,7 @@ The user who will receive the initial message will derive the shared key and the
 \label{sec:Implementation}
 
 This section will provide a comprehensive explanation of the implementation of each key component of the application. Each aspect of the application, from the underlying security mechanisms to the user-facing interface, is discussed in detail to give a clear understanding of the technical choices and how they come together to ensure a seamless and secure user experience.
-For the implementation of X3DH and Double Ratchet protocols, we followed the specifications outlined in the \textbf{Signal Protocol} documentation \cite{x3dh} \cite{DoubleRachet}. The implementation is designed to be modular, allowing for easy updates and maintenance. Moreover, we lavaraged the \texttt{dalek-cryptography} library, which provides a robust set of cryptographic primitives, including Ed25519 signatures and X25519 key exchange.
+For the implementation of X3DH and Double Ratchet protocols, we followed the specifications outlined in the \textbf{Signal Protocol} documentation \cite{x3dh} \cite{DoubleRachet}. The implementation is designed to be modular, allowing for easy updates and maintenance. Moreover, we leveraged the \texttt{dalek-cryptography} library, which provides a robust set of cryptographic primitives, including Ed25519 signatures and X25519 key exchange. For the protocol documentation you can visit the site implemented by us \href{https://christiansassi.github.io/advanced-programming-of-cryptographic-methods-project/doc/protocol/index.html}{here}.
 
 \subsection{Key Generation for X3DH}
 \label{subsec:KeyGeneration}
@@ -130,15 +131,15 @@ The function responsible for processing \textbf{Pre-Key Bundles} is \texttt{proc
 
 The function first verifies the signature contained in the bundle to ensure its authenticity. After validation, it performs the \textbf{X3DH (Extended Triple Diffie-Hellman) key agreement protocol} to derive the shared secret. This is done by passing the secret obtained from the three Diffie-Hellman exchanges through a \textbf{Key Derivation Function (KDF)} to generate the final 32-byte shared key.  
 
-Once the shared key is established, an \textbf{Initial Message (IM)} is generated, containing the following components:  
+Once the shared key is established, an \textbf{Initial Message (IM)} is generated, containing the following components:
 
-\begin{itemize}  
-    \item The receiver's \textbf{Public Identity Key};  
-    \item The receiver's \textbf{Public Ephemeral Key};  
-    \item The sender's \textbf{Public Signed Pre-Key hash} (extracted from the bundle);  
-    \item The sender's \textbf{Public One-Time Pre-Key (OTPK) hash};  
-    \item \textbf{Associated Data}, which includes the Public Identity Keys of both the sender and receiver.  
-\end{itemize}  
+\begin{itemize}
+    \item The receiver's \textbf{Public Identity Key};
+    \item The receiver's \textbf{Public Ephemeral Key};
+    \item The sender's \textbf{Public Signed Pre-Key hash} (extracted from the bundle);
+    \item The sender's \textbf{Public One-Time Pre-Key (OTPK) hash};
+    \item \textbf{Associated Data}, which includes the Public Identity Keys of both the sender and receiver.
+\end{itemize}
 
 The function then returns the shared key and the initial message.
 
@@ -157,12 +158,12 @@ Upon receiving the \textbf{Initial Message} from Alice, Bob calls the function \
 \subsection{Ratchet Encryption}
 \label{subsec:RatchetEncryption}
 The function responsible for encrypting messages using the Double Ratchet algorithm is \texttt{Ratchet::encrypt()}. This function takes as input the message to be encrypted, the sender's \textbf{Ratchet State}, the plaintext to be encrypted and the associated data.
-The function derives the \textbf{Message Key} and \textbf{Chain Key} from the Ratchet State, then it updates the Ratche State. The encryption is performed using the \textbf{AES-GCM} algorithm, ensuring both confidentiality and integrity of the message. The function returns the encrypted message.
+The function derives the \textbf{Message Key} and \textbf{Chain Key} from the Ratchet State, then it updates the Ratchet State. The encryption is performed using the \textbf{AES-GCM} algorithm, ensuring both confidentiality and integrity of the message. The function returns the encrypted message.
 
 \subsection{Ratchet Decryption}
 \label{subsec:RatchetDecryption}
 The function responsible for decrypting messages using the Double Ratchet algorithm is \texttt{Ratchet::decrypt()}. This function takes as input the recipient's \textbf{Ratchet State} and the ciphertext to be decrypted.
-It first decode the ciphertext from Base64, then it extracts the \textbf{Nonce}, \textbf{Associated Data (AD)} and the \textbf{Header} from the ciphertext. Finally, it checks the synchronization of the Ratchet State and performs the \textbf{Symmetric Ratchet Step} before the decryption. If the decryption is successful, it returns the decrypted message; otherwise, it returns an error indicating that the message could not be decrypted.
+It first decodes the ciphertext from Base64, then it extracts the \textbf{Nonce}, \textbf{Associated Data (AD)} and the \textbf{Header} from the ciphertext. Finally, it checks the synchronization of the Ratchet State and performs the \textbf{Symmetric Ratchet Step} before the decryption. If the decryption is successful, it returns the decrypted message; otherwise, it returns an error indicating that the message could not be decrypted.
 
 
 
@@ -206,7 +207,7 @@ This task continuously listens for incoming requests on the WebSocket connection
 
     \item \texttt{get\_user\_bundle}: Accessible after the secure connection is established, enabling the client to retrieve a user's key bundle. This API endpoint is handled by the function \texttt{handle\_get\_prekey\_bundle}, which verifies whether the requested user is registered in the system. If the user exists, the function generates a response containing the corresponding key bundle; otherwise, it returns a \texttt{UserNotFound} error.
 
-    \item \texttt{send\_message}: Available once the secure connection is established, allowing the client to exchange messages with other users. This API endpoint is handled directly by the task. It first checks whether the recipient is registered (and thus connected) to the system. If the recipient is online, the task forwards the message to the recipient's sender task, which then delivers it to the recipient's client.
+    \item \texttt{send\_message}: Available once the secure connection is established, allowing the client to exchange messages with other users. This API endpoint is handled directly by the task. First the API checks if the recipient is registered or not to the system. If the recipient is online, the task forwards the message to the recipient's sender task, which then delivers it to the recipient's client.
 \end{itemize}
 
 All API requests received after the secure connection is established are decrypted upon arrival, and all responses are encrypted before being sent to the client. 
@@ -218,7 +219,6 @@ The Task Sender is responsible for message forwarding. It continuously listens o
 
 The content of messages is encrypted using the shared key between the two clients. The \texttt{send\_message} request undergoes two layers of encryption: first, the message text is encrypted with the shared key between the clients, and then the entire request is encrypted using the shared key between the client and the server, ensuring end-to-end security.
 
-put image here
 \begin{figure}
   \centering
   \includegraphics[width=0.8\linewidth]{imgs/server-arch.png}
@@ -226,11 +226,9 @@ put image here
   \label{fig:architecture-overview}
 \end{figure}
 
-
-
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\linewidth]{imgs/client-arch.png}
+  \includegraphics[width=0.6\linewidth]{imgs/client-arch.png}
   \caption{Client Architecture Overview}
   \label{fig:client-architecture-overview}
 \end{figure}
@@ -247,24 +245,20 @@ Chat messages, on the other hand, are handled as regular \texttt{send\_message} 
 \section{Code Structure}
 \label{sec:CodeStructure}
 
-%TODO la struttura e' cambiata aggiungendo la perte di dr
-
 The codebase is organized into five separate Cargo projects, each serving a distinct purpose:
 
 \begin{itemize}
-    \item \textbf{Protocol}: A library that implements the cryptographic protocols used in the system, including X3DH and AES-GCM.
-    \item \textbf{Common}: A shared library providing utility functions used by both the client and server.
-    \item \textbf{Server}: Contains the server binary along with all necessary utility functions for server-side operations.
-    \item \textbf{Client}: A library that facilitates client interactions with the server.
-    \item \textbf{Tui}: Includes the TUI application binary, along with all files required for the user interface and front-end logic.
+    \item \textbf{protocol}: A library that implements the cryptographic protocols used in the system, including X3DH, Double Ratchet and AES-GCM.
+    \item \textbf{common}: A shared library providing utility functions used by both the client and server.
+    \item \textbf{server}: Contains the server binary along with all necessary utility functions for server-side operations.
+    \item \textbf{client}: A library that facilitates client interactions with the server.
+    \item \textbf{tui}: Includes the TUI application binary, along with all files required for the user interface and front-end logic.
 \end{itemize}
 
 \section{Dependencies}
 \label{sec:Dependecies}
 
-% TODO non sono sicuro se dr abbia aggiunto altre dependencies ma se si bisogna aggiungerle
-
-The implementation of \textbf{TRUST} application relies on several external Rust crates that provide critical functionalities such as asynchronous networking, cryptographic operations, and terminal user interface (TUI) rendering. All dependencies used in this project are well-known, actively maintained, and considered de facto standards in their respective domains, ensuring reliability, security, and long-term support. Below is an overview of the main dependencies.   
+The implementation of \textbf{TRUST} application relies on several external Rust crates that provide critical functionalities such as asynchronous networking, cryptographic operations, and terminal user interface (TUI) rendering. All dependencies used in this project are well-known, actively maintained, and considered de facto standards in their respective domains, ensuring reliability, security, and long-term support. Below is an overview of the main dependencies.
 
 \subsection{Networking and Asynchronous Execution}
 \label{subsec:NetworkingAndAsynchronousExecution}
@@ -317,11 +311,11 @@ For the TUI we chose the following dependencies:
 \subsection{Utilities}
 \label{subsec:Utilities}
 
-Finally some extra packeges chosen for extra utilities are:
+Finally some extra packages chosen for extra utilities are:
 
 \begin{itemize}
   \item \textbf{\texttt{uuid} (1.11.0)}: Used for generating unique request identifiers, allowing the system to match server responses with client requests.
   \item \textbf{\texttt{arrayref} (0.3.9)}: Provides utilities for working with fixed-size arrays, useful in cryptographic operations.
 \end{itemize}
 
-These dependencies collectively enable our application to provide secure, efficient, and user-friendly encrypted messaging.  
+These dependencies collectively enable our application to provide secure, efficient, and user-friendly encrypted messaging.
