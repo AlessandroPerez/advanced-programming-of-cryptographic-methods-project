@@ -103,6 +103,11 @@ carbo build --release
         \end{lstlisting}
 
     \item The built executables will be located in the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/tree/main/target/release}{\texttt{target/release}} folder.
+    
+        \noindent
+        \begin{myWarning}
+        \textbf{Warning:} The executables require access to the \href{https://github.com/christiansassi/advanced-programming-of-cryptographic-methods-project/blob/main/config/config.toml}{\texttt{config.toml}} file. Therefore, you must run them from the root directory of the repository.
+        \end{myWarning}
 
         \begin{enumerate}
             \item First, update the server keys by running the \texttt{updater} executable.

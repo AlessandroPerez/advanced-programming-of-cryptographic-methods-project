@@ -113,6 +113,10 @@ cargo build --release
 
 3. The built executables will be located in the [target/release](target/release) folder.
 
+> [!WARNING]  
+> The executables require access to the [config.toml](config/config.toml) file.
+> Therefore, you must run them from the root directory of the repository.
+
     1. First, update the server keys by running the `updater` executable.
     2. Then, start the server by running the `server` executable.
     3. Finally, run any number of clients (as needed) using the `tui` executable.
