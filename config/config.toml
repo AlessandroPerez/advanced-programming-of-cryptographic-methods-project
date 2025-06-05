@@ -1,5 +1,5 @@
 server_ip = "server"
 server_port = "3333"
-private_key_server = "ggU1o1mwcYqWHx3ghIy26a9mYCdLzByuC+gbt7/iNMU="
-public_key_server = "HXEM/vdckkFFDEsRlGR+W3+hYispPy9QzT1PHWZjgiA="
+private_key_server = "AmdueHjWDgYdENW/TO8+ReL6ogEx/WZ8tld5uT8m37M="
+public_key_server = "a7GPvaWB6F2XA/ie29cPVwjuh6SEzcPhf8I2+KoJgyY="
 log_level = "info"

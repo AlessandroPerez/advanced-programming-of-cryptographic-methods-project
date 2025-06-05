@@ -182,7 +182,7 @@ impl Widget for ChatsWidget {
             .split(inner_chats_area);
 
         for (i, chat) in self.chats.iter().enumerate() {
-            let (text_style, border_style) = if i == self.selected_chat {
+            let (text_style, border_style) = if i == self.selected_chat && self.active_window == 0 {
                 (
                     Style::default()
                         .add_modifier(Modifier::BOLD)
