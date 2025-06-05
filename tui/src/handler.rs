@@ -120,7 +120,6 @@ impl App {
                         return; // Restrict input when popup is shown in Chats state
                     }
                 },
-                _ => {}
             }
 
             let index = self.byte_index(); // Get byte index corresponding to the cursor position
@@ -237,7 +236,6 @@ impl App {
                     }
                 }
             },
-            _ => {}
         }
         self.input.clear();
         self.reset_cursor();

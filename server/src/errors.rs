@@ -1,3 +1,4 @@
+#[allow(warnings)]
 use protocol::errors::X3DHError;
 use std::env;
 use std::fmt::Display;

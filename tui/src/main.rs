@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use std::io;
 use client::Client;
 use ratatui::backend::CrosstermBackend;

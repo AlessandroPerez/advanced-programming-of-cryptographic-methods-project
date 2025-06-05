@@ -1,15 +1,12 @@
-use client::ChatMessage;
-
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style, Modifier},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Widget},
     buffer::Buffer,
 };
 
-use ratatui::layout::{Alignment, Margin};
-use ratatui::widgets::{List, ListItem};
+use ratatui::layout::{Alignment};
 use crate::app::InputMode;
 use ratatui::widgets::block::Padding;
 
