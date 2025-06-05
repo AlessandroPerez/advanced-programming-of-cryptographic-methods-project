@@ -4,8 +4,6 @@ use crate::app::{App, AppResult, AppState, InputMode};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use crate::errors::TuiError;
 
-
-
 pub async fn handle_key_events(key: KeyEvent, app: &mut App) -> AppResult<()> {
 
         match app.input_mode {
